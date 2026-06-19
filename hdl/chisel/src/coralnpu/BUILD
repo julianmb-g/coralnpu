@@ -827,3 +827,42 @@ chisel_cc_library(
         "//hdl/verilog:sram_1rw_256x256",
     ],
 )
+
+chisel_cc_library(
+    name = "core_verification_cc_library",
+    chisel_lib = ":coralnpu",
+    emit_class = "coralnpu.EmitCore",
+    extra_outs = [
+        "VCoreVerification_parameters.h",
+    ],
+    gen_flags = [
+        "--enableFetchL0=False",
+        "--fetchDataBits=128",
+        "--lsuDataBits=128",
+        "--enableFloat=True",
+        "--enableZfbfmin=True",
+        "--moduleName=CoreVerification",
+        "--enableVerification=True",
+    ],
+    module_name = "CoreVerification",
+    vopts = CORE_MINI_AXI_VOPTS,
+)
+
+chisel_cc_library(
+    name = "core_barebones_cc_library",
+    chisel_lib = ":coralnpu",
+    emit_class = "coralnpu.EmitCore",
+    extra_outs = [
+        "VCoreBarebones_parameters.h",
+    ],
+    gen_flags = [
+        "--enableFetchL0=False",
+        "--fetchDataBits=128",
+        "--lsuDataBits=128",
+        "--enableFloat=True",
+        "--enableZfbfmin=True",
+        "--moduleName=CoreBarebones",
+    ],
+    module_name = "CoreBarebones",
+    vopts = CORE_MINI_AXI_VOPTS,
+)
