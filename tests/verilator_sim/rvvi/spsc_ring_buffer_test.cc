@@ -37,4 +37,28 @@ TEST_F(SpscRingBufferTest, EmptyBuffer) {
   EXPECT_FALSE(buffer_.Pop(packet));
 }
 
+TEST(SpscRingBufferFullTest, FullBuffer) {
+  SpscRingBuffer<TracePacket, 4> buffer;
+  TracePacket packet;
+  packet.type = 'I';
+
+  EXPECT_TRUE(buffer.Push(packet));
+  EXPECT_TRUE(buffer.Push(packet));
+  EXPECT_TRUE(buffer.Push(packet));
+  EXPECT_TRUE(buffer.Push(packet));
+
+  // Should be full now
+  EXPECT_FALSE(buffer.Push(packet));
+
+  // Pop one
+  TracePacket popped;
+  EXPECT_TRUE(buffer.Pop(popped));
+
+  // Should be able to push one more
+  EXPECT_TRUE(buffer.Push(packet));
+
+  // Should be full again
+  EXPECT_FALSE(buffer.Push(packet));
+}
+
 } // namespace mpact::sim::riscv::rvvi
