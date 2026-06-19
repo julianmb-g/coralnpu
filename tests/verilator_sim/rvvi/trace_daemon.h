@@ -58,6 +58,11 @@ class TraceDaemon {
   std::function<std::string(uint64_t)> symbol_resolver_;
   std::vector<RegisterUpdate> accumulated_updates_;
   TraceFormatterInterface* trace_formatter_ = nullptr;
+
+  TracePacket pending_inst_packet_;
+  bool has_pending_inst_ = false;
+
+  void FlushPendingInstruction();
 };
 
 } // namespace mpact::sim::riscv::rvvi

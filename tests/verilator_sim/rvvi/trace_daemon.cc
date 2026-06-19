@@ -65,6 +65,7 @@ void TraceDaemon::Stop() {
   while (buffer_->Pop(packet)) {
     ProcessPacket(packet);
   }
+  FlushPendingInstruction();
   if (output_stream_) {
     output_stream_->flush();
   }
@@ -89,8 +90,75 @@ void TraceDaemon::DaemonLoop() {
   }
 }
 
+void TraceDaemon::FlushPendingInstruction() {
+  if (!has_pending_inst_) return;
+
+  std::string disasm;
+  if (trace_formatter_) {
+    disasm = trace_formatter_->Disassemble(pending_inst_packet_.inst.instruction);
+  } else {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "inst_0x%08x", pending_inst_packet_.inst.instruction);
+    disasm = buf;
+  }
+  
+  std::string symbol_str = "";
+  if (symbol_resolver_) {
+    symbol_str = symbol_resolver_(pending_inst_packet_.inst.pc);
+  }
+  std::string disasm_field = disasm;
+  if (!symbol_str.empty()) {
+    disasm_field = "'" + symbol_str + "' " + disasm;
+  }
+
+  char buf[128];
+  std::snprintf(buf, sizeof(buf), "rvvi,0,%016lx,%08x", pending_inst_packet_.inst.pc, pending_inst_packet_.inst.instruction);
+  std::string line = buf;
+  if (!disasm_field.empty()) {
+    line += "," + disasm_field;
+  } else {
+    line += ",";
+  }
+
+  for (const auto& update : accumulated_updates_) {
+    std::string reg_prefix;
+    if (update.reg_type == 'X') reg_prefix = "x";
+    else if (update.reg_type == 'F') reg_prefix = "f";
+    else if (update.reg_type == 'V') reg_prefix = "v";
+    else if (update.reg_type == 'C') reg_prefix = "c";
+    else reg_prefix = "?";
+
+    std::string idx_str;
+    if (update.reg_type == 'C') {
+      char cbuf[16];
+      std::snprintf(cbuf, sizeof(cbuf), "%x", update.index);
+      idx_str = cbuf;
+    } else {
+      idx_str = std::to_string(update.index);
+    }
+
+    std::string val_hex = "";
+    val_hex.reserve(update.data.size() * 2);
+    for (int i = static_cast<int>(update.data.size()) - 1; i >= 0; --i) {
+      char vbuf[4];
+      std::snprintf(vbuf, sizeof(vbuf), "%02x", update.data[i]);
+      val_hex += vbuf;
+    }
+
+    line += "," + reg_prefix + idx_str + ":" + val_hex;
+  }
+
+  if (output_stream_) {
+    *output_stream_ << line << "\n";
+  }
+  
+  accumulated_updates_.clear();
+  has_pending_inst_ = false;
+}
+
 void TraceDaemon::ProcessPacket(const TracePacket& packet) {
   if (packet.type == 'E') {
+    FlushPendingInstruction();
     running_ = false;
     return;
   }
@@ -123,65 +191,9 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
   }
 
   if (packet.type == 'I' || packet.type == 'T') {
-    std::string disasm;
-    if (trace_formatter_) {
-      disasm = trace_formatter_->Disassemble(packet.inst.instruction);
-    } else {
-      char buf[32];
-      std::snprintf(buf, sizeof(buf), "inst_0x%08x", packet.inst.instruction);
-      disasm = buf;
-    }
-    
-    std::string symbol_str = "";
-    if (symbol_resolver_) {
-      symbol_str = symbol_resolver_(packet.inst.pc);
-    }
-    std::string disasm_field = disasm;
-    if (!symbol_str.empty()) {
-      disasm_field = "'" + symbol_str + "' " + disasm;
-    }
-
-    char buf[128];
-    std::snprintf(buf, sizeof(buf), "rvvi,0,%016lx,%08x", packet.inst.pc, packet.inst.instruction);
-    std::string line = buf;
-    if (!disasm_field.empty()) {
-      line += "," + disasm_field;
-    } else {
-      line += ",";
-    }
-
-    for (const auto& update : accumulated_updates_) {
-      std::string reg_prefix;
-      if (update.reg_type == 'X') reg_prefix = "x";
-      else if (update.reg_type == 'F') reg_prefix = "f";
-      else if (update.reg_type == 'V') reg_prefix = "v";
-      else if (update.reg_type == 'C') reg_prefix = "c";
-      else reg_prefix = "?";
-
-      std::string idx_str;
-      if (update.reg_type == 'C') {
-        char cbuf[16];
-        std::snprintf(cbuf, sizeof(cbuf), "%x", update.index);
-        idx_str = cbuf;
-      } else {
-        idx_str = std::to_string(update.index);
-      }
-
-      std::string val_hex = "";
-      val_hex.reserve(update.data.size() * 2);
-      for (int i = static_cast<int>(update.data.size()) - 1; i >= 0; --i) {
-        char vbuf[4];
-        std::snprintf(vbuf, sizeof(vbuf), "%02x", update.data[i]);
-        val_hex += vbuf;
-      }
-
-      line += "," + reg_prefix + idx_str + ":" + val_hex;
-    }
-
-    if (output_stream_) {
-      *output_stream_ << line << "\n";
-    }
-    accumulated_updates_.clear();
+    FlushPendingInstruction();
+    pending_inst_packet_ = packet;
+    has_pending_inst_ = true;
   }
 }
 
