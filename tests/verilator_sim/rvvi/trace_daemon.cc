@@ -54,7 +54,6 @@ void TraceDaemon::Start() {
 }
 
 void TraceDaemon::Stop() {
-  if (!running_) return;
   running_ = false;
   if (daemon_thread_.joinable()) {
     daemon_thread_.join();
