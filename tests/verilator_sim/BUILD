@@ -381,14 +381,48 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "trace_packet",
+    hdrs = ["rvvi/trace_packet.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "spsc_ring_buffer",
+    hdrs = ["rvvi/spsc_ring_buffer.h"],
+    deps = [":trace_packet"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "trace_daemon",
+    srcs = ["rvvi/trace_daemon.cc"],
+    hdrs = ["rvvi/trace_daemon.h"],
+    deps = [
+        ":spsc_ring_buffer",
+        ":trace_packet",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_test(
     name = "spsc_ring_buffer_test",
     srcs = [
         "rvvi/spsc_ring_buffer_test.cc",
-        "rvvi/spsc_ring_buffer.h",
-        "rvvi/trace_packet.h",
     ],
     deps = [
+        ":spsc_ring_buffer",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "trace_daemon_test",
+    srcs = [
+        "rvvi/trace_daemon_test.cc",
+    ],
+    deps = [
+        ":trace_daemon",
         "@com_google_googletest//:gtest_main",
     ],
 )
