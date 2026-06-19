@@ -380,3 +380,15 @@ cc_test(
         "//hdl/chisel/src/coralnpu:l1icache_cc_library",
     ],
 )
+
+cc_test(
+    name = "spsc_ring_buffer_test",
+    srcs = [
+        "rvvi/spsc_ring_buffer_test.cc",
+        "rvvi/spsc_ring_buffer.h",
+        "rvvi/trace_packet.h",
+    ],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+    ],
+)
