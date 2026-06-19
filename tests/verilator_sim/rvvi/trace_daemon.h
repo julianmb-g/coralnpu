@@ -24,11 +24,9 @@
 #include <map>
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_packet.h"
+#include "tests/verilator_sim/rvvi/trace_formatter_interface.h"
 
-namespace mpact::sim::riscv {
-class TraceFormatter;
-
-namespace rvvi {
+namespace mpact::sim::riscv::rvvi {
 
 class TraceDaemon {
  public:
@@ -39,12 +37,11 @@ class TraceDaemon {
   void Stop();
 
   void SetSymbolResolver(std::function<std::string(uint64_t)> resolver);
-  void SetTraceFormatter(TraceFormatter* formatter);
+  void SetTraceFormatter(TraceFormatterInterface* formatter);
 
  private:
   void DaemonLoop();
   void ProcessPacket(const TracePacket& packet);
-  std::string Disassemble(uint32_t inst);
 
   struct RegisterUpdate {
     uint8_t reg_type;
@@ -60,10 +57,9 @@ class TraceDaemon {
   
   std::function<std::string(uint64_t)> symbol_resolver_;
   std::vector<RegisterUpdate> accumulated_updates_;
-  TraceFormatter* trace_formatter_ = nullptr;
+  TraceFormatterInterface* trace_formatter_ = nullptr;
 };
 
-} // namespace rvvi
-} // namespace mpact::sim::riscv
+} // namespace mpact::sim::riscv::rvvi
 
 #endif // TESTS_VERILATOR_SIM_RVVI_TRACE_DAEMON_H_

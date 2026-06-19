@@ -15,6 +15,7 @@
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_packet.h"
+#include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
 #include "gtest/gtest.h"
 #include <sstream>
 #include <thread>
@@ -26,10 +27,12 @@ class TraceDaemonTest : public ::testing::Test {
  protected:
   SpscRingBuffer<> buffer_;
   std::stringstream output_stream_;
+  CustomFallbackFormatter formatter_;
 };
 
 TEST_F(TraceDaemonTest, StartAndStopDaemon) {
   TraceDaemon daemon(&buffer_, &output_stream_);
+  daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
   daemon.Stop();
   EXPECT_TRUE(true);
@@ -37,6 +40,7 @@ TEST_F(TraceDaemonTest, StartAndStopDaemon) {
 
 TEST_F(TraceDaemonTest, ProcessInstructionPacket) {
   TraceDaemon daemon(&buffer_, &output_stream_);
+  daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
   TracePacket packet;
