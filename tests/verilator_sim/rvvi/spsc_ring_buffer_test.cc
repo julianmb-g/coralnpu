@@ -20,7 +20,7 @@ namespace mpact::sim::riscv::rvvi {
 
 class SpscRingBufferTest : public ::testing::Test {
  protected:
-  SpscRingBuffer buffer_;
+  SpscRingBuffer<> buffer_;
 };
 
 TEST_F(SpscRingBufferTest, PushAndPop) {
@@ -28,13 +28,13 @@ TEST_F(SpscRingBufferTest, PushAndPop) {
   packet.type = 'I';
   EXPECT_TRUE(buffer_.Push(packet));
   TracePacket popped;
-  EXPECT_TRUE(buffer_.Pop(&popped));
+  EXPECT_TRUE(buffer_.Pop(popped));
   EXPECT_EQ(popped.type, 'I');
 }
 
 TEST_F(SpscRingBufferTest, EmptyBuffer) {
   TracePacket packet;
-  EXPECT_FALSE(buffer_.Pop(&packet));
+  EXPECT_FALSE(buffer_.Pop(packet));
 }
 
 } // namespace mpact::sim::riscv::rvvi
