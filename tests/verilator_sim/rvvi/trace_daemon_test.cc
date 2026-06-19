@@ -61,4 +61,39 @@ TEST_F(TraceDaemonTest, ProcessInstructionPacket) {
   EXPECT_NE(output.find("rvvi,0,0000000080000000,00000013"), std::string::npos);
 }
 
+TEST_F(TraceDaemonTest, ProcessRegisterPacket) {
+  TraceDaemon daemon(&buffer_, &output_stream_);
+  daemon.SetTraceFormatter(&formatter_);
+  daemon.Start();
+
+  TracePacket r_packet;
+  r_packet.type = 'R';
+  r_packet.reg.reg_type = 'X';
+  r_packet.reg.index = 10;
+  r_packet.reg.offset = 0;
+  r_packet.reg.total_size = 8;
+  r_packet.reg.size = 8;
+  r_packet.reg.value[0] = 0x123456789abcdef0;
+  
+  EXPECT_TRUE(buffer_.Push(r_packet));
+
+  TracePacket i_packet;
+  i_packet.type = 'I';
+  i_packet.inst.pc = 0x80000004;
+  i_packet.inst.instruction = 0x00100513; // li a0, 1
+  
+  EXPECT_TRUE(buffer_.Push(i_packet));
+  
+  // Wait for processing
+  while (!buffer_.IsEmpty()) {
+    std::this_thread::yield();
+  }
+  
+  daemon.Stop();
+  
+  std::string output = output_stream_.str();
+  EXPECT_NE(output.find("rvvi,0,0000000080000004,00100513"), std::string::npos);
+  EXPECT_NE(output.find("x10:123456789abcdef0"), std::string::npos);
+}
+
 } // namespace mpact::sim::riscv::rvvi
