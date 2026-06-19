@@ -96,4 +96,28 @@ TEST_F(TraceDaemonTest, ProcessRegisterPacket) {
   EXPECT_NE(output.find("x10:123456789abcdef0"), std::string::npos);
 }
 
+TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
+  // This test verifies that pushing an 'E' packet causes the daemon to stop
+  // and destruct cleanly without leaving threads unjoined (QA-004).
+  TraceDaemon daemon(&buffer_, &output_stream_);
+  daemon.SetTraceFormatter(&formatter_);
+  daemon.Start();
+
+  TracePacket e_packet;
+  e_packet.type = 'E';
+  
+  EXPECT_TRUE(buffer_.Push(e_packet));
+  
+  // Wait for processing
+  while (!buffer_.IsEmpty()) {
+    std::this_thread::yield();
+  }
+  
+  // Give the daemon thread time to process the 'E' packet and set running_ = false.
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  
+  // If the bug exists, daemon destructor might crash due to unjoined thread
+  // because running_ was set to false by ProcessPacket, making Stop() return early.
+}
+
 } // namespace mpact::sim::riscv::rvvi
