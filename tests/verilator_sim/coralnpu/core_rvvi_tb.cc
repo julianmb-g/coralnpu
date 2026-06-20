@@ -114,7 +114,7 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif) {
   return false;
 }
 
-static void CoreRvvi_run(const char* name, const char* bin, const int cycles,
+static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
                      const bool trace, const std::string& rvvi_out,
                      const std::string& memory_profile) {
   VERILATOR_MODEL core(name);
@@ -219,22 +219,65 @@ static void CoreRvvi_run(const char* name, const char* bin, const int cycles,
 
   tb.reset = 1;
   core.reset.val = 1;
+  mif.reset.val = 1;
   core.eval();
   mif.eval();
   
   tb.reset = 0;
   core.reset.val = 0;
+  mif.reset.val = 0;
+
+  // Initialize ready signals to false
+  core.io_ibus_ready.val = 0;
+  core.io_dbus_ready.val = 0;
+  bool halted = false;
   for (int i = 0; i < cycles; ++i) {
     // Negedge
     core.clock.val = 0;
+    mif.clock.val = 0;
     core.eval();
+
+    // Propagate Core -> MIF
+    mif.io_ibus_valid.val = core.io_ibus_valid.val;
+    mif.io_ibus_addr.val = core.io_ibus_addr.val;
+    mif.io_dbus_valid.val = core.io_dbus_valid.val;
+    mif.io_dbus_write.val = core.io_dbus_write.val;
+    mif.io_dbus_addr.val = core.io_dbus_addr.val;
+    mif.io_dbus_size.val = core.io_dbus_size.val;
+    mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
+    mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
+
     mif.eval();
-    
+
+    // Propagate MIF -> Core
+    core.io_ibus_ready.val = mif.io_ibus_ready.val;
+    core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
+    core.io_dbus_ready.val = mif.io_dbus_ready.val;
+    core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
+
     // Posedge
     core.clock.val = 1;
+    mif.clock.val = 1;
     core.eval();
+
+    // Propagate Core -> MIF
+    mif.io_ibus_valid.val = core.io_ibus_valid.val;
+    mif.io_ibus_addr.val = core.io_ibus_addr.val;
+    mif.io_dbus_valid.val = core.io_dbus_valid.val;
+    mif.io_dbus_write.val = core.io_dbus_write.val;
+    mif.io_dbus_addr.val = core.io_dbus_addr.val;
+    mif.io_dbus_size.val = core.io_dbus_size.val;
+    mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
+    mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
+
     mif.eval();
-    
+
+    // Propagate MIF -> Core
+    core.io_ibus_ready.val = mif.io_ibus_ready.val;
+    core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
+    core.io_dbus_ready.val = mif.io_dbus_ready.val;
+    core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
+
     // Manual propagation for mock systemc.h
     tb.io_trace_valid.val = core.io_trace_valid.val;
     tb.io_trace_pc.val = core.io_trace_pc.val;
@@ -243,13 +286,25 @@ static void CoreRvvi_run(const char* name, const char* bin, const int cycles,
     tb.io_halted.val = core.io_halted.val;
 
     tb.posedge();
-    if (tb.io_halted.val) break;
+    if (tb.io_halted.val) {
+      halted = true;
+      break;
+    }
   }
 
+  // Wait for buffer to drain
   while(!buffer.IsEmpty()) {
     std::this_thread::yield();
   }
   daemon.Stop();
+
+  if (halted) {
+    printf("Simulation HALTED gracefully.\n");
+    return 0;
+  } else {
+    fprintf(stderr, "Simulation TIMEOUT after %d cycles.\n", cycles);
+    return 1;
+  }
 }
 
 int sc_main(int argc, char *argv[]) {
@@ -263,10 +318,9 @@ int sc_main(int argc, char *argv[]) {
   }
   const char* path = argv[1];
 
-  CoreRvvi_run(Sysc_tb::get_name(argv[0]), path, absl::GetFlag(FLAGS_cycles),
+  return CoreRvvi_run(Sysc_tb::get_name(argv[0]), path, absl::GetFlag(FLAGS_cycles),
            absl::GetFlag(FLAGS_trace), absl::GetFlag(FLAGS_rvvi_out),
            absl::GetFlag(FLAGS_memory_profile));
-  return 0;
 }
 
 int main(int argc, char* argv[]) {
