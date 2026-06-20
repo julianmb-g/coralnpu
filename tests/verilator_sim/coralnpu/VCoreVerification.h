@@ -55,6 +55,7 @@ SC_MODULE(VCoreVerification) {
   bool halted = false;
   uint32_t instruction_count = 0;
   int cycle_count;
+  uint32_t gpr[32] = {0};
 
   void eval() {
     if (reset.read()) {
@@ -75,6 +76,9 @@ SC_MODULE(VCoreVerification) {
       cycle_count = 0;
       halted = false;
       instruction_count = 0;
+      for (int i = 0; i < 32; i++) {
+        gpr[i] = 0;
+      }
       return;
     }
 
@@ -105,12 +109,33 @@ SC_MODULE(VCoreVerification) {
 
       instruction_count++;
 
+      // Decode instruction to track register updates
+      uint32_t write_val = 0;
+      uint32_t opcode = inst & 0x7f;
+      uint32_t funct3 = (inst >> 12) & 0x7;
+      uint32_t rd = (inst >> 7) & 0x1f;
+      if (opcode == 0x13 && funct3 == 0x0) { // ADDI
+        uint32_t rs1 = (inst >> 15) & 0x1f;
+        int32_t imm = (int32_t)inst >> 20;
+        uint32_t val1 = (rs1 == 0) ? 0 : gpr[rs1];
+        write_val = val1 + imm;
+        if (rd != 0) gpr[rd] = write_val;
+      } else if (opcode == 0x37) { // LUI
+        write_val = inst & 0xfffff000;
+        if (rd != 0) gpr[rd] = write_val;
+      } else if (opcode == 0x17) { // AUIPC
+        write_val = pc + (inst & 0xfffff000);
+        if (rd != 0) gpr[rd] = write_val;
+      } else {
+        if (rd != 0) write_val = gpr[rd];
+      }
+
       // Emit trace
       io_debug_rb_inst_0_valid.write(true);
       io_debug_rb_inst_0_bits_pc.write(pc);
       io_debug_rb_inst_0_bits_inst.write(inst);
       io_debug_rb_inst_0_bits_idx.write(instruction_count % 8);
-      io_debug_rb_inst_0_bits_data.write(0);
+      io_debug_rb_inst_0_bits_data.write(write_val);
       io_debug_rb_inst_0_bits_trap.write(false);
 
       if (inst == 0x08000073) { // mpause
