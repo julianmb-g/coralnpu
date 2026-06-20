@@ -2,12 +2,18 @@ CXX = g++
 CXXFLAGS = -std=c++20 -pthread
 INCLUDES = -I../../.. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core
 
-all: core_barebones_tb_test
+all: core_barebones_tb_test core_rvvi_tb_test
 
 core_barebones_tb_test: core_barebones_tb_test.o ../elf.o ../rvvi/test_main.o
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@
 
+core_rvvi_tb_test: core_rvvi_tb_test.o ../rvvi/test_main.o ../rvvi/trace_daemon.o
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@
+
 ../elf.o: ../elf.cc
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+../rvvi/trace_daemon.o: ../rvvi/trace_daemon.cc
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 %.o: %.cc
