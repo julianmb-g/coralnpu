@@ -76,8 +76,8 @@ if ! grep -q "00100513" trace.rvvi; then
   echo "Trace file missing expected instruction (00100513)"
   exit 1
 fi
-if ! grep -q "x10:0000000000000001" trace.rvvi; then
-  echo "Trace file missing expected register update (x10:0000000000000001)"
+if ! grep -q "x10:00000001" trace.rvvi; then
+  echo "Trace file missing expected register update (x10:00000001)"
   exit 1
 fi
 if ! grep -q "08000073" trace.rvvi; then

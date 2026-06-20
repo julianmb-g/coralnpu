@@ -197,7 +197,8 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
         ru = &accumulated_updates_[num_accumulated_updates_++];
         ru->reg_type = packet.reg.reg_type;
         ru->index = packet.reg.index;
-        ru->total_size = packet.reg.total_size;
+        // Cap total_size to prevent buffer over-read in FlushPendingInstruction.
+        ru->total_size = std::min(packet.reg.total_size, static_cast<uint16_t>(sizeof(ru->data)));
         std::memset(ru->data, 0, sizeof(ru->data));
       }
     }

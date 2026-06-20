@@ -101,8 +101,8 @@ struct CoreRvvi_tb : Sysc_tb {
           rpacket.v_id = v_id;
           rpacket.reg.reg_type = 'X'; // GPR
           rpacket.reg.index = rd;
-          rpacket.reg.size = 4;
-          rpacket.reg.total_size = 8;
+          rpacket.reg.size = KP_xlen / 8;
+          rpacket.reg.total_size = KP_xlen / 8;
           rpacket.reg.value[0] = 0xDEADBEEF; // Garbage to detect read failures
           rpacket.reg.value[0] = io_debug_rb_inst_0_bits_data.read().to_uint64();
           
