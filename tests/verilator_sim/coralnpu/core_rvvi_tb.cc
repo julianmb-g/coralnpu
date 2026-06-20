@@ -66,6 +66,32 @@ struct CoreRvvi_tb : Sysc_tb {
   sc_in<bool> io_debug_rb_inst_0_bits_trap;
   sc_in<bool> io_trace_halt;
 
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_0_valid;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_0_data;
+  sc_in<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_0_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_1_valid;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_1_data;
+  sc_in<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_1_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_2_valid;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_2_data;
+  sc_in<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_2_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_3_valid;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_3_data;
+  sc_in<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_3_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_4_valid;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_4_data;
+  sc_in<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_4_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_5_valid;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_5_data;
+  sc_in<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_5_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_6_valid;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_6_data;
+  sc_in<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_6_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_7_valid;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_7_data;
+  sc_in<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_7_idx;
+
+
   SpscRingBuffer<TracePacket, 4096>* buffer;
 
   CoreRvvi_tb(sc_module_name name, int cycles, bool random, SpscRingBuffer<TracePacket, 4096>* buf) 
@@ -109,8 +135,19 @@ struct CoreRvvi_tb : Sysc_tb {
             // Vector registers exceed 64 bytes (Finding 32). Hardcode 256 for vector.
             rpacket.reg.total_size = (opcode == 0x57) ? 256 : (KP_xlen / 8);
             
-            if (i == 0) {
-              rpacket.reg.value[0] = io_debug_rb_inst_0_bits_data.read().to_uint64();
+            if (opcode == 0x57) {
+              uint64_t vdata = 0;
+              if (i == 0 && io_debug_rb_inst_0_bits_vecWrites_0_valid.read()) vdata = io_debug_rb_inst_0_bits_vecWrites_0_data.read().to_uint64();
+              if (i == 1 && io_debug_rb_inst_0_bits_vecWrites_1_valid.read()) vdata = io_debug_rb_inst_0_bits_vecWrites_1_data.read().to_uint64();
+              if (i == 2 && io_debug_rb_inst_0_bits_vecWrites_2_valid.read()) vdata = io_debug_rb_inst_0_bits_vecWrites_2_data.read().to_uint64();
+              if (i == 3 && io_debug_rb_inst_0_bits_vecWrites_3_valid.read()) vdata = io_debug_rb_inst_0_bits_vecWrites_3_data.read().to_uint64();
+              if (i == 4 && io_debug_rb_inst_0_bits_vecWrites_4_valid.read()) vdata = io_debug_rb_inst_0_bits_vecWrites_4_data.read().to_uint64();
+              if (i == 5 && io_debug_rb_inst_0_bits_vecWrites_5_valid.read()) vdata = io_debug_rb_inst_0_bits_vecWrites_5_data.read().to_uint64();
+              if (i == 6 && io_debug_rb_inst_0_bits_vecWrites_6_valid.read()) vdata = io_debug_rb_inst_0_bits_vecWrites_6_data.read().to_uint64();
+              if (i == 7 && io_debug_rb_inst_0_bits_vecWrites_7_valid.read()) vdata = io_debug_rb_inst_0_bits_vecWrites_7_data.read().to_uint64();
+              rpacket.reg.value[0] = vdata;
+            } else {
+              if (i == 0) rpacket.reg.value[0] = io_debug_rb_inst_0_bits_data.read().to_uint64();
             }
             
             while (!buffer->Push(rpacket)) {
@@ -216,6 +253,32 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   sc_signal<bool> io_debug_rb_inst_0_bits_trap;
   sc_signal<bool> io_trace_halt;
 
+  sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_0_valid;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_0_data;
+  sc_signal<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_0_idx;
+  sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_1_valid;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_1_data;
+  sc_signal<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_1_idx;
+  sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_2_valid;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_2_data;
+  sc_signal<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_2_idx;
+  sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_3_valid;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_3_data;
+  sc_signal<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_3_idx;
+  sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_4_valid;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_4_data;
+  sc_signal<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_4_idx;
+  sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_5_valid;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_5_data;
+  sc_signal<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_5_idx;
+  sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_6_valid;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_6_data;
+  sc_signal<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_6_idx;
+  sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_7_valid;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_7_data;
+  sc_signal<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_7_idx;
+
+
   tb.io_halted(io_halted);
   tb.io_fault(io_fault);
   tb.io_debug_rb_inst_0_valid(io_debug_rb_inst_0_valid);
@@ -225,6 +288,31 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   tb.io_debug_rb_inst_0_bits_data(io_debug_rb_inst_0_bits_data);
   tb.io_debug_rb_inst_0_bits_trap(io_debug_rb_inst_0_bits_trap);
   tb.io_trace_halt(io_trace_halt);
+  tb.io_debug_rb_inst_0_bits_vecWrites_0_valid(io_debug_rb_inst_0_bits_vecWrites_0_valid);
+  tb.io_debug_rb_inst_0_bits_vecWrites_0_data(io_debug_rb_inst_0_bits_vecWrites_0_data);
+  tb.io_debug_rb_inst_0_bits_vecWrites_0_idx(io_debug_rb_inst_0_bits_vecWrites_0_idx);
+  tb.io_debug_rb_inst_0_bits_vecWrites_1_valid(io_debug_rb_inst_0_bits_vecWrites_1_valid);
+  tb.io_debug_rb_inst_0_bits_vecWrites_1_data(io_debug_rb_inst_0_bits_vecWrites_1_data);
+  tb.io_debug_rb_inst_0_bits_vecWrites_1_idx(io_debug_rb_inst_0_bits_vecWrites_1_idx);
+  tb.io_debug_rb_inst_0_bits_vecWrites_2_valid(io_debug_rb_inst_0_bits_vecWrites_2_valid);
+  tb.io_debug_rb_inst_0_bits_vecWrites_2_data(io_debug_rb_inst_0_bits_vecWrites_2_data);
+  tb.io_debug_rb_inst_0_bits_vecWrites_2_idx(io_debug_rb_inst_0_bits_vecWrites_2_idx);
+  tb.io_debug_rb_inst_0_bits_vecWrites_3_valid(io_debug_rb_inst_0_bits_vecWrites_3_valid);
+  tb.io_debug_rb_inst_0_bits_vecWrites_3_data(io_debug_rb_inst_0_bits_vecWrites_3_data);
+  tb.io_debug_rb_inst_0_bits_vecWrites_3_idx(io_debug_rb_inst_0_bits_vecWrites_3_idx);
+  tb.io_debug_rb_inst_0_bits_vecWrites_4_valid(io_debug_rb_inst_0_bits_vecWrites_4_valid);
+  tb.io_debug_rb_inst_0_bits_vecWrites_4_data(io_debug_rb_inst_0_bits_vecWrites_4_data);
+  tb.io_debug_rb_inst_0_bits_vecWrites_4_idx(io_debug_rb_inst_0_bits_vecWrites_4_idx);
+  tb.io_debug_rb_inst_0_bits_vecWrites_5_valid(io_debug_rb_inst_0_bits_vecWrites_5_valid);
+  tb.io_debug_rb_inst_0_bits_vecWrites_5_data(io_debug_rb_inst_0_bits_vecWrites_5_data);
+  tb.io_debug_rb_inst_0_bits_vecWrites_5_idx(io_debug_rb_inst_0_bits_vecWrites_5_idx);
+  tb.io_debug_rb_inst_0_bits_vecWrites_6_valid(io_debug_rb_inst_0_bits_vecWrites_6_valid);
+  tb.io_debug_rb_inst_0_bits_vecWrites_6_data(io_debug_rb_inst_0_bits_vecWrites_6_data);
+  tb.io_debug_rb_inst_0_bits_vecWrites_6_idx(io_debug_rb_inst_0_bits_vecWrites_6_idx);
+  tb.io_debug_rb_inst_0_bits_vecWrites_7_valid(io_debug_rb_inst_0_bits_vecWrites_7_valid);
+  tb.io_debug_rb_inst_0_bits_vecWrites_7_data(io_debug_rb_inst_0_bits_vecWrites_7_data);
+  tb.io_debug_rb_inst_0_bits_vecWrites_7_idx(io_debug_rb_inst_0_bits_vecWrites_7_idx);
+
 
   core.clock(tb.clock);
   core.reset(tb.reset);
@@ -256,6 +344,31 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   core.io_debug_rb_inst_0_bits_data(io_debug_rb_inst_0_bits_data);
   core.io_debug_rb_inst_0_bits_trap(io_debug_rb_inst_0_bits_trap);
   core.io_trace_halt(io_trace_halt);
+  core.io_debug_rb_inst_0_bits_vecWrites_0_valid(io_debug_rb_inst_0_bits_vecWrites_0_valid);
+  core.io_debug_rb_inst_0_bits_vecWrites_0_data(io_debug_rb_inst_0_bits_vecWrites_0_data);
+  core.io_debug_rb_inst_0_bits_vecWrites_0_idx(io_debug_rb_inst_0_bits_vecWrites_0_idx);
+  core.io_debug_rb_inst_0_bits_vecWrites_1_valid(io_debug_rb_inst_0_bits_vecWrites_1_valid);
+  core.io_debug_rb_inst_0_bits_vecWrites_1_data(io_debug_rb_inst_0_bits_vecWrites_1_data);
+  core.io_debug_rb_inst_0_bits_vecWrites_1_idx(io_debug_rb_inst_0_bits_vecWrites_1_idx);
+  core.io_debug_rb_inst_0_bits_vecWrites_2_valid(io_debug_rb_inst_0_bits_vecWrites_2_valid);
+  core.io_debug_rb_inst_0_bits_vecWrites_2_data(io_debug_rb_inst_0_bits_vecWrites_2_data);
+  core.io_debug_rb_inst_0_bits_vecWrites_2_idx(io_debug_rb_inst_0_bits_vecWrites_2_idx);
+  core.io_debug_rb_inst_0_bits_vecWrites_3_valid(io_debug_rb_inst_0_bits_vecWrites_3_valid);
+  core.io_debug_rb_inst_0_bits_vecWrites_3_data(io_debug_rb_inst_0_bits_vecWrites_3_data);
+  core.io_debug_rb_inst_0_bits_vecWrites_3_idx(io_debug_rb_inst_0_bits_vecWrites_3_idx);
+  core.io_debug_rb_inst_0_bits_vecWrites_4_valid(io_debug_rb_inst_0_bits_vecWrites_4_valid);
+  core.io_debug_rb_inst_0_bits_vecWrites_4_data(io_debug_rb_inst_0_bits_vecWrites_4_data);
+  core.io_debug_rb_inst_0_bits_vecWrites_4_idx(io_debug_rb_inst_0_bits_vecWrites_4_idx);
+  core.io_debug_rb_inst_0_bits_vecWrites_5_valid(io_debug_rb_inst_0_bits_vecWrites_5_valid);
+  core.io_debug_rb_inst_0_bits_vecWrites_5_data(io_debug_rb_inst_0_bits_vecWrites_5_data);
+  core.io_debug_rb_inst_0_bits_vecWrites_5_idx(io_debug_rb_inst_0_bits_vecWrites_5_idx);
+  core.io_debug_rb_inst_0_bits_vecWrites_6_valid(io_debug_rb_inst_0_bits_vecWrites_6_valid);
+  core.io_debug_rb_inst_0_bits_vecWrites_6_data(io_debug_rb_inst_0_bits_vecWrites_6_data);
+  core.io_debug_rb_inst_0_bits_vecWrites_6_idx(io_debug_rb_inst_0_bits_vecWrites_6_idx);
+  core.io_debug_rb_inst_0_bits_vecWrites_7_valid(io_debug_rb_inst_0_bits_vecWrites_7_valid);
+  core.io_debug_rb_inst_0_bits_vecWrites_7_data(io_debug_rb_inst_0_bits_vecWrites_7_data);
+  core.io_debug_rb_inst_0_bits_vecWrites_7_idx(io_debug_rb_inst_0_bits_vecWrites_7_idx);
+
 
   mif.clock(tb.clock);
   mif.reset(tb.reset);
@@ -361,6 +474,31 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
     tb.io_debug_rb_inst_0_bits_data.val = core.io_debug_rb_inst_0_bits_data.val;
     tb.io_debug_rb_inst_0_bits_trap.val = core.io_debug_rb_inst_0_bits_trap.val;
     tb.io_trace_halt.val = core.io_trace_halt.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_0_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_0_valid.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_0_data.val = core.io_debug_rb_inst_0_bits_vecWrites_0_data.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_0_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_0_idx.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_1_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_1_valid.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_1_data.val = core.io_debug_rb_inst_0_bits_vecWrites_1_data.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_1_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_1_idx.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_2_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_2_valid.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_2_data.val = core.io_debug_rb_inst_0_bits_vecWrites_2_data.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_2_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_2_idx.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_3_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_3_valid.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_3_data.val = core.io_debug_rb_inst_0_bits_vecWrites_3_data.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_3_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_3_idx.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_4_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_4_valid.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_4_data.val = core.io_debug_rb_inst_0_bits_vecWrites_4_data.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_4_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_4_idx.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_5_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_5_valid.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_5_data.val = core.io_debug_rb_inst_0_bits_vecWrites_5_data.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_5_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_5_idx.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_6_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_6_valid.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_6_data.val = core.io_debug_rb_inst_0_bits_vecWrites_6_data.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_6_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_6_idx.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_7_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_7_valid.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_7_data.val = core.io_debug_rb_inst_0_bits_vecWrites_7_data.val;
+    tb.io_debug_rb_inst_0_bits_vecWrites_7_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_7_idx.val;
+
     tb.io_halted.val = core.io_halted.val;
 
     tb.posedge();

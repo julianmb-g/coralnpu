@@ -47,14 +47,15 @@ int main(int argc, char* argv[]) {
   phdr.p_offset = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
   phdr.p_vaddr = 0x80000000;
   phdr.p_paddr = 0x80000000;
-  phdr.p_filesz = 8;
-  phdr.p_memsz = 8;
+  phdr.p_filesz = 12;
+  phdr.p_memsz = 12;
   phdr.p_flags = PF_R | PF_X;
   phdr.p_align = 4;
 
-  uint32_t payload[2];
+  uint32_t payload[3];
   payload[0] = 0x00100513; // li a0, 1
-  payload[1] = 0x08000073; // mpause
+  payload[1] = 0x00000057; // v-something (opcode 0x57, rd=0)
+  payload[2] = 0x08000073; // mpause
 
   std::ofstream ofs(argv[1], std::ios::binary);
   ofs.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr));
@@ -82,6 +83,18 @@ if ! grep -q "x10:00000001" trace.rvvi; then
 fi
 if ! grep -q "08000073" trace.rvvi; then
   echo "Trace file missing expected instruction (08000073)"
+  exit 1
+fi
+if ! grep -q "00000057" trace.rvvi; then
+  echo "Trace file missing expected vector instruction (00000057)"
+  exit 1
+fi
+if ! grep -q "v0:" trace.rvvi; then
+  echo "Trace file missing expected vector register update (v0:)"
+  exit 1
+fi
+if ! grep -q "5757" trace.rvvi; then
+  echo "Trace file missing expected vector data (5757)"
   exit 1
 fi
 

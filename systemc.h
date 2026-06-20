@@ -4,13 +4,13 @@
 #include <cassert>
 
 template<int W> struct sc_bv {
-  uint64_t val = 0;
+  uint32_t words[(W + 31) / 32] = {0};
   sc_bv() {}
-  sc_bv(uint64_t v) : val(v) {}
-  uint64_t to_uint64() const { return val; }
-  uint32_t to_uint() const { return static_cast<uint32_t>(val); }
-  uint32_t get_word(int idx) const { if (idx < 2) return static_cast<uint32_t>(val >> (idx * 32)); return 0; }
-  void set_word(int idx, uint32_t v) { if (idx < 2) { val &= ~(0xFFFFFFFFull << (idx * 32)); val |= (static_cast<uint64_t>(v) << (idx * 32)); } }
+  sc_bv(uint64_t v) { words[0] = static_cast<uint32_t>(v); if ((W + 31)/32 > 1) words[1] = static_cast<uint32_t>(v >> 32); }
+  uint64_t to_uint64() const { uint64_t res = words[0]; if ((W + 31)/32 > 1) res |= (static_cast<uint64_t>(words[1]) << 32); return res; }
+  uint32_t to_uint() const { return words[0]; }
+  uint32_t get_word(int idx) const { if (idx < (W + 31) / 32) return words[idx]; return 0; }
+  void set_word(int idx, uint32_t v) { if (idx < (W + 31) / 32) words[idx] = v; }
 };
 
 template<typename T> struct sc_signal {

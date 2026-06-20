@@ -72,7 +72,7 @@ struct Core_if : Memory_if {
   void eval() {
     if (reset) {
       io_ibus_ready = false;
-    } else if (clock->posedge()) {
+    } else if (clock.read()) {
       cycle_++;
 
       io_ibus_ready = rand_bool_ibus();

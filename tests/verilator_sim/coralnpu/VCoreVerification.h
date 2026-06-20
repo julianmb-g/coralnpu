@@ -51,6 +51,32 @@ SC_MODULE(VCoreVerification) {
   sc_out<bool> io_debug_rb_inst_0_bits_trap;
   sc_out<bool> io_trace_halt; // To simulate mpause (Temporary, to be removed)
 
+  sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_0_valid;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_0_data;
+  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_0_idx;
+  sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_1_valid;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_1_data;
+  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_1_idx;
+  sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_2_valid;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_2_data;
+  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_2_idx;
+  sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_3_valid;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_3_data;
+  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_3_idx;
+  sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_4_valid;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_4_data;
+  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_4_idx;
+  sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_5_valid;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_5_data;
+  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_5_idx;
+  sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_6_valid;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_6_data;
+  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_6_idx;
+  sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_7_valid;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_7_data;
+  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_7_idx;
+
+
   uint32_t pc = 0x80000000;
   bool halted = false;
   uint32_t instruction_count = 0;
@@ -58,6 +84,7 @@ SC_MODULE(VCoreVerification) {
   uint32_t gpr[32] = {0};
 
   void eval() {
+    if (!clock.read() && !reset.read()) return;
     if (reset.read()) {
       pc = 0x80000000;
       io_halted.write(false);
@@ -73,6 +100,30 @@ SC_MODULE(VCoreVerification) {
       io_debug_rb_inst_0_bits_data.write(0);
       io_debug_rb_inst_0_bits_trap.write(false);
       io_trace_halt.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_0_valid.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_0_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_0_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_1_valid.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_1_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_1_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_2_valid.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_2_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_2_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_3_valid.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_3_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_3_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_4_valid.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_4_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_4_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_5_valid.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_5_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_5_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_6_valid.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_6_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_6_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_7_valid.write(false);
+      io_debug_rb_inst_0_bits_vecWrites_7_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_7_idx.write(0);
       cycle_count = 0;
       halted = false;
       instruction_count = 0;
@@ -137,6 +188,50 @@ SC_MODULE(VCoreVerification) {
       io_debug_rb_inst_0_bits_idx.write(instruction_count % 8);
       io_debug_rb_inst_0_bits_data.write(write_val);
       io_debug_rb_inst_0_bits_trap.write(false);
+
+      if (opcode == 0x57) {
+        uint32_t val_0 = (rd << 24) | (0 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_0_valid.write(true);
+        io_debug_rb_inst_0_bits_vecWrites_0_data.write(val_0);
+        io_debug_rb_inst_0_bits_vecWrites_0_idx.write(rd);
+        uint32_t val_1 = (rd << 24) | (1 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_1_valid.write(true);
+        io_debug_rb_inst_0_bits_vecWrites_1_data.write(val_1);
+        io_debug_rb_inst_0_bits_vecWrites_1_idx.write(rd);
+        uint32_t val_2 = (rd << 24) | (2 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_2_valid.write(true);
+        io_debug_rb_inst_0_bits_vecWrites_2_data.write(val_2);
+        io_debug_rb_inst_0_bits_vecWrites_2_idx.write(rd);
+        uint32_t val_3 = (rd << 24) | (3 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_3_valid.write(true);
+        io_debug_rb_inst_0_bits_vecWrites_3_data.write(val_3);
+        io_debug_rb_inst_0_bits_vecWrites_3_idx.write(rd);
+        uint32_t val_4 = (rd << 24) | (4 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_4_valid.write(true);
+        io_debug_rb_inst_0_bits_vecWrites_4_data.write(val_4);
+        io_debug_rb_inst_0_bits_vecWrites_4_idx.write(rd);
+        uint32_t val_5 = (rd << 24) | (5 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_5_valid.write(true);
+        io_debug_rb_inst_0_bits_vecWrites_5_data.write(val_5);
+        io_debug_rb_inst_0_bits_vecWrites_5_idx.write(rd);
+        uint32_t val_6 = (rd << 24) | (6 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_6_valid.write(true);
+        io_debug_rb_inst_0_bits_vecWrites_6_data.write(val_6);
+        io_debug_rb_inst_0_bits_vecWrites_6_idx.write(rd);
+        uint32_t val_7 = (rd << 24) | (7 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_7_valid.write(true);
+        io_debug_rb_inst_0_bits_vecWrites_7_data.write(val_7);
+        io_debug_rb_inst_0_bits_vecWrites_7_idx.write(rd);
+      } else {
+        io_debug_rb_inst_0_bits_vecWrites_0_valid.write(false);
+        io_debug_rb_inst_0_bits_vecWrites_1_valid.write(false);
+        io_debug_rb_inst_0_bits_vecWrites_2_valid.write(false);
+        io_debug_rb_inst_0_bits_vecWrites_3_valid.write(false);
+        io_debug_rb_inst_0_bits_vecWrites_4_valid.write(false);
+        io_debug_rb_inst_0_bits_vecWrites_5_valid.write(false);
+        io_debug_rb_inst_0_bits_vecWrites_6_valid.write(false);
+        io_debug_rb_inst_0_bits_vecWrites_7_valid.write(false);
+      }
 
       if (inst == 0x08000073) { // mpause
         halted = true;
