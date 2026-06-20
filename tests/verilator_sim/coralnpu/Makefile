@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++20 -pthread
-INCLUDES = -I../../.. -I../../..
+INCLUDES = -I../../.. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core
 
 all: core_barebones_tb_test
 
