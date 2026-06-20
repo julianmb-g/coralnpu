@@ -29,10 +29,20 @@
 #include "tests/verilator_sim/elf.h"
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
-#ifdef DELAY_FORMATTER
-#include "/tmp/delay_formatter.h"
-#else
 #include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
+
+#ifdef DELAY_FORMATTER
+#include <chrono>
+
+namespace mpact::sim::riscv::rvvi {
+class DelayFormatter : public CustomFallbackFormatter {
+public:
+  std::string Disassemble(uint32_t inst) override {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    return CustomFallbackFormatter::Disassemble(inst);
+  }
+};
+}
 #endif
 
 using namespace mpact::sim::riscv::rvvi;
@@ -86,7 +96,7 @@ struct CoreRvvi_tb : Sysc_tb {
   }
 };
 
-bool LoadElfToMemory(const std::string& file_name, Core_if& mif) {
+bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry_point) {
   int fd = open(file_name.c_str(), O_RDONLY);
   if (fd < 0) return false;
   struct stat sb;
@@ -99,7 +109,7 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif) {
   uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
   bool load_ok = true;
   if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
-    ::LoadElf(data8,
+    entry_point = ::LoadElf(data8,
               [&mif, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
                 if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
@@ -122,7 +132,8 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   CoreRvvi_tb tb("CoreRvvi_tb", cycles, false, &buffer);
   Core_if mif("Core_if", nullptr, memory_profile);
 
-  if (!LoadElfToMemory(bin, mif)) {
+  uint32_t entry_point = 0x80000000;
+  if (!LoadElfToMemory(bin, mif, entry_point)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
     exit(-1);
   }
@@ -187,6 +198,11 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   core.io_dbus_wdata(io_dbus_wdata);
   core.io_dbus_wmask(io_dbus_wmask);
   core.io_dbus_rdata(io_dbus_rdata);
+  core.io_ibus_fault_valid(io_ibus_fault_valid);
+  core.io_ibus_fault_bits_write(io_ibus_fault_bits_write);
+  core.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
+  core.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
+  core.io_dbus_adrx(io_dbus_adrx);
   
   core.io_trace_valid(io_trace_valid);
   core.io_trace_pc(io_trace_pc);
@@ -226,6 +242,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   tb.reset = 0;
   core.reset.val = 0;
   mif.reset.val = 0;
+  core.pc = entry_point;
 
   // Initialize ready signals to false
   core.io_ibus_ready.val = 0;
@@ -243,6 +260,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
     mif.io_dbus_valid.val = core.io_dbus_valid.val;
     mif.io_dbus_write.val = core.io_dbus_write.val;
     mif.io_dbus_addr.val = core.io_dbus_addr.val;
+    mif.io_dbus_adrx.val = core.io_dbus_adrx.val;
     mif.io_dbus_size.val = core.io_dbus_size.val;
     mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
     mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
@@ -252,6 +270,10 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
     // Propagate MIF -> Core
     core.io_ibus_ready.val = mif.io_ibus_ready.val;
     core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
+    core.io_ibus_fault_valid.val = mif.io_ibus_fault_valid.val;
+    core.io_ibus_fault_bits_write.val = mif.io_ibus_fault_bits_write.val;
+    core.io_ibus_fault_bits_addr.val = mif.io_ibus_fault_bits_addr.val;
+    core.io_ibus_fault_bits_epc.val = mif.io_ibus_fault_bits_epc.val;
     core.io_dbus_ready.val = mif.io_dbus_ready.val;
     core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
 
@@ -266,6 +288,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
     mif.io_dbus_valid.val = core.io_dbus_valid.val;
     mif.io_dbus_write.val = core.io_dbus_write.val;
     mif.io_dbus_addr.val = core.io_dbus_addr.val;
+    mif.io_dbus_adrx.val = core.io_dbus_adrx.val;
     mif.io_dbus_size.val = core.io_dbus_size.val;
     mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
     mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
@@ -275,6 +298,10 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
     // Propagate MIF -> Core
     core.io_ibus_ready.val = mif.io_ibus_ready.val;
     core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
+    core.io_ibus_fault_valid.val = mif.io_ibus_fault_valid.val;
+    core.io_ibus_fault_bits_write.val = mif.io_ibus_fault_bits_write.val;
+    core.io_ibus_fault_bits_addr.val = mif.io_ibus_fault_bits_addr.val;
+    core.io_ibus_fault_bits_epc.val = mif.io_ibus_fault_bits_epc.val;
     core.io_dbus_ready.val = mif.io_dbus_ready.val;
     core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
 

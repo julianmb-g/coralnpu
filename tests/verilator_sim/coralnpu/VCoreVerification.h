@@ -34,19 +34,37 @@ SC_MODULE(VCoreVerification) {
   sc_out<sc_bv<KP_lsuDataBits / 8>> io_dbus_wmask;
   sc_in<sc_bv<KP_lsuDataBits>> io_dbus_rdata;
 
+  sc_in<bool> io_ibus_fault_valid;
+  sc_in<bool> io_ibus_fault_bits_write;
+  sc_in<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_addr;
+  sc_in<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc;
+  sc_out<sc_bv<KP_lsuAddrBits>> io_dbus_adrx;
+
   // RVVI Trace Ports (mocked)
   sc_out<bool> io_trace_valid;
   sc_out<sc_bv<64>> io_trace_pc;
   sc_out<sc_bv<32>> io_trace_insn;
   sc_out<bool> io_trace_halt; // To simulate mpause
 
+  uint32_t pc = 0x80000000;
   int cycle_count;
 
   void eval() {
     if (reset.read()) {
       io_halted.write(false);
+      io_fault.write(false);
+      io_wfi.write(false);
+      io_ibus_valid.write(false);
+      io_dbus_valid.write(false);
+      io_dbus_adrx.write(0);
       io_trace_valid.write(false);
       cycle_count = 0;
+      return;
+    }
+    
+    if (io_ibus_fault_valid.read()) {
+      io_fault.write(true);
+      io_halted.write(true);
       return;
     }
     

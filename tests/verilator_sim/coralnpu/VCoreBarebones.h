@@ -18,6 +18,7 @@
 #include <systemc.h>
 #include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 #include "tests/verilator_sim/coralnpu/VCoreBarebones_parameters.h"
+#include <cstdio>
 
 SC_MODULE(VCoreBarebones) {
   sc_in<bool> clock;
@@ -42,7 +43,13 @@ SC_MODULE(VCoreBarebones) {
   sc_out<sc_bv<KP_lsuDataBits / 8>> io_dbus_wmask;
   sc_in<sc_bv<KP_lsuDataBits>> io_dbus_rdata;
 
-  uint32_t pc = 0x00000000;
+  sc_in<bool> io_ibus_fault_valid;
+  sc_in<bool> io_ibus_fault_bits_write;
+  sc_in<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_addr;
+  sc_in<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc;
+  sc_out<sc_bv<KP_lsuAddrBits>> io_dbus_adrx;
+
+  uint32_t pc = 0x80000000;
   bool halted = false;
   uint32_t instruction_count = 0;
 
@@ -55,12 +62,13 @@ SC_MODULE(VCoreBarebones) {
 
   void eval() {
     if (reset.read()) {
-      pc = 0x00000000;
+      pc = 0x80000000;
       io_halted.write(false);
       io_fault.write(false);
       io_wfi.write(false);
       io_ibus_valid.write(false);
       io_dbus_valid.write(false);
+      io_dbus_adrx.write(0);
       halted = false;
       instruction_count = 0;
       return;
@@ -71,10 +79,18 @@ SC_MODULE(VCoreBarebones) {
       return;
     }
 
+    if (io_ibus_fault_valid.read()) {
+      io_fault.write(true);
+      halted = true;
+      io_halted.write(true);
+      return;
+    }
+
     // Attempt instruction fetch
     uint32_t fetch_addr = pc & ~0x1f; // align to 32 bytes (256 bits)
     io_ibus_valid.write(true);
     io_ibus_addr.write(fetch_addr);
+    io_dbus_adrx.write(io_dbus_addr.read());
 
     if (io_ibus_ready.read()) {
       sc_bv<KP_fetchDataBits> rdata = io_ibus_rdata.read();

@@ -34,8 +34,24 @@ struct Memory_if : Sysc_module {
     uint8_t  data[4096];
   };
 
+  std::string profile_;
+
+  bool IsValidAddress(uint32_t addr) const {
+    if (profile_ == "default") {
+      if (addr >= 0x80000000) return true;
+      if (addr < 0x2000) return true; // ITCM: 8KB
+      if (addr >= 0x10000 && addr < 0x18000) return true; // DTCM: 32KB
+      return false;
+    } else if (profile_ == "highmem") {
+      if (addr >= 0x80000000) return true;
+      if (addr < 0x200000) return true; // ITCM + DTCM: 2MB total
+      return false;
+    }
+    return true;
+  }
+
   Memory_if(sc_module_name n, const char* bin, int limit = -1, const std::string& profile = "all") :
-      Sysc_module(n) {
+      Sysc_module(n), profile_(profile) {
     FILE *f = (bin != nullptr && bin[0] != '\0') ? fopen(bin, "rb") : nullptr;
 
     if (f != nullptr) {
@@ -94,12 +110,17 @@ struct Memory_if : Sysc_module {
 
   bool Read(uint32_t addr, int bytes, uint8_t* data) {
     while (bytes > 0) {
+      if (!IsValidAddress(addr)) {
+        printf("DEBUG: Read failed IsValidAddress addr=%08x\n", addr);
+        return false;
+      }
       const uint32_t maddr = addr & kPageMask;
       const uint32_t offset = addr - maddr;
       const int limit = kPageSize - offset;
       const int len = std::min(bytes, limit);
 
       if (!HasPage(maddr)) {
+        printf("DEBUG: Read failed HasPage addr=%08x maddr=%08x\n", addr, maddr);
         return false;
       }
 
@@ -123,6 +144,7 @@ struct Memory_if : Sysc_module {
 
   bool Write(uint32_t addr, int bytes, const uint8_t* data) {
     while (bytes > 0) {
+      if (!IsValidAddress(addr)) return false;
       const uint32_t maddr = addr & kPageMask;
       const uint32_t offset = addr - maddr;
       const int limit = kPageSize - offset;

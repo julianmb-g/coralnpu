@@ -9,12 +9,12 @@ template<int W> struct sc_bv {
   sc_bv(uint64_t v) : val(v) {}
   uint64_t to_uint64() const { return val; }
   uint32_t to_uint() const { return static_cast<uint32_t>(val); }
-  uint32_t get_word(int idx) const { return static_cast<uint32_t>(val >> (idx * 32)); }
-  void set_word(int idx, uint32_t v) { val &= ~(0xFFFFFFFFull << (idx * 32)); val |= (static_cast<uint64_t>(v) << (idx * 32)); }
+  uint32_t get_word(int idx) const { if (idx < 2) return static_cast<uint32_t>(val >> (idx * 32)); return 0; }
+  void set_word(int idx, uint32_t v) { if (idx < 2) { val &= ~(0xFFFFFFFFull << (idx * 32)); val |= (static_cast<uint64_t>(v) << (idx * 32)); } }
 };
 
 template<typename T> struct sc_signal {
-  T val;
+  T val = T();
   void write(T v) { val = v; }
   T read() const { return val; }
   void operator=(T v) { val = v; }
@@ -33,7 +33,7 @@ struct sc_clock {
 };
 
 template<typename T> struct sc_in {
-  T val;
+  T val = T();
   T read() const { return val; }
   bool pos() const { return true; }
   bool neg() const { return false; }
@@ -48,7 +48,7 @@ template<typename T> struct sc_in {
 };
 
 template<typename T> struct sc_out {
-  T val;
+  T val = T();
   void write(T v) { val = v; }
   T read() const { return val; }
   void bind(T& v) { val = v; }

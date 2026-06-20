@@ -54,7 +54,7 @@ struct Core_tb : Sysc_tb {
   }
 };
 
-bool LoadElfToMemory(const std::string& file_name, Core_if& mif) {
+bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry_point) {
   int fd = open(file_name.c_str(), O_RDONLY);
   if (fd < 0) {
     fprintf(stderr, "Failed to open ELF file: %s\n", file_name.c_str());
@@ -77,7 +77,7 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif) {
   uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
   bool load_ok = true;
   if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
-    ::LoadElf(data8,
+    entry_point = ::LoadElf(data8,
               [&mif, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
                 if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
@@ -98,7 +98,8 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   Core_tb tb("Core_tb", cycles, /* random= */ false);
   Core_if mif("Core_if", nullptr, memory_profile); // nullptr since we will load ELF
 
-  if (!LoadElfToMemory(bin, mif)) {
+  uint32_t entry_point = 0x80000000;
+  if (!LoadElfToMemory(bin, mif, entry_point)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
     exit(-1);
   }
@@ -157,6 +158,11 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   core.io_dbus_wdata(io_dbus_wdata);
   core.io_dbus_wmask(io_dbus_wmask);
   core.io_dbus_rdata(io_dbus_rdata);
+  core.io_ibus_fault_valid(io_ibus_fault_valid);
+  core.io_ibus_fault_bits_write(io_ibus_fault_bits_write);
+  core.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
+  core.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
+  core.io_dbus_adrx(io_dbus_adrx);
 
   mif.clock(tb.clock);
   mif.reset(tb.reset);
@@ -191,6 +197,7 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   tb.reset = 0;
   core.reset.val = 0;
   mif.reset.val = 0;
+  core.pc = entry_point;
   
   // Initialize ready signals to false
   core.io_ibus_ready.val = 0;
@@ -209,6 +216,7 @@ static int Core_run(const char* name, const char* bin, const int cycles,
     mif.io_dbus_valid.val = core.io_dbus_valid.val;
     mif.io_dbus_write.val = core.io_dbus_write.val;
     mif.io_dbus_addr.val = core.io_dbus_addr.val;
+    mif.io_dbus_adrx.val = core.io_dbus_adrx.val;
     mif.io_dbus_size.val = core.io_dbus_size.val;
     mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
     mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
@@ -217,9 +225,13 @@ static int Core_run(const char* name, const char* bin, const int cycles,
 
     // Propagate MIF -> Core
     core.io_ibus_ready.val = mif.io_ibus_ready.val;
-    core.io_ibus_rdata.val = mif.io_ibus_rdata.val; // Reverted
+    core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
+    core.io_ibus_fault_valid.val = mif.io_ibus_fault_valid.val;
+    core.io_ibus_fault_bits_write.val = mif.io_ibus_fault_bits_write.val;
+    core.io_ibus_fault_bits_addr.val = mif.io_ibus_fault_bits_addr.val;
+    core.io_ibus_fault_bits_epc.val = mif.io_ibus_fault_bits_epc.val;
     core.io_dbus_ready.val = mif.io_dbus_ready.val;
-    core.io_dbus_rdata.val = mif.io_dbus_rdata.val; // Reverted
+    core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
     
     // Posedge
     core.clock.val = 1;
@@ -232,6 +244,7 @@ static int Core_run(const char* name, const char* bin, const int cycles,
     mif.io_dbus_valid.val = core.io_dbus_valid.val;
     mif.io_dbus_write.val = core.io_dbus_write.val;
     mif.io_dbus_addr.val = core.io_dbus_addr.val;
+    mif.io_dbus_adrx.val = core.io_dbus_adrx.val;
     mif.io_dbus_size.val = core.io_dbus_size.val;
     mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
     mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
@@ -240,9 +253,13 @@ static int Core_run(const char* name, const char* bin, const int cycles,
 
     // Propagate MIF -> Core
     core.io_ibus_ready.val = mif.io_ibus_ready.val;
-    core.io_ibus_rdata.val = mif.io_ibus_rdata.val; // Reverted
+    core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
+    core.io_ibus_fault_valid.val = mif.io_ibus_fault_valid.val;
+    core.io_ibus_fault_bits_write.val = mif.io_ibus_fault_bits_write.val;
+    core.io_ibus_fault_bits_addr.val = mif.io_ibus_fault_bits_addr.val;
+    core.io_ibus_fault_bits_epc.val = mif.io_ibus_fault_bits_epc.val;
     core.io_dbus_ready.val = mif.io_dbus_ready.val;
-    core.io_dbus_rdata.val = mif.io_dbus_rdata.val; // Reverted
+    core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
     
     // Manual propagation for mock systemc.h
     tb.io_halted.val = core.io_halted.val;
