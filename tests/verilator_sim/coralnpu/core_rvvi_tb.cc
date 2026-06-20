@@ -91,18 +91,20 @@ struct CoreRvvi_tb : Sysc_tb {
       uint32_t opcode = inst & 0x7f;
       bool writes_rd = (opcode == 0x13) || (opcode == 0x33) || (opcode == 0x37) || 
                        (opcode == 0x17) || (opcode == 0x6f) || (opcode == 0x67) || 
-                       (opcode == 0x03) || (opcode == 0x73);
+                       (opcode == 0x03) || (opcode == 0x73) || (opcode == 0x57);
       
       if (writes_rd) {
         uint32_t rd = (inst >> 7) & 0x1f;
-        if (rd != 0) {
+        // Vector register v0 (rd==0) is valid and traced.
+        if (rd != 0 || opcode == 0x57) {
           TracePacket rpacket = {};
           rpacket.type = 'R';
           rpacket.v_id = v_id;
-          rpacket.reg.reg_type = 'X'; // GPR
+          rpacket.reg.reg_type = (opcode == 0x57) ? 'V' : 'X';
           rpacket.reg.index = rd;
           rpacket.reg.size = KP_xlen / 8;
-          rpacket.reg.total_size = KP_xlen / 8;
+          // Vector registers exceed 64 bytes (Finding 32). Hardcode 256 for vector.
+          rpacket.reg.total_size = (opcode == 0x57) ? 256 : (KP_xlen / 8);
           rpacket.reg.value[0] = 0xDEADBEEF; // Garbage to detect read failures
           rpacket.reg.value[0] = io_debug_rb_inst_0_bits_data.read().to_uint64();
           
