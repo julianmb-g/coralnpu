@@ -40,6 +40,7 @@
 
 ABSL_FLAG(int, cycles, 500000, "Simulation cycles");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
+ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
 
 struct Core_tb : Sysc_tb {
   sc_in<bool> io_halted;
@@ -74,25 +75,28 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif) {
 
   uint32_t elf_magic = 0x464c457f;
   uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
+  bool load_ok = true;
   if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
     ::LoadElf(data8,
-              [&mif](void* dest, const void* src, size_t count) {
+              [&mif, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
-                mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src));
+                if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
+                  load_ok = false;
+                }
                 return dest;
               });
     munmap(file_data, file_size);
-    return true;
+    return load_ok;
   }
   munmap(file_data, file_size);
   return false;
 }
 
 static void Core_run(const char* name, const char* bin, const int cycles,
-                     const bool trace) {
+                     const bool trace, const std::string& memory_profile) {
   VERILATOR_MODEL core(name);
   Core_tb tb("Core_tb", cycles, /* random= */ false);
-  Core_if mif("Core_if", nullptr); // nullptr since we will load ELF
+  Core_if mif("Core_if", nullptr, memory_profile); // nullptr since we will load ELF
 
   if (!LoadElfToMemory(bin, mif)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
@@ -178,7 +182,27 @@ static void Core_run(const char* name, const char* bin, const int cycles,
     tb.trace(&core);
   }
 
-  tb.start();
+  tb.reset = 1;
+  core.reset.val = 1;
+  core.eval();
+  mif.eval();
+  
+  tb.reset = 0;
+  core.reset.val = 0;
+  for (int i = 0; i < cycles; ++i) {
+    // Toggle clock for Verilator model
+    core.clock.val = !core.clock.val;
+    
+    core.eval();
+    mif.eval();
+    
+    // Manual propagation for mock systemc.h
+    tb.io_halted.val = core.io_halted.val;
+    tb.io_fault.val = core.io_fault.val;
+
+    tb.posedge();
+    if (tb.io_halted.val) break;
+  }
 }
 
 int sc_main(int argc, char *argv[]) {
@@ -193,6 +217,6 @@ int sc_main(int argc, char *argv[]) {
   const char* path = argv[1];
 
   Core_run(Sysc_tb::get_name(argv[0]), path, absl::GetFlag(FLAGS_cycles),
-           absl::GetFlag(FLAGS_trace));
+           absl::GetFlag(FLAGS_trace), absl::GetFlag(FLAGS_memory_profile));
   return 0;
 }

@@ -63,7 +63,7 @@ struct Core_if : Memory_if {
   sc_in<sc_bv<KP_lsuDataBits / 8> > io_dbus_wmask;
   sc_out<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
 
-  Core_if(sc_module_name n, const char* bin) : Memory_if(n, bin) {
+  Core_if(sc_module_name n, const char* bin, const std::string& profile = "all") : Memory_if(n, bin, -1, profile) {
     for (int i = 0; i < KP_lsuDataBits / 32; ++i) {
       runused_.set_word(i, 0);
     }
