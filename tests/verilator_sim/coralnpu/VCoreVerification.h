@@ -47,10 +47,13 @@ SC_MODULE(VCoreVerification) {
   sc_out<bool> io_trace_halt; // To simulate mpause
 
   uint32_t pc = 0x80000000;
+  bool halted = false;
+  uint32_t instruction_count = 0;
   int cycle_count;
 
   void eval() {
     if (reset.read()) {
+      pc = 0x80000000;
       io_halted.write(false);
       io_fault.write(false);
       io_wfi.write(false);
@@ -58,30 +61,57 @@ SC_MODULE(VCoreVerification) {
       io_dbus_valid.write(false);
       io_dbus_adrx.write(0);
       io_trace_valid.write(false);
+      io_trace_halt.write(false);
       cycle_count = 0;
+      halted = false;
+      instruction_count = 0;
       return;
     }
-    
+
+    if (halted) {
+      io_halted.write(true);
+      return;
+    }
+
     if (io_ibus_fault_valid.read()) {
       io_fault.write(true);
+      halted = true;
       io_halted.write(true);
       return;
     }
-    
+
     cycle_count++;
-    
-    // Simulate emitting instructions
-    if (cycle_count == 10) {
+
+    // Attempt instruction fetch
+    uint32_t fetch_addr = pc & ~0x1f; // align to 32 bytes (256 bits)
+    io_ibus_valid.write(true);
+    io_ibus_addr.write(fetch_addr);
+    io_dbus_adrx.write(io_dbus_addr.read());
+
+    if (io_ibus_ready.read()) {
+      sc_bv<KP_fetchDataBits> rdata = io_ibus_rdata.read();
+      uint32_t word_offset = (pc - fetch_addr) / 4;
+      uint32_t inst = rdata.get_word(word_offset);
+
+      instruction_count++;
+
+      // Emit trace
       io_trace_valid.write(true);
-      io_trace_pc.write(0x1000);
-      io_trace_insn.write(0x00000013); // nop
-      io_trace_halt.write(false);
-    } else if (cycle_count == 20) {
-      io_trace_valid.write(true);
-      io_trace_pc.write(0x1004);
-      io_trace_insn.write(0x08000073); // mpause
-      io_trace_halt.write(true);
-      io_halted.write(true);
+      io_trace_pc.write(pc);
+      io_trace_insn.write(inst);
+
+      if (inst == 0x08000073) { // mpause
+        halted = true;
+        io_halted.write(true);
+        io_trace_halt.write(true);
+      } else if (inst == 0x00100073) { // ebreak
+        halted = true;
+        io_halted.write(true);
+        io_trace_halt.write(true);
+      } else {
+        pc += 4; // increment pc
+        io_trace_halt.write(false);
+      }
     } else {
       io_trace_valid.write(false);
       io_trace_halt.write(false);
