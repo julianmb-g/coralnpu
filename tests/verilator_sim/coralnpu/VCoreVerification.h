@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <systemc.h>
+#include <cstdio>
 
 // Define constants based on core_if.h and coralnpu_cfg.h
 #define KP_programCounterBits 32
@@ -41,7 +42,7 @@ SC_MODULE(VCoreVerification) {
 
   int cycle_count;
 
-  void process() {
+  void eval() {
     if (reset.read()) {
       io_halted.write(false);
       io_trace_valid.write(false);

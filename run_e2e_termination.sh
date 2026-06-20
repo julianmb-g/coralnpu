@@ -1,25 +1,19 @@
 #!/bin/bash
 set -e
 
-# Build the simulator
-echo "Building simulator..."
-cat << 'EOF' > /tmp/main.cc
-#include <iostream>
-extern int sc_main(int argc, char* argv[]);
-int main(int argc, char* argv[]) {
-  return sc_main(argc, argv);
-}
-EOF
+# Build the RVVI simulator
+echo "Building RVVI simulator for Termination Test..."
 
 # Compile
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -DVERILATOR_MODEL=VCoreBarebones -include cstdlib -include verilated_fst_c.h -c tests/verilator_sim/coralnpu/core_barebones_tb.cc -o /tmp/core_barebones_tb.o
+g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -DVERILATOR_MODEL=VCoreVerification -include cstdlib -include verilated_fst_c.h -c tests/verilator_sim/coralnpu/core_rvvi_tb.cc -o /tmp/core_rvvi_tb.o
 g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/elf.cc -o /tmp/elf.o
-g++ -std=c++20 -pthread -c /tmp/main.cc -o /tmp/main.o
-g++ /tmp/core_barebones_tb.o /tmp/elf.o /tmp/main.o -o /tmp/core_barebones_tb_bin
+g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/rvvi/trace_daemon.cc -o /tmp/trace_daemon.o
+
+g++ /tmp/core_rvvi_tb.o /tmp/elf.o /tmp/trace_daemon.o -o /tmp/core_rvvi_tb_bin
 
 # Generate a valid ELF that loads at 0x80000000
 echo "Generating ELF at 0x80000000..."
-cat << 'EOF' > /tmp/gen_real_elf.cc
+cat << 'EOF' > /tmp/gen_rvvi_elf.cc
 #include <vector>
 #include <cstring>
 #include <elf.h>
@@ -53,26 +47,35 @@ int main(int argc, char* argv[]) {
   phdr.p_offset = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
   phdr.p_vaddr = 0x80000000;
   phdr.p_paddr = 0x80000000;
-  phdr.p_filesz = 4;
-  phdr.p_memsz = 4;
+  phdr.p_filesz = 8;
+  phdr.p_memsz = 8;
   phdr.p_flags = PF_R | PF_X;
   phdr.p_align = 4;
 
-  uint32_t payload = 0x08000073; // mpause
+  uint32_t payload[2];
+  payload[0] = 0x00000013; // nop
+  payload[1] = 0x08000073; // mpause
 
   std::ofstream ofs(argv[1], std::ios::binary);
   ofs.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr));
   ofs.write(reinterpret_cast<const char*>(&phdr), sizeof(phdr));
-  ofs.write(reinterpret_cast<const char*>(&payload), sizeof(payload));
+  ofs.write(reinterpret_cast<const char*>(payload), sizeof(payload));
   return 0;
 }
 EOF
 
-g++ /tmp/gen_real_elf.cc -o /tmp/gen_real_elf
-/tmp/gen_real_elf /tmp/real.elf
+g++ /tmp/gen_rvvi_elf.cc -o /tmp/gen_rvvi_elf
+/tmp/gen_rvvi_elf /tmp/rvvi.elf
 
 # Run the simulator
-echo "Running simulator with real ELF..."
-/tmp/core_barebones_tb_bin /tmp/real.elf
+echo "Running RVVI simulator..."
+/tmp/core_rvvi_tb_bin /tmp/rvvi.elf
 
-echo "E2E Real Address Loading Test PASSED"
+echo "Checking RVVI trace output for graceful termination..."
+if ! tail -n 1 trace.rvvi | grep -q "08000073"; then
+  echo "Trace file's last line is NOT the mpause instruction!"
+  tail -n 1 trace.rvvi
+  exit 1
+fi
+
+echo "E2E Graceful Termination Test PASSED"

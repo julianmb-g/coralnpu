@@ -190,9 +190,13 @@ static void Core_run(const char* name, const char* bin, const int cycles,
   tb.reset = 0;
   core.reset.val = 0;
   for (int i = 0; i < cycles; ++i) {
-    // Toggle clock for Verilator model
-    core.clock.val = !core.clock.val;
+    // Negedge
+    core.clock.val = 0;
+    core.eval();
+    mif.eval();
     
+    // Posedge
+    core.clock.val = 1;
     core.eval();
     mif.eval();
     

@@ -29,17 +29,23 @@
 #include "tests/verilator_sim/elf.h"
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
+#ifdef DELAY_FORMATTER
+#include "/tmp/delay_formatter.h"
+#else
 #include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
+#endif
 
 using namespace mpact::sim::riscv::rvvi;
 
 ABSL_FLAG(int, cycles, 500000, "Simulation cycles");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, rvvi_out, "trace.rvvi", "RVVI trace output file");
+ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
 
 struct CoreRvvi_tb : Sysc_tb {
   sc_in<bool> io_halted;
   sc_in<bool> io_fault;
+
   
   // RVVI ports
   sc_in<bool> io_trace_valid;
@@ -74,7 +80,9 @@ struct CoreRvvi_tb : Sysc_tb {
       }
     }
 
-    if (io_halted) sc_stop();
+    if (io_halted.read()) {
+      sc_stop();
+    }
   }
 };
 
@@ -89,26 +97,30 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif) {
   close(fd);
   uint32_t elf_magic = 0x464c457f;
   uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
+  bool load_ok = true;
   if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
     ::LoadElf(data8,
-              [&mif](void* dest, const void* src, size_t count) {
+              [&mif, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
-                mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src));
+                if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
+                  load_ok = false;
+                }
                 return dest;
               });
     munmap(file_data, file_size);
-    return true;
+    return load_ok;
   }
   munmap(file_data, file_size);
   return false;
 }
 
 static void CoreRvvi_run(const char* name, const char* bin, const int cycles,
-                     const bool trace, const std::string& rvvi_out) {
+                     const bool trace, const std::string& rvvi_out,
+                     const std::string& memory_profile) {
   VERILATOR_MODEL core(name);
   SpscRingBuffer<TracePacket, 4096> buffer;
   CoreRvvi_tb tb("CoreRvvi_tb", cycles, false, &buffer);
-  Core_if mif("Core_if", nullptr);
+  Core_if mif("Core_if", nullptr, memory_profile);
 
   if (!LoadElfToMemory(bin, mif)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
@@ -117,7 +129,11 @@ static void CoreRvvi_run(const char* name, const char* bin, const int cycles,
 
   std::ofstream trace_stream(rvvi_out);
   TraceDaemon daemon(&buffer, &trace_stream);
+#ifdef DELAY_FORMATTER
+  DelayFormatter formatter;
+#else
   CustomFallbackFormatter formatter;
+#endif
   daemon.SetTraceFormatter(&formatter);
   daemon.Start();
 
@@ -201,7 +217,34 @@ static void CoreRvvi_run(const char* name, const char* bin, const int cycles,
     tb.trace(&core);
   }
 
-  tb.start();
+  tb.reset = 1;
+  core.reset.val = 1;
+  core.eval();
+  mif.eval();
+  
+  tb.reset = 0;
+  core.reset.val = 0;
+  for (int i = 0; i < cycles; ++i) {
+    // Negedge
+    core.clock.val = 0;
+    core.eval();
+    mif.eval();
+    
+    // Posedge
+    core.clock.val = 1;
+    core.eval();
+    mif.eval();
+    
+    // Manual propagation for mock systemc.h
+    tb.io_trace_valid.val = core.io_trace_valid.val;
+    tb.io_trace_pc.val = core.io_trace_pc.val;
+    tb.io_trace_insn.val = core.io_trace_insn.val;
+    tb.io_trace_halt.val = core.io_trace_halt.val;
+    tb.io_halted.val = core.io_halted.val;
+
+    tb.posedge();
+    if (tb.io_halted.val) break;
+  }
 
   while(!buffer.IsEmpty()) {
     std::this_thread::yield();
@@ -221,7 +264,8 @@ int sc_main(int argc, char *argv[]) {
   const char* path = argv[1];
 
   CoreRvvi_run(Sysc_tb::get_name(argv[0]), path, absl::GetFlag(FLAGS_cycles),
-           absl::GetFlag(FLAGS_trace), absl::GetFlag(FLAGS_rvvi_out));
+           absl::GetFlag(FLAGS_trace), absl::GetFlag(FLAGS_rvvi_out),
+           absl::GetFlag(FLAGS_memory_profile));
   return 0;
 }
 

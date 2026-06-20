@@ -81,3 +81,45 @@ TEST(BarebonesMemoryTest, LoadElf) {
   std::memcpy(&loaded_payload, mem.data().data() + 0x00010000, sizeof(loaded_payload));
   EXPECT_EQ(loaded_payload, 0xdeadbeef);
 }
+
+#include "tests/verilator_sim/coralnpu/VCoreVerification.h"
+#include "tests/verilator_sim/coralnpu/VCoreVerification_parameters.h"
+#include "tests/verilator_sim/coralnpu/core_if.h"
+
+TEST(BarebonesMemoryTest, MemoryProfileEnforcementDefault) {
+  Core_if mem("mem", nullptr, "default");
+  uint8_t data[4] = {0x12, 0x34, 0x56, 0x78};
+
+  // ITCM valid writes
+  EXPECT_TRUE(mem.Write(0x0, 4, data));
+  EXPECT_TRUE(mem.Write(0x1FFC, 4, data));
+  
+  // ITCM out of bounds
+  EXPECT_FALSE(mem.Write(0x2000, 4, data));
+
+  // DTCM valid writes
+  EXPECT_TRUE(mem.Write(0x10000, 4, data));
+  EXPECT_TRUE(mem.Write(0x17FFC, 4, data));
+
+  // DTCM out of bounds
+  EXPECT_FALSE(mem.Write(0x18000, 4, data));
+}
+
+TEST(BarebonesMemoryTest, MemoryProfileEnforcementHighmem) {
+  Core_if mem("mem", nullptr, "highmem");
+  uint8_t data[4] = {0x12, 0x34, 0x56, 0x78};
+
+  // ITCM valid writes
+  EXPECT_TRUE(mem.Write(0x0, 4, data));
+  EXPECT_TRUE(mem.Write(0xFFFFC, 4, data));
+  
+  // ITCM out of bounds / DTCM transition
+  // DTCM starts at 0x100000 in highmem, so 0x100000 is actually valid!
+  EXPECT_TRUE(mem.Write(0x100000, 4, data));
+
+  // DTCM valid writes
+  EXPECT_TRUE(mem.Write(0x1FFFFC, 4, data));
+
+  // DTCM out of bounds (above 2MB)
+  EXPECT_FALSE(mem.Write(0x200000, 4, data));
+}
