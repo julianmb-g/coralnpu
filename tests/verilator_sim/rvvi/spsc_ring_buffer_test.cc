@@ -15,6 +15,7 @@
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_packet.h"
 #include "gtest/gtest.h"
+#include <thread>
 
 namespace mpact::sim::riscv::rvvi {
 
@@ -59,6 +60,38 @@ TEST(SpscRingBufferFullTest, FullBuffer) {
 
   // Should be full again
   EXPECT_FALSE(buffer.Push(packet));
+}
+
+TEST(SpscRingBufferConcurrentTest, ConcurrentStressTest) {
+  SpscRingBuffer<TracePacket, 16> buffer;
+  const int kNumItems = 100000;
+
+  std::thread producer([&]() {
+    for (int i = 0; i < kNumItems; ++i) {
+      TracePacket packet;
+      packet.type = 'I';
+      packet.inst.pc = i;
+      while (!buffer.Push(packet)) {
+        std::this_thread::yield();
+      }
+    }
+  });
+
+  std::thread consumer([&]() {
+    for (int i = 0; i < kNumItems; ++i) {
+      TracePacket packet;
+      while (!buffer.Pop(packet)) {
+        std::this_thread::yield();
+      }
+      EXPECT_EQ(packet.type, 'I');
+      EXPECT_EQ(packet.inst.pc, i);
+    }
+  });
+
+  producer.join();
+  consumer.join();
+
+  EXPECT_TRUE(buffer.IsEmpty());
 }
 
 } // namespace mpact::sim::riscv::rvvi
