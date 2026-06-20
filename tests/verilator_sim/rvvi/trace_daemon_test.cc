@@ -170,7 +170,7 @@ TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
   r_packet.reg.reg_type = 'V'; // Vector
   r_packet.reg.index = 1;
   r_packet.reg.offset = 0;
-  r_packet.reg.total_size = 128; // Larger than 64-byte buffer
+  r_packet.reg.total_size = 128; // Fits in 256-byte buffer
   r_packet.reg.size = 32;
   for (int i = 0; i < 4; ++i) r_packet.reg.value[i] = 0x1111111111111111;
   
@@ -187,12 +187,12 @@ TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
   daemon.Stop();
   
   std::string output = output_stream_.str();
-  // It should be capped at 64 bytes (128 hex digits)
+  // It should NOT be capped at 64 bytes anymore. It should output 128 bytes (256 hex digits).
   size_t pos = output.find("v1:");
   EXPECT_NE(pos, std::string::npos);
   size_t end_pos = output.find_first_of(",\n", pos);
   std::string hex = output.substr(pos + 3, end_pos - (pos + 3));
-  EXPECT_EQ(hex.length(), 128); // 64 bytes * 2 hex chars/byte
+  EXPECT_EQ(hex.length(), 256); // 128 bytes * 2 hex chars/byte
 }
 
 } // namespace mpact::sim::riscv::rvvi

@@ -49,7 +49,7 @@ class TraceDaemon {
     uint8_t reg_type;
     uint16_t index;
     uint16_t total_size;
-    uint8_t data[64]; // Fixed size to support up to 512-bit registers
+    uint8_t data[256]; // Fixed size to support up to 2048-bit vector registers
   };
 
   SpscRingBuffer<TracePacket, 4096>* buffer_;
