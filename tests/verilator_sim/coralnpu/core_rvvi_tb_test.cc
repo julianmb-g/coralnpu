@@ -58,12 +58,14 @@ TEST(CoreRvviTbTest, BackpressureZeroLoss) {
   // Don't start daemon yet, fill the buffer completely
   for (int i = 0; i < 4096; ++i) {
     TracePacket p = {};
+    p.v_id = static_cast<uint64_t>(i);
     p.type = 'I'; p.inst.pc = 0x1000 + (i * 4); p.inst.instruction = 0x13;
     EXPECT_TRUE(buffer.Push(p));
   }
 
   // Buffer is full. A push should fail if we just try once.
   TracePacket p_extra = {};
+  p_extra.v_id = 4096;
   p_extra.type = 'I'; p_extra.inst.pc = 0x1000 + (4096 * 4); p_extra.inst.instruction = 0x13;
   EXPECT_FALSE(buffer.Push(p_extra));
 
