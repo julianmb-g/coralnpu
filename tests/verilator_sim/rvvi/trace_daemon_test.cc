@@ -159,4 +159,40 @@ TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
   // because running_ was set to false by ProcessPacket, making Stop() return early.
 }
 
+TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
+  TraceDaemon daemon(&buffer_, &output_stream_);
+  daemon.SetTraceFormatter(&formatter_);
+  daemon.Start();
+
+  TracePacket r_packet = {};
+  r_packet.type = 'R';
+  r_packet.v_id = 1;
+  r_packet.reg.reg_type = 'V'; // Vector
+  r_packet.reg.index = 1;
+  r_packet.reg.offset = 0;
+  r_packet.reg.total_size = 128; // Larger than 64-byte buffer
+  r_packet.reg.size = 32;
+  for (int i = 0; i < 4; ++i) r_packet.reg.value[i] = 0x1111111111111111;
+  
+  EXPECT_TRUE(buffer_.Push(r_packet));
+
+  TracePacket i_packet = {};
+  i_packet.type = 'I';
+  i_packet.v_id = 1;
+  i_packet.inst.pc = 0x80000000;
+  i_packet.inst.instruction = 0x00000013;
+  
+  EXPECT_TRUE(buffer_.Push(i_packet));
+  
+  daemon.Stop();
+  
+  std::string output = output_stream_.str();
+  // It should be capped at 64 bytes (128 hex digits)
+  size_t pos = output.find("v1:");
+  EXPECT_NE(pos, std::string::npos);
+  size_t end_pos = output.find_first_of(",\n", pos);
+  std::string hex = output.substr(pos + 3, end_pos - (pos + 3));
+  EXPECT_EQ(hex.length(), 128); // 64 bytes * 2 hex chars/byte
+}
+
 } // namespace mpact::sim::riscv::rvvi
