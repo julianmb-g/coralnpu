@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
   ehdr.e_type = ET_EXEC;
   ehdr.e_machine = EM_RISCV;
   ehdr.e_version = EV_CURRENT;
-  ehdr.e_entry = 0x00000000;
+  ehdr.e_entry = 0x80000000;
   ehdr.e_phoff = sizeof(Elf32_Ehdr);
   ehdr.e_ehsize = sizeof(Elf32_Ehdr);
   ehdr.e_phentsize = sizeof(Elf32_Phdr);
@@ -54,8 +54,8 @@ int main(int argc, char* argv[]) {
   std::memset(&phdr, 0, sizeof(phdr));
   phdr.p_type = PT_LOAD;
   phdr.p_offset = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
-  phdr.p_vaddr = 0x00000000;
-  phdr.p_paddr = 0x00000000;
+  phdr.p_vaddr = 0x80000000;
+  phdr.p_paddr = 0x80000000;
   phdr.p_filesz = 4;
   phdr.p_memsz = 4;
   phdr.p_flags = PF_R | PF_X;
