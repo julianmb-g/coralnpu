@@ -11,6 +11,7 @@ internal
 *vcst*
 novas*
 *csrc*
+*.rvvi
 # Build artifacts for UVM
 tests/uvm/rtl
 tests/uvm/sim_work
