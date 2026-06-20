@@ -58,9 +58,12 @@ struct CoreRvvi_tb : Sysc_tb {
 
   
   // RVVI ports
-  sc_in<bool> io_trace_valid;
-  sc_in<sc_bv<64>> io_trace_pc;
-  sc_in<sc_bv<32>> io_trace_insn;
+  sc_in<bool> io_debug_rb_inst_0_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_0_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_0_bits_idx;
+  sc_in<sc_bv<KP_xlen>> io_debug_rb_inst_0_bits_data;
+  sc_in<bool> io_debug_rb_inst_0_bits_trap;
   sc_in<bool> io_trace_halt;
 
   SpscRingBuffer<TracePacket, 4096>* buffer;
@@ -71,11 +74,11 @@ struct CoreRvvi_tb : Sysc_tb {
   void posedge() {
     check(!io_fault, "io_fault");
     
-    if (io_trace_valid.read()) {
+    if (io_debug_rb_inst_0_valid.read()) {
       TracePacket ipacket = {};
       ipacket.type = 'I';
-      ipacket.inst.pc = io_trace_pc.read().to_uint64();
-      ipacket.inst.instruction = io_trace_insn.read().to_uint();
+      ipacket.inst.pc = io_debug_rb_inst_0_bits_pc.read().to_uint64();
+      ipacket.inst.instruction = io_debug_rb_inst_0_bits_inst.read().to_uint();
       
       while (!buffer->Push(ipacket)) {
         std::this_thread::yield();
@@ -169,16 +172,22 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   sc_signal<sc_bv<KP_lsuDataBits / 8> > io_dbus_wmask;
   sc_signal<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
 
-  sc_signal<bool> io_trace_valid;
-  sc_signal<sc_bv<64>> io_trace_pc;
-  sc_signal<sc_bv<32>> io_trace_insn;
+  sc_signal<bool> io_debug_rb_inst_0_valid;
+  sc_signal<sc_bv<KP_programCounterBits>> io_debug_rb_inst_0_bits_pc;
+  sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_inst;
+  sc_signal<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_0_bits_idx;
+  sc_signal<sc_bv<KP_xlen>> io_debug_rb_inst_0_bits_data;
+  sc_signal<bool> io_debug_rb_inst_0_bits_trap;
   sc_signal<bool> io_trace_halt;
 
   tb.io_halted(io_halted);
   tb.io_fault(io_fault);
-  tb.io_trace_valid(io_trace_valid);
-  tb.io_trace_pc(io_trace_pc);
-  tb.io_trace_insn(io_trace_insn);
+  tb.io_debug_rb_inst_0_valid(io_debug_rb_inst_0_valid);
+  tb.io_debug_rb_inst_0_bits_pc(io_debug_rb_inst_0_bits_pc);
+  tb.io_debug_rb_inst_0_bits_inst(io_debug_rb_inst_0_bits_inst);
+  tb.io_debug_rb_inst_0_bits_idx(io_debug_rb_inst_0_bits_idx);
+  tb.io_debug_rb_inst_0_bits_data(io_debug_rb_inst_0_bits_data);
+  tb.io_debug_rb_inst_0_bits_trap(io_debug_rb_inst_0_bits_trap);
   tb.io_trace_halt(io_trace_halt);
 
   core.clock(tb.clock);
@@ -204,9 +213,12 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   core.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
   core.io_dbus_adrx(io_dbus_adrx);
   
-  core.io_trace_valid(io_trace_valid);
-  core.io_trace_pc(io_trace_pc);
-  core.io_trace_insn(io_trace_insn);
+  core.io_debug_rb_inst_0_valid(io_debug_rb_inst_0_valid);
+  core.io_debug_rb_inst_0_bits_pc(io_debug_rb_inst_0_bits_pc);
+  core.io_debug_rb_inst_0_bits_inst(io_debug_rb_inst_0_bits_inst);
+  core.io_debug_rb_inst_0_bits_idx(io_debug_rb_inst_0_bits_idx);
+  core.io_debug_rb_inst_0_bits_data(io_debug_rb_inst_0_bits_data);
+  core.io_debug_rb_inst_0_bits_trap(io_debug_rb_inst_0_bits_trap);
   core.io_trace_halt(io_trace_halt);
 
   mif.clock(tb.clock);
@@ -306,9 +318,12 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
     core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
 
     // Manual propagation for mock systemc.h
-    tb.io_trace_valid.val = core.io_trace_valid.val;
-    tb.io_trace_pc.val = core.io_trace_pc.val;
-    tb.io_trace_insn.val = core.io_trace_insn.val;
+    tb.io_debug_rb_inst_0_valid.val = core.io_debug_rb_inst_0_valid.val;
+    tb.io_debug_rb_inst_0_bits_pc.val = core.io_debug_rb_inst_0_bits_pc.val;
+    tb.io_debug_rb_inst_0_bits_inst.val = core.io_debug_rb_inst_0_bits_inst.val;
+    tb.io_debug_rb_inst_0_bits_idx.val = core.io_debug_rb_inst_0_bits_idx.val;
+    tb.io_debug_rb_inst_0_bits_data.val = core.io_debug_rb_inst_0_bits_data.val;
+    tb.io_debug_rb_inst_0_bits_trap.val = core.io_debug_rb_inst_0_bits_trap.val;
     tb.io_trace_halt.val = core.io_trace_halt.val;
     tb.io_halted.val = core.io_halted.val;
 
