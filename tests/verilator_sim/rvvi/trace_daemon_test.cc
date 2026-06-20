@@ -33,9 +33,11 @@ class TraceDaemonTest : public ::testing::Test {
 TEST_F(TraceDaemonTest, StartAndStopDaemon) {
   TraceDaemon daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);
+  EXPECT_FALSE(daemon.is_running());
   daemon.Start();
+  EXPECT_TRUE(daemon.is_running());
   daemon.Stop();
-  EXPECT_TRUE(true);
+  EXPECT_FALSE(daemon.is_running());
 }
 
 TEST_F(TraceDaemonTest, ProcessInstructionPacket) {

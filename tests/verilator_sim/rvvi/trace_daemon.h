@@ -36,6 +36,8 @@ class TraceDaemon {
   void Start();
   void Stop();
 
+  bool is_running() const { return running_; }
+
   void SetSymbolResolver(std::function<std::string(uint64_t)> resolver);
   void SetTraceFormatter(TraceFormatterInterface* formatter);
 
