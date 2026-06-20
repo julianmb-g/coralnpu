@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
   phdr.p_align = 4;
 
   uint32_t payload[2];
-  payload[0] = 0x00000013; // nop
+  payload[0] = 0x00100513; // li a0, 1
   payload[1] = 0x08000073; // mpause
 
   std::ofstream ofs(argv[1], std::ios::binary);
@@ -72,8 +72,12 @@ echo "Running RVVI simulator..."
 /tmp/core_rvvi_tb_bin /tmp/rvvi.elf
 
 echo "Checking RVVI trace output..."
-if ! grep -q "00000013" trace.rvvi; then
-  echo "Trace file missing expected instruction (00000013)"
+if ! grep -q "00100513" trace.rvvi; then
+  echo "Trace file missing expected instruction (00100513)"
+  exit 1
+fi
+if ! grep -q "x10:0000000000000000" trace.rvvi; then
+  echo "Trace file missing expected register update (x10:0000000000000000)"
   exit 1
 fi
 if ! grep -q "08000073" trace.rvvi; then
