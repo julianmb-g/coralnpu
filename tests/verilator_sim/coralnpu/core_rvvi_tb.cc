@@ -75,8 +75,10 @@ struct CoreRvvi_tb : Sysc_tb {
     check(!io_fault, "io_fault");
     
     if (io_debug_rb_inst_0_valid.read()) {
+      uint32_t v_id = io_debug_rb_inst_0_bits_idx.read().to_uint();
       TracePacket ipacket = {};
       ipacket.type = 'I';
+      ipacket.v_id = v_id;
       ipacket.inst.pc = io_debug_rb_inst_0_bits_pc.read().to_uint64();
       ipacket.inst.instruction = io_debug_rb_inst_0_bits_inst.read().to_uint();
       
@@ -96,6 +98,7 @@ struct CoreRvvi_tb : Sysc_tb {
         if (rd != 0) {
           TracePacket rpacket = {};
           rpacket.type = 'R';
+          rpacket.v_id = v_id;
           rpacket.reg.reg_type = 'X'; // GPR
           rpacket.reg.index = rd;
           rpacket.reg.size = 4;

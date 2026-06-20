@@ -90,7 +90,16 @@ void TraceDaemon::DaemonLoop() {
 }
 
 void TraceDaemon::FlushPendingInstruction() {
-  if (!has_pending_inst_) return;
+  if (!has_any_pending_) return;
+
+  if (!has_pending_inst_) {
+    // We have register updates but no instruction packet. This might happen 
+    // if a trap occurred and we missed the instruction, or if reassembly failed.
+    // In RVVI, we generally need the 'I' packet to anchor the trace line.
+    num_accumulated_updates_ = 0;
+    has_any_pending_ = false;
+    return;
+  }
 
   std::string disasm;
   if (trace_formatter_) {
@@ -119,7 +128,8 @@ void TraceDaemon::FlushPendingInstruction() {
     line += ",";
   }
 
-  for (const auto& update : accumulated_updates_) {
+  for (size_t i = 0; i < num_accumulated_updates_; ++i) {
+    const auto& update = accumulated_updates_[i];
     std::string reg_prefix;
     if (update.reg_type == 'X') reg_prefix = "x";
     else if (update.reg_type == 'F') reg_prefix = "f";
@@ -137,10 +147,10 @@ void TraceDaemon::FlushPendingInstruction() {
     }
 
     std::string val_hex = "";
-    val_hex.reserve(update.data.size() * 2);
-    for (int i = static_cast<int>(update.data.size()) - 1; i >= 0; --i) {
+    val_hex.reserve(update.total_size * 2);
+    for (int j = static_cast<int>(update.total_size) - 1; j >= 0; --j) {
       char vbuf[4];
-      std::snprintf(vbuf, sizeof(vbuf), "%02x", update.data[i]);
+      std::snprintf(vbuf, sizeof(vbuf), "%02x", update.data[j]);
       val_hex += vbuf;
     }
 
@@ -151,8 +161,9 @@ void TraceDaemon::FlushPendingInstruction() {
     *output_stream_ << line << "\n";
   }
   
-  accumulated_updates_.clear();
+  num_accumulated_updates_ = 0;
   has_pending_inst_ = false;
+  has_any_pending_ = false;
 }
 
 void TraceDaemon::ProcessPacket(const TracePacket& packet) {
@@ -162,35 +173,46 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
     return;
   }
 
+  if (!has_any_pending_) {
+    pending_v_id_ = packet.v_id;
+    has_any_pending_ = true;
+  } else if (packet.v_id != pending_v_id_) {
+    FlushPendingInstruction();
+    pending_v_id_ = packet.v_id;
+    has_any_pending_ = true;
+  }
+
   if (packet.type == 'R') {
-    auto it = std::find_if(accumulated_updates_.begin(), accumulated_updates_.end(),
-                           [&](const RegisterUpdate& u) {
-                             return u.reg_type == packet.reg.reg_type && u.index == packet.reg.index;
-                           });
-    if (it == accumulated_updates_.end()) {
-      RegisterUpdate ru;
-      ru.reg_type = packet.reg.reg_type;
-      ru.index = packet.reg.index;
-      ru.total_size = packet.reg.total_size;
-      ru.data.resize(packet.reg.total_size, 0);
-      size_t size = packet.reg.size;
-      size_t offset = packet.reg.offset;
-      if (offset + size <= ru.total_size) {
-        std::memcpy(ru.data.data() + offset, packet.reg.value, size);
+    RegisterUpdate* ru = nullptr;
+    for (size_t i = 0; i < num_accumulated_updates_; ++i) {
+      if (accumulated_updates_[i].reg_type == packet.reg.reg_type && 
+          accumulated_updates_[i].index == packet.reg.index) {
+        ru = &accumulated_updates_[i];
+        break;
       }
-      accumulated_updates_.push_back(ru);
-    } else {
+    }
+
+    if (!ru) {
+      if (num_accumulated_updates_ < kMaxAccumulatedUpdates) {
+        ru = &accumulated_updates_[num_accumulated_updates_++];
+        ru->reg_type = packet.reg.reg_type;
+        ru->index = packet.reg.index;
+        ru->total_size = packet.reg.total_size;
+        std::memset(ru->data, 0, sizeof(ru->data));
+      }
+    }
+
+    if (ru) {
       size_t size = packet.reg.size;
       size_t offset = packet.reg.offset;
-      if (offset + size <= it->total_size) {
-        std::memcpy(it->data.data() + offset, packet.reg.value, size);
+      if (offset + size <= sizeof(ru->data) && offset + size <= ru->total_size) {
+        std::memcpy(ru->data + offset, packet.reg.value, size);
       }
     }
     return;
   }
 
   if (packet.type == 'I' || packet.type == 'T') {
-    FlushPendingInstruction();
     pending_inst_packet_ = packet;
     has_pending_inst_ = true;
   }

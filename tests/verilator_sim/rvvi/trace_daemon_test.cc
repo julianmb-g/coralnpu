@@ -45,8 +45,9 @@ TEST_F(TraceDaemonTest, ProcessInstructionPacket) {
   daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
-  TracePacket packet;
+  TracePacket packet = {};
   packet.type = 'I';
+  packet.v_id = 1;
   packet.inst.pc = 0x80000000;
   packet.inst.instruction = 0x00000013; // nop
   
@@ -68,8 +69,9 @@ TEST_F(TraceDaemonTest, ProcessRegisterPacket) {
   daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
-  TracePacket r_packet;
+  TracePacket r_packet = {};
   r_packet.type = 'R';
+  r_packet.v_id = 1;
   r_packet.reg.reg_type = 'X';
   r_packet.reg.index = 10;
   r_packet.reg.offset = 0;
@@ -79,8 +81,9 @@ TEST_F(TraceDaemonTest, ProcessRegisterPacket) {
   
   EXPECT_TRUE(buffer_.Push(r_packet));
 
-  TracePacket i_packet;
+  TracePacket i_packet = {};
   i_packet.type = 'I';
+  i_packet.v_id = 1;
   i_packet.inst.pc = 0x80000004;
   i_packet.inst.instruction = 0x00100513; // li a0, 1
   
@@ -96,6 +99,40 @@ TEST_F(TraceDaemonTest, ProcessRegisterPacket) {
   std::string output = output_stream_.str();
   EXPECT_NE(output.find("rvvi,0,0000000080000004,00100513"), std::string::npos);
   EXPECT_NE(output.find("x10:123456789abcdef0"), std::string::npos);
+}
+
+TEST_F(TraceDaemonTest, InterleavedPacketStreams) {
+  TraceDaemon daemon(&buffer_, &output_stream_);
+  daemon.SetTraceFormatter(&formatter_);
+  daemon.Start();
+
+  // Instruction 1: R comes before I
+  TracePacket r1 = {};
+  r1.type = 'R'; r1.v_id = 1; r1.reg.reg_type = 'X'; r1.reg.index = 1;
+  r1.reg.total_size = 4; r1.reg.size = 4; r1.reg.value[0] = 0xAAAA;
+  buffer_.Push(r1);
+
+  TracePacket i1 = {};
+  i1.type = 'I'; i1.v_id = 1; i1.inst.pc = 0x1000; i1.inst.instruction = 0x1234;
+  buffer_.Push(i1);
+
+  // Instruction 2: I comes before R
+  TracePacket i2 = {};
+  i2.type = 'I'; i2.v_id = 2; i2.inst.pc = 0x2000; i2.inst.instruction = 0x5678;
+  buffer_.Push(i2);
+
+  TracePacket r2 = {};
+  r2.type = 'R'; r2.v_id = 2; r2.reg.reg_type = 'X'; r2.reg.index = 2;
+  r2.reg.total_size = 4; r2.reg.size = 4; r2.reg.value[0] = 0xBBBB;
+  buffer_.Push(r2);
+
+  daemon.Stop();
+  
+  std::string output = output_stream_.str();
+  // Check I1 with R1 (Disassembly fallback adds 'inst_0x...')
+  EXPECT_NE(output.find("rvvi,0,0000000000001000,00001234,inst_0x00001234,x1:0000aaaa"), std::string::npos);
+  // Check I2 with R2
+  EXPECT_NE(output.find("rvvi,0,0000000000002000,00005678,inst_0x00005678,x2:0000bbbb"), std::string::npos);
 }
 
 TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {

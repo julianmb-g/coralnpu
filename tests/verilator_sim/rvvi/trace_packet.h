@@ -21,7 +21,8 @@ namespace mpact::sim::riscv::rvvi {
 
 struct alignas(64) TracePacket {
   uint8_t type; // 'I' (Instruction), 'T' (Trap), 'R' (Register Update), 'E' (Terminate)
-  uint8_t padding[7];
+  uint8_t padding[3];
+  uint32_t v_id; // Instruction/Retirement ID for reassembly
   union {
     struct {
       uint64_t pc;

@@ -49,7 +49,7 @@ class TraceDaemon {
     uint8_t reg_type;
     uint16_t index;
     uint16_t total_size;
-    std::vector<uint8_t> data;
+    uint8_t data[64]; // Fixed size to support up to 512-bit registers
   };
 
   SpscRingBuffer<TracePacket, 4096>* buffer_;
@@ -58,11 +58,17 @@ class TraceDaemon {
   std::atomic<bool> running_;
   
   std::function<std::string(uint64_t)> symbol_resolver_;
-  std::vector<RegisterUpdate> accumulated_updates_;
+  
+  static constexpr int kMaxAccumulatedUpdates = 16;
+  RegisterUpdate accumulated_updates_[kMaxAccumulatedUpdates];
+  size_t num_accumulated_updates_ = 0;
+
   TraceFormatterInterface* trace_formatter_ = nullptr;
 
   TracePacket pending_inst_packet_;
+  uint32_t pending_v_id_ = 0;
   bool has_pending_inst_ = false;
+  bool has_any_pending_ = false;
 
   void FlushPendingInstruction();
 };
