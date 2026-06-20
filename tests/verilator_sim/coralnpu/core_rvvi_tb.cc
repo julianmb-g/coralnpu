@@ -97,19 +97,25 @@ struct CoreRvvi_tb : Sysc_tb {
         uint32_t rd = (inst >> 7) & 0x1f;
         // Vector register v0 (rd==0) is valid and traced.
         if (rd != 0 || opcode == 0x57) {
-          TracePacket rpacket = {};
-          rpacket.type = 'R';
-          rpacket.v_id = v_id;
-          rpacket.reg.reg_type = (opcode == 0x57) ? 'V' : 'X';
-          rpacket.reg.index = rd;
-          rpacket.reg.size = KP_xlen / 8;
-          // Vector registers exceed 64 bytes (Finding 32). Hardcode 256 for vector.
-          rpacket.reg.total_size = (opcode == 0x57) ? 256 : (KP_xlen / 8);
-          rpacket.reg.value[0] = 0xDEADBEEF; // Garbage to detect read failures
-          rpacket.reg.value[0] = io_debug_rb_inst_0_bits_data.read().to_uint64();
-          
-          while (!buffer->Push(rpacket)) {
-            std::this_thread::yield();
+          int num_packets = (opcode == 0x57) ? 8 : 1;
+          for (int i = 0; i < num_packets; ++i) {
+            TracePacket rpacket = {};
+            rpacket.type = 'R';
+            rpacket.v_id = v_id;
+            rpacket.reg.reg_type = (opcode == 0x57) ? 'V' : 'X';
+            rpacket.reg.index = rd;
+            rpacket.reg.offset = i * 32;
+            rpacket.reg.size = (opcode == 0x57) ? 32 : (KP_xlen / 8);
+            // Vector registers exceed 64 bytes (Finding 32). Hardcode 256 for vector.
+            rpacket.reg.total_size = (opcode == 0x57) ? 256 : (KP_xlen / 8);
+            
+            if (i == 0) {
+              rpacket.reg.value[0] = io_debug_rb_inst_0_bits_data.read().to_uint64();
+            }
+            
+            while (!buffer->Push(rpacket)) {
+              std::this_thread::yield();
+            }
           }
         }
       }
