@@ -50,11 +50,25 @@ For ultra-fast validation of self-checking binaries, use the barebones targets w
 
 **Barebones Core (No Tracing):**
 ```bash
+# Build the simulator:
+bazel build //tests/verilator_sim:core_barebones_sim
+
+# Run an ELF (standard CoralNPU load address 0x80000000):
+bazel-bin/tests/verilator_sim/core_barebones_sim --binary path/to/your_test.elf
+
+# Or use the convenience script:
 ./run_e2e_baseline.sh
 ```
 
 **RVVI Traced Core (Asynchronous):**
 ```bash
+# Build the simulator:
+bazel build //tests/verilator_sim:core_rvvi_sim
+
+# Run an ELF and generate trace.rvvi:
+bazel-bin/tests/verilator_sim/core_rvvi_sim --binary path/to/your_test.elf
+
+# Or use the convenience script:
 ./run_e2e_rvvi.sh
 ```
 
