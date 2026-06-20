@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <map>
+#include <string>
 
 #include "tests/verilator_sim/sysc_module.h"
 
@@ -33,35 +34,62 @@ struct Memory_if : Sysc_module {
     uint8_t  data[4096];
   };
 
-  Memory_if(sc_module_name n, const char* bin, int limit = -1) :
+  Memory_if(sc_module_name n, const char* bin, int limit = -1, const std::string& profile = "all") :
       Sysc_module(n) {
-    FILE *f = fopen(bin, "rb");
+    FILE *f = (bin != nullptr && bin[0] != '\0') ? fopen(bin, "rb") : nullptr;
 
-    fseek(f, 0, SEEK_END);
-    int64_t fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    uint8_t *fdata = new uint8_t[fsize];
+    if (f != nullptr) {
+      fseek(f, 0, SEEK_END);
+      int64_t fsize = ftell(f);
+      fseek(f, 0, SEEK_SET);
+      uint8_t *fdata = new uint8_t[fsize];
 
-    fread(fdata, fsize, 1, f);
-    fclose(f);
+      fread(fdata, fsize, 1, f);
+      fclose(f);
 
-    if (limit > 0 && fsize > limit) {
-      printf("***ERROR Memory_if limit exceeded [%ld > %d]\n", fsize, limit);
-      exit(-1);
+      if (limit > 0 && fsize > limit) {
+        printf("***ERROR Memory_if limit exceeded [%ld > %d]\n", fsize, limit);
+        exit(-1);
+      }
+
+      int addr = 0;
+      for (; addr < fsize; addr += kPageSize) {
+        const int64_t size = std::min(fsize - addr, int64_t(kPageSize));
+        AddPage(addr, size, fdata + addr);
+      }
+      // Create pages for the rest of our memory space, that was not created
+      // for inserting the binary.
+      for (; addr < 0x400000; addr += kPageSize) {
+        AddPage(addr, kPageSize, nullptr);
+      }
+
+      delete [] fdata;
+    } else {
+      if (profile == "default") {
+        // ITCM: 8KB -> pages at 0x0, 0x1000
+        for (int addr = 0; addr < 0x2000; addr += kPageSize) {
+          AddPage(addr, kPageSize, nullptr);
+        }
+        // DTCM: 32KB at 0x10000 -> pages from 0x10000 to 0x17FFF (i.e., less than 0x18000)
+        for (int addr = 0x10000; addr < 0x18000; addr += kPageSize) {
+          AddPage(addr, kPageSize, nullptr);
+        }
+      } else if (profile == "highmem") {
+        // ITCM: 1MB -> pages from 0 to 0xFFFFF (i.e., less than 0x100000)
+        for (int addr = 0; addr < 0x100000; addr += kPageSize) {
+          AddPage(addr, kPageSize, nullptr);
+        }
+        // DTCM: 1MB at 0x100000 -> pages from 0x100000 to 0x1FFFFF (i.e., less than 0x200000)
+        for (int addr = 0x100000; addr < 0x200000; addr += kPageSize) {
+          AddPage(addr, kPageSize, nullptr);
+        }
+      } else {
+        // Create pages for the rest of our memory space (up to 4MB)
+        for (int addr = 0; addr < 0x400000; addr += kPageSize) {
+          AddPage(addr, kPageSize, nullptr);
+        }
+      }
     }
-
-    int addr = 0;
-    for (; addr < fsize; addr += kPageSize) {
-      const int64_t size = std::min(fsize - addr, int64_t(kPageSize));
-      AddPage(addr, size, fdata + addr);
-    }
-    // Create pages for the rest of our memory space, that was not created
-    // for inserting the binary.
-    for (; addr < 0x400000; addr += kPageSize) {
-      AddPage(addr, kPageSize, nullptr);
-    }
-
-    delete [] fdata;
   }
 
   bool Read(uint32_t addr, int bytes, uint8_t* data) {
@@ -101,7 +129,7 @@ struct Memory_if : Sysc_module {
       const int len = std::min(bytes, limit);
 
       if (!HasPage(maddr)) {
-        return false;
+        AddPage(maddr, kPageSize, nullptr);
       }
 
       auto& p = page_[maddr];
