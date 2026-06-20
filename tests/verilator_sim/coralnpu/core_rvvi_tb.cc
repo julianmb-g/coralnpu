@@ -84,6 +84,29 @@ struct CoreRvvi_tb : Sysc_tb {
         std::this_thread::yield();
       }
 
+      // Finding 25: Register extraction logic
+      uint32_t inst = ipacket.inst.instruction;
+      uint32_t opcode = inst & 0x7f;
+      bool writes_rd = (opcode == 0x13) || (opcode == 0x33) || (opcode == 0x37) || 
+                       (opcode == 0x17) || (opcode == 0x6f) || (opcode == 0x67) || 
+                       (opcode == 0x03) || (opcode == 0x73);
+      
+      if (writes_rd) {
+        uint32_t rd = (inst >> 7) & 0x1f;
+        if (rd != 0) {
+          TracePacket rpacket = {};
+          rpacket.type = 'R';
+          rpacket.reg.reg_type = 'X'; // GPR
+          rpacket.reg.index = rd;
+          rpacket.reg.size = 4;
+          rpacket.reg.value[0] = io_debug_rb_inst_0_bits_data.read().to_uint64();
+          
+          while (!buffer->Push(rpacket)) {
+            std::this_thread::yield();
+          }
+        }
+      }
+
       if (io_trace_halt.read()) {
         TracePacket epacket = {};
         epacket.type = 'E';
