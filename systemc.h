@@ -1,0 +1,103 @@
+#pragma once
+#include <cstdint>
+#include <cstring>
+#include <cassert>
+
+template<int W> struct sc_bv {
+  uint64_t val = 0;
+  sc_bv() {}
+  sc_bv(uint64_t v) : val(v) {}
+  uint64_t to_uint64() const { return val; }
+  uint32_t to_uint() const { return static_cast<uint32_t>(val); }
+  uint32_t get_word(int idx) const { return static_cast<uint32_t>(val >> (idx * 32)); }
+  void set_word(int idx, uint32_t v) { val &= ~(0xFFFFFFFFull << (idx * 32)); val |= (static_cast<uint64_t>(v) << (idx * 32)); }
+};
+
+template<typename T> struct sc_signal {
+  T val;
+  void write(T v) { val = v; }
+  T read() const { return val; }
+  void operator=(T v) { val = v; }
+  operator T() const { return val; }
+};
+
+struct sc_clock {
+  sc_clock(const char*, int, int) {}
+  sc_clock() {}
+  bool pos() const { return true; }
+  bool neg() const { return false; }
+  bool posedge() const { return true; }
+  bool negedge() const { return false; }
+  operator bool() const { return true; }
+  sc_clock* operator->() { return this; }
+};
+
+template<typename T> struct sc_in {
+  T val;
+  T read() const { return val; }
+  bool pos() const { return true; }
+  bool neg() const { return false; }
+  void bind(T& v) { val = v; }
+  void bind(sc_signal<T>& s) { val = s.val; }
+  void operator()(T& v) { val = v; }
+  void operator()(sc_signal<T>& s) { val = s.val; }
+  void operator()(sc_clock& c) { }
+  operator T() const { return val; }
+  bool operator!() const { return !static_cast<bool>(val); }
+  sc_clock* operator->() { static sc_clock c; return &c; }
+};
+
+template<typename T> struct sc_out {
+  T val;
+  void write(T v) { val = v; }
+  T read() const { return val; }
+  void bind(T& v) { val = v; }
+  void bind(sc_signal<T>& s) { s.val = val; }
+  void operator()(T& v) { val = v; }
+  void operator()(sc_signal<T>& s) { s.val = val; }
+  void operator=(T v) { val = v; }
+  operator T() const { return val; }
+  bool operator!() const { return !static_cast<bool>(val); }
+};
+
+typedef sc_in<bool> sc_in_clk;
+
+struct sc_module_name {
+  const char* name_;
+  sc_module_name(const char* name) : name_(name) {}
+  operator const char*() const { return name_; }
+};
+
+struct sc_module {
+  const char* name_;
+  sc_module(sc_module_name name) : name_(name.name_) {}
+  sc_module(const char* name) : name_(name) {}
+  const char* name() const { return name_; }
+  void trace(void*, int) {}
+};
+
+struct DummySensitive {
+  template<typename T> DummySensitive& operator<<(const T&) { return *this; }
+};
+
+#define SC_MODULE(name) struct name : public sc_module
+#define SC_CTOR(name) name(const char* nm) : sc_module(nm)
+#define SC_METHOD(func)
+#define sensitive DummySensitive()
+
+#define SC_HAS_PROCESS(name)
+
+#define SC_NS 1
+#define SC_ZERO_TIME 0
+inline void sc_start(...) {}
+inline void sc_stop() {}
+
+namespace sc_core {
+}
+namespace sc_dt {
+  using ::sc_bv;
+}
+
+#ifndef SC_NO_MAIN
+// removed main wrapper
+#endif
