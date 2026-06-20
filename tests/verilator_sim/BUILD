@@ -310,6 +310,49 @@ cc_binary(
 )
 
 cc_binary(
+    name = "core_barebones_sim",
+    srcs = [
+        "coralnpu/core_barebones_tb.cc",
+        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
+    ],
+    defines = [
+        "VERILATOR_MODEL=VCoreBarebones",
+    ],
+    deps = [
+        ":coralnpu_if",
+        ":sim_libs",
+        ":util",
+        "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/flags:usage",
+    ],
+)
+
+cc_binary(
+    name = "core_rvvi_sim",
+    srcs = [
+        "coralnpu/core_rvvi_tb.cc",
+        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreVerification_parameters.h",
+    ],
+    defines = [
+        "VERILATOR_MODEL=VCoreVerification",
+    ],
+    deps = [
+        ":coralnpu_if",
+        ":elf",
+        ":sim_libs",
+        ":spsc_ring_buffer",
+        ":trace_daemon",
+        ":util",
+        "//hdl/chisel/src/coralnpu:core_verification_cc_library",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/flags:usage",
+    ],
+)
+
+cc_binary(
     name = "core_mini_sim",
     srcs = [
         "coralnpu/core_tb.cc",
@@ -328,6 +371,7 @@ cc_binary(
         "@com_google_absl//absl/flags:usage",
     ],
 )
+
 
 cc_test(
     name = "dbus2axi_tb",
