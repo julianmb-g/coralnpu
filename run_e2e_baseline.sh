@@ -19,8 +19,7 @@ g++ -std=c++20 -pthread -c /tmp/main.cc -o /tmp/main.o
 
 g++ /tmp/core_barebones_tb.o /tmp/elf.o /tmp/main.o -o /tmp/core_barebones_tb_bin
 
-# Generate a dummy valid ELF that fits in default memory profile (loads at 0x0)
-# This is needed because provided external ELFs load at 0x80000000 which is not mapped in mocks.
+# Generate a dummy valid ELF that loads at 0x80000000
 echo "Generating dummy ELF..."
 cat << 'EOF' > /tmp/gen_elf.cc
 #include <vector>
