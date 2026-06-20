@@ -16,6 +16,11 @@ novas*
 tests/uvm/rtl
 tests/uvm/sim_work
 tests/uvm/vc_hdrs.h
+# Build artifacts for Verilator Sim
+tests/verilator_sim/rvvi/*.o
+tests/verilator_sim/rvvi/formatter_test
+tests/verilator_sim/rvvi/spsc_test
+tests/verilator_sim/rvvi/trace_test
 # python
 __pycache__
 # downloaded bitstreams
