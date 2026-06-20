@@ -11,6 +11,8 @@
 #define KP_lsuAddrBits 32
 #define KP_lsuDataBits 256
 #define KP_dbusSize 4
+#define KP_retirementBufferIdxWidth 7
+#define KP_xlen 32
 
 SC_MODULE(VCoreVerification) {
   sc_in<bool> clock;
@@ -40,11 +42,14 @@ SC_MODULE(VCoreVerification) {
   sc_in<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc;
   sc_out<sc_bv<KP_lsuAddrBits>> io_dbus_adrx;
 
-  // RVVI Trace Ports (mocked)
-  sc_out<bool> io_trace_valid;
-  sc_out<sc_bv<64>> io_trace_pc;
-  sc_out<sc_bv<32>> io_trace_insn;
-  sc_out<bool> io_trace_halt; // To simulate mpause
+  // RVVI Trace Ports (Aligned with real RTL io_debug_rb_...)
+  sc_out<bool> io_debug_rb_inst_0_valid;
+  sc_out<sc_bv<KP_programCounterBits>> io_debug_rb_inst_0_bits_pc;
+  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_inst;
+  sc_out<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_0_bits_idx;
+  sc_out<sc_bv<KP_xlen>> io_debug_rb_inst_0_bits_data;
+  sc_out<bool> io_debug_rb_inst_0_bits_trap;
+  sc_out<bool> io_trace_halt; // To simulate mpause (Temporary, to be removed)
 
   uint32_t pc = 0x80000000;
   bool halted = false;
@@ -60,7 +65,12 @@ SC_MODULE(VCoreVerification) {
       io_ibus_valid.write(false);
       io_dbus_valid.write(false);
       io_dbus_adrx.write(0);
-      io_trace_valid.write(false);
+      io_debug_rb_inst_0_valid.write(false);
+      io_debug_rb_inst_0_bits_pc.write(0);
+      io_debug_rb_inst_0_bits_inst.write(0);
+      io_debug_rb_inst_0_bits_idx.write(0);
+      io_debug_rb_inst_0_bits_data.write(0);
+      io_debug_rb_inst_0_bits_trap.write(false);
       io_trace_halt.write(false);
       cycle_count = 0;
       halted = false;
@@ -96,9 +106,12 @@ SC_MODULE(VCoreVerification) {
       instruction_count++;
 
       // Emit trace
-      io_trace_valid.write(true);
-      io_trace_pc.write(pc);
-      io_trace_insn.write(inst);
+      io_debug_rb_inst_0_valid.write(true);
+      io_debug_rb_inst_0_bits_pc.write(pc);
+      io_debug_rb_inst_0_bits_inst.write(inst);
+      io_debug_rb_inst_0_bits_idx.write(instruction_count % 8);
+      io_debug_rb_inst_0_bits_data.write(0);
+      io_debug_rb_inst_0_bits_trap.write(false);
 
       if (inst == 0x08000073) { // mpause
         halted = true;
@@ -113,7 +126,7 @@ SC_MODULE(VCoreVerification) {
         io_trace_halt.write(false);
       }
     } else {
-      io_trace_valid.write(false);
+      io_debug_rb_inst_0_valid.write(false);
       io_trace_halt.write(false);
     }
   }
