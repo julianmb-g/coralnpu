@@ -5,7 +5,7 @@
 #define MODEL_HEADER STR(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
 #include MODEL_HEADER
 
-#define PARAMS_HEADER_PREFIX tests/verilator_sim/coralnpu/
+#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
 #define PARAMS_HEADER_SUFFIX _parameters.h
 #define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
 #include PARAMS_HEADER
@@ -453,119 +453,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
     tb.trace(&core);
   }
 
-  tb.reset = 1;
-  core.reset.val = 1;
-  mif.reset.val = 1;
-  core.eval();
-  mif.eval();
-  
-  tb.reset = 0;
-  core.reset.val = 0;
-  mif.reset.val = 0;
-  core.pc = entry_point;
-
-  // Initialize ready signals to false
-  core.io_ibus_ready.val = 0;
-  core.io_dbus_ready.val = 0;
-  bool halted = false;
-  for (int i = 0; i < cycles; ++i) {
-    // Negedge
-    core.clock.val = 0;
-    mif.clock.val = 0;
-    core.eval();
-
-    // Propagate Core -> MIF
-    mif.io_ibus_valid.val = core.io_ibus_valid.val;
-    mif.io_ibus_addr.val = core.io_ibus_addr.val;
-    mif.io_dbus_valid.val = core.io_dbus_valid.val;
-    mif.io_dbus_write.val = core.io_dbus_write.val;
-    mif.io_dbus_addr.val = core.io_dbus_addr.val;
-    mif.io_dbus_adrx.val = core.io_dbus_adrx.val;
-    mif.io_dbus_size.val = core.io_dbus_size.val;
-    mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
-    mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
-
-    mif.eval();
-
-    // Propagate MIF -> Core
-    core.io_ibus_ready.val = mif.io_ibus_ready.val;
-    core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
-    core.io_ibus_fault_valid.val = mif.io_ibus_fault_valid.val;
-    core.io_ibus_fault_bits_write.val = mif.io_ibus_fault_bits_write.val;
-    core.io_ibus_fault_bits_addr.val = mif.io_ibus_fault_bits_addr.val;
-    core.io_ibus_fault_bits_epc.val = mif.io_ibus_fault_bits_epc.val;
-    core.io_dbus_ready.val = mif.io_dbus_ready.val;
-    core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
-
-    // Posedge
-    core.clock.val = 1;
-    mif.clock.val = 1;
-    core.eval();
-
-    // Propagate Core -> MIF
-    mif.io_ibus_valid.val = core.io_ibus_valid.val;
-    mif.io_ibus_addr.val = core.io_ibus_addr.val;
-    mif.io_dbus_valid.val = core.io_dbus_valid.val;
-    mif.io_dbus_write.val = core.io_dbus_write.val;
-    mif.io_dbus_addr.val = core.io_dbus_addr.val;
-    mif.io_dbus_adrx.val = core.io_dbus_adrx.val;
-    mif.io_dbus_size.val = core.io_dbus_size.val;
-    mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
-    mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
-
-    mif.eval();
-
-    // Propagate MIF -> Core
-    core.io_ibus_ready.val = mif.io_ibus_ready.val;
-    core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
-    core.io_ibus_fault_valid.val = mif.io_ibus_fault_valid.val;
-    core.io_ibus_fault_bits_write.val = mif.io_ibus_fault_bits_write.val;
-    core.io_ibus_fault_bits_addr.val = mif.io_ibus_fault_bits_addr.val;
-    core.io_ibus_fault_bits_epc.val = mif.io_ibus_fault_bits_epc.val;
-    core.io_dbus_ready.val = mif.io_dbus_ready.val;
-    core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
-
-    // Manual propagation for mock systemc.h
-    tb.io_debug_rb_inst_0_valid.val = core.io_debug_rb_inst_0_valid.val;
-    tb.io_debug_rb_inst_0_bits_pc.val = core.io_debug_rb_inst_0_bits_pc.val;
-    tb.io_debug_rb_inst_0_bits_inst.val = core.io_debug_rb_inst_0_bits_inst.val;
-    tb.io_debug_rb_inst_0_bits_idx.val = core.io_debug_rb_inst_0_bits_idx.val;
-    tb.io_debug_rb_inst_0_bits_data.val = core.io_debug_rb_inst_0_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_trap.val = core.io_debug_rb_inst_0_bits_trap.val;
-    tb.io_trace_halt.val = core.io_trace_halt.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_0_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_0_valid.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_0_bits_data.val = core.io_debug_rb_inst_0_bits_vecWrites_0_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_0_bits_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_0_bits_idx.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_1_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_1_valid.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_1_bits_data.val = core.io_debug_rb_inst_0_bits_vecWrites_1_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_1_bits_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_1_bits_idx.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_2_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_2_valid.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_2_bits_data.val = core.io_debug_rb_inst_0_bits_vecWrites_2_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_2_bits_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_2_bits_idx.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_3_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_3_valid.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_3_bits_data.val = core.io_debug_rb_inst_0_bits_vecWrites_3_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_3_bits_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_3_bits_idx.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_4_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_4_valid.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_4_bits_data.val = core.io_debug_rb_inst_0_bits_vecWrites_4_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_4_bits_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_4_bits_idx.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_5_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_5_valid.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_5_bits_data.val = core.io_debug_rb_inst_0_bits_vecWrites_5_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_5_bits_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_5_bits_idx.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_6_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_6_valid.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_6_bits_data.val = core.io_debug_rb_inst_0_bits_vecWrites_6_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_6_bits_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_6_bits_idx.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_7_valid.val = core.io_debug_rb_inst_0_bits_vecWrites_7_valid.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_7_bits_data.val = core.io_debug_rb_inst_0_bits_vecWrites_7_bits_data.val;
-    tb.io_debug_rb_inst_0_bits_vecWrites_7_bits_idx.val = core.io_debug_rb_inst_0_bits_vecWrites_7_bits_idx.val;
-
-    tb.io_halted.val = core.io_halted.val;
-
-    tb.posedge();
-    if (tb.io_halted.val) {
-      halted = true;
-      break;
-    }
-  }
+  tb.start();
 
   // Wait for buffer to drain
   while(!buffer.IsEmpty()) {
@@ -573,7 +461,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   }
   daemon.Stop();
 
-  if (halted) {
+  if (io_halted.read()) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
   } else {

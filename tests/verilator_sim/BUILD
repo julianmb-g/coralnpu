@@ -320,6 +320,7 @@ cc_binary(
     ],
     deps = [
         ":coralnpu_if",
+        ":elf",
         ":sim_libs",
         ":util",
         "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
@@ -441,7 +442,11 @@ cc_library(
 cc_library(
     name = "trace_daemon",
     srcs = ["rvvi/trace_daemon.cc"],
-    hdrs = ["rvvi/trace_daemon.h"],
+    hdrs = [
+        "rvvi/custom_fallback_formatter.h",
+        "rvvi/trace_daemon.h",
+        "rvvi/trace_formatter_interface.h",
+    ],
     deps = [
         ":spsc_ring_buffer",
         ":trace_packet",

@@ -18,7 +18,7 @@
 #define MODEL_HEADER STR(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
 #include MODEL_HEADER
 
-#define PARAMS_HEADER_PREFIX tests/verilator_sim/coralnpu/
+#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
 #define PARAMS_HEADER_SUFFIX _parameters.h
 #define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
 #include PARAMS_HEADER
@@ -188,91 +188,9 @@ static int Core_run(const char* name, const char* bin, const int cycles,
     tb.trace(&core);
   }
 
-  tb.reset = 1;
-  core.reset.val = 1;
-  mif.reset.val = 1;
-  core.eval();
-  mif.eval();
-  
-  tb.reset = 0;
-  core.reset.val = 0;
-  mif.reset.val = 0;
-  core.pc = entry_point;
-  
-  // Initialize ready signals to false
-  core.io_ibus_ready.val = 0;
-  core.io_dbus_ready.val = 0;
+  tb.start();
 
-  bool halted = false;
-  for (int i = 0; i < cycles; ++i) {
-    // Negedge
-    core.clock.val = 0;
-    mif.clock.val = 0;
-    core.eval();
-    
-    // Propagate Core -> MIF
-    mif.io_ibus_valid.val = core.io_ibus_valid.val;
-    mif.io_ibus_addr.val = core.io_ibus_addr.val;
-    mif.io_dbus_valid.val = core.io_dbus_valid.val;
-    mif.io_dbus_write.val = core.io_dbus_write.val;
-    mif.io_dbus_addr.val = core.io_dbus_addr.val;
-    mif.io_dbus_adrx.val = core.io_dbus_adrx.val;
-    mif.io_dbus_size.val = core.io_dbus_size.val;
-    mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
-    mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
-
-    mif.eval();
-
-    // Propagate MIF -> Core
-    core.io_ibus_ready.val = mif.io_ibus_ready.val;
-    core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
-    core.io_ibus_fault_valid.val = mif.io_ibus_fault_valid.val;
-    core.io_ibus_fault_bits_write.val = mif.io_ibus_fault_bits_write.val;
-    core.io_ibus_fault_bits_addr.val = mif.io_ibus_fault_bits_addr.val;
-    core.io_ibus_fault_bits_epc.val = mif.io_ibus_fault_bits_epc.val;
-    core.io_dbus_ready.val = mif.io_dbus_ready.val;
-    core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
-    
-    // Posedge
-    core.clock.val = 1;
-    mif.clock.val = 1;
-    core.eval();
-
-    // Propagate Core -> MIF
-    mif.io_ibus_valid.val = core.io_ibus_valid.val;
-    mif.io_ibus_addr.val = core.io_ibus_addr.val;
-    mif.io_dbus_valid.val = core.io_dbus_valid.val;
-    mif.io_dbus_write.val = core.io_dbus_write.val;
-    mif.io_dbus_addr.val = core.io_dbus_addr.val;
-    mif.io_dbus_adrx.val = core.io_dbus_adrx.val;
-    mif.io_dbus_size.val = core.io_dbus_size.val;
-    mif.io_dbus_wdata.val = core.io_dbus_wdata.val;
-    mif.io_dbus_wmask.val = core.io_dbus_wmask.val;
-
-    mif.eval();
-
-    // Propagate MIF -> Core
-    core.io_ibus_ready.val = mif.io_ibus_ready.val;
-    core.io_ibus_rdata.val = mif.io_ibus_rdata.val;
-    core.io_ibus_fault_valid.val = mif.io_ibus_fault_valid.val;
-    core.io_ibus_fault_bits_write.val = mif.io_ibus_fault_bits_write.val;
-    core.io_ibus_fault_bits_addr.val = mif.io_ibus_fault_bits_addr.val;
-    core.io_ibus_fault_bits_epc.val = mif.io_ibus_fault_bits_epc.val;
-    core.io_dbus_ready.val = mif.io_dbus_ready.val;
-    core.io_dbus_rdata.val = mif.io_dbus_rdata.val;
-    
-    // Manual propagation for mock systemc.h
-    tb.io_halted.val = core.io_halted.val;
-    tb.io_fault.val = core.io_fault.val;
-
-    tb.posedge();
-    if (tb.io_halted.val) {
-      halted = true;
-      break;
-    }
-  }
-
-  if (halted) {
+  if (io_halted.read()) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
   } else {
