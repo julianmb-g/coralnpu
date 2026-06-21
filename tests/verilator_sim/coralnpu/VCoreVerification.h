@@ -13,6 +13,8 @@
 #define KP_dbusSize 4
 #define KP_retirementBufferIdxWidth 7
 #define KP_xlen 32
+#define KP_rvvVlen 256
+#define KP_rvvRegCountWidth 5
 
 SC_MODULE(VCoreVerification) {
   sc_in<bool> clock;
@@ -52,29 +54,29 @@ SC_MODULE(VCoreVerification) {
   sc_out<bool> io_trace_halt; // To simulate mpause (Temporary, to be removed)
 
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_0_valid;
-  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_0_data;
-  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_0_idx;
+  sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_0_bits_data;
+  sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_0_bits_idx;
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_1_valid;
-  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_1_data;
-  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_1_idx;
+  sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_1_bits_data;
+  sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_1_bits_idx;
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_2_valid;
-  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_2_data;
-  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_2_idx;
+  sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_2_bits_data;
+  sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_2_bits_idx;
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_3_valid;
-  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_3_data;
-  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_3_idx;
+  sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_3_bits_data;
+  sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_3_bits_idx;
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_4_valid;
-  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_4_data;
-  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_4_idx;
+  sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_4_bits_data;
+  sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_4_bits_idx;
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_5_valid;
-  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_5_data;
-  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_5_idx;
+  sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_5_bits_data;
+  sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_5_bits_idx;
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_6_valid;
-  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_6_data;
-  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_6_idx;
+  sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_6_bits_data;
+  sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_6_bits_idx;
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_7_valid;
-  sc_out<sc_bv<32>> io_debug_rb_inst_0_bits_vecWrites_7_data;
-  sc_out<sc_bv<5>> io_debug_rb_inst_0_bits_vecWrites_7_idx;
+  sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_7_bits_data;
+  sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_7_bits_idx;
 
 
   uint32_t pc = 0x80000000;
@@ -101,29 +103,29 @@ SC_MODULE(VCoreVerification) {
       io_debug_rb_inst_0_bits_trap.write(false);
       io_trace_halt.write(false);
       io_debug_rb_inst_0_bits_vecWrites_0_valid.write(false);
-      io_debug_rb_inst_0_bits_vecWrites_0_data.write(0);
-      io_debug_rb_inst_0_bits_vecWrites_0_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_0_bits_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_0_bits_idx.write(0);
       io_debug_rb_inst_0_bits_vecWrites_1_valid.write(false);
-      io_debug_rb_inst_0_bits_vecWrites_1_data.write(0);
-      io_debug_rb_inst_0_bits_vecWrites_1_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_1_bits_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_1_bits_idx.write(0);
       io_debug_rb_inst_0_bits_vecWrites_2_valid.write(false);
-      io_debug_rb_inst_0_bits_vecWrites_2_data.write(0);
-      io_debug_rb_inst_0_bits_vecWrites_2_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_2_bits_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_2_bits_idx.write(0);
       io_debug_rb_inst_0_bits_vecWrites_3_valid.write(false);
-      io_debug_rb_inst_0_bits_vecWrites_3_data.write(0);
-      io_debug_rb_inst_0_bits_vecWrites_3_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_3_bits_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_3_bits_idx.write(0);
       io_debug_rb_inst_0_bits_vecWrites_4_valid.write(false);
-      io_debug_rb_inst_0_bits_vecWrites_4_data.write(0);
-      io_debug_rb_inst_0_bits_vecWrites_4_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_4_bits_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_4_bits_idx.write(0);
       io_debug_rb_inst_0_bits_vecWrites_5_valid.write(false);
-      io_debug_rb_inst_0_bits_vecWrites_5_data.write(0);
-      io_debug_rb_inst_0_bits_vecWrites_5_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_5_bits_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_5_bits_idx.write(0);
       io_debug_rb_inst_0_bits_vecWrites_6_valid.write(false);
-      io_debug_rb_inst_0_bits_vecWrites_6_data.write(0);
-      io_debug_rb_inst_0_bits_vecWrites_6_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_6_bits_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_6_bits_idx.write(0);
       io_debug_rb_inst_0_bits_vecWrites_7_valid.write(false);
-      io_debug_rb_inst_0_bits_vecWrites_7_data.write(0);
-      io_debug_rb_inst_0_bits_vecWrites_7_idx.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_7_bits_data.write(0);
+      io_debug_rb_inst_0_bits_vecWrites_7_bits_idx.write(0);
       cycle_count = 0;
       halted = false;
       instruction_count = 0;
@@ -190,38 +192,39 @@ SC_MODULE(VCoreVerification) {
       io_debug_rb_inst_0_bits_trap.write(false);
 
       if (opcode == 0x57) {
-        uint32_t val_0 = (rd << 24) | (0 << 16) | 0x5757;
+        sc_bv<256> vval_0; for (int j = 0; j < 8; j++) vval_0.set_word(j, (rd << 24) | (0 << 20) | (j << 16) | 0x5757);
+        sc_bv<256> vval_1; for (int j = 0; j < 8; j++) vval_1.set_word(j, (rd << 24) | (1 << 20) | (j << 16) | 0x5757);
+        sc_bv<256> vval_2; for (int j = 0; j < 8; j++) vval_2.set_word(j, (rd << 24) | (2 << 20) | (j << 16) | 0x5757);
+        sc_bv<256> vval_3; for (int j = 0; j < 8; j++) vval_3.set_word(j, (rd << 24) | (3 << 20) | (j << 16) | 0x5757);
+        sc_bv<256> vval_4; for (int j = 0; j < 8; j++) vval_4.set_word(j, (rd << 24) | (4 << 20) | (j << 16) | 0x5757);
+        sc_bv<256> vval_5; for (int j = 0; j < 8; j++) vval_5.set_word(j, (rd << 24) | (5 << 20) | (j << 16) | 0x5757);
+        sc_bv<256> vval_6; for (int j = 0; j < 8; j++) vval_6.set_word(j, (rd << 24) | (6 << 20) | (j << 16) | 0x5757);
+        sc_bv<256> vval_7; for (int j = 0; j < 8; j++) vval_7.set_word(j, (rd << 24) | (7 << 20) | (j << 16) | 0x5757);
+
         io_debug_rb_inst_0_bits_vecWrites_0_valid.write(true);
-        io_debug_rb_inst_0_bits_vecWrites_0_data.write(val_0);
-        io_debug_rb_inst_0_bits_vecWrites_0_idx.write(rd);
-        uint32_t val_1 = (rd << 24) | (1 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_0_bits_data.write(vval_0);
+        io_debug_rb_inst_0_bits_vecWrites_0_bits_idx.write(rd);
         io_debug_rb_inst_0_bits_vecWrites_1_valid.write(true);
-        io_debug_rb_inst_0_bits_vecWrites_1_data.write(val_1);
-        io_debug_rb_inst_0_bits_vecWrites_1_idx.write(rd);
-        uint32_t val_2 = (rd << 24) | (2 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_1_bits_data.write(vval_1);
+        io_debug_rb_inst_0_bits_vecWrites_1_bits_idx.write(rd);
         io_debug_rb_inst_0_bits_vecWrites_2_valid.write(true);
-        io_debug_rb_inst_0_bits_vecWrites_2_data.write(val_2);
-        io_debug_rb_inst_0_bits_vecWrites_2_idx.write(rd);
-        uint32_t val_3 = (rd << 24) | (3 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_2_bits_data.write(vval_2);
+        io_debug_rb_inst_0_bits_vecWrites_2_bits_idx.write(rd);
         io_debug_rb_inst_0_bits_vecWrites_3_valid.write(true);
-        io_debug_rb_inst_0_bits_vecWrites_3_data.write(val_3);
-        io_debug_rb_inst_0_bits_vecWrites_3_idx.write(rd);
-        uint32_t val_4 = (rd << 24) | (4 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_3_bits_data.write(vval_3);
+        io_debug_rb_inst_0_bits_vecWrites_3_bits_idx.write(rd);
         io_debug_rb_inst_0_bits_vecWrites_4_valid.write(true);
-        io_debug_rb_inst_0_bits_vecWrites_4_data.write(val_4);
-        io_debug_rb_inst_0_bits_vecWrites_4_idx.write(rd);
-        uint32_t val_5 = (rd << 24) | (5 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_4_bits_data.write(vval_4);
+        io_debug_rb_inst_0_bits_vecWrites_4_bits_idx.write(rd);
         io_debug_rb_inst_0_bits_vecWrites_5_valid.write(true);
-        io_debug_rb_inst_0_bits_vecWrites_5_data.write(val_5);
-        io_debug_rb_inst_0_bits_vecWrites_5_idx.write(rd);
-        uint32_t val_6 = (rd << 24) | (6 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_5_bits_data.write(vval_5);
+        io_debug_rb_inst_0_bits_vecWrites_5_bits_idx.write(rd);
         io_debug_rb_inst_0_bits_vecWrites_6_valid.write(true);
-        io_debug_rb_inst_0_bits_vecWrites_6_data.write(val_6);
-        io_debug_rb_inst_0_bits_vecWrites_6_idx.write(rd);
-        uint32_t val_7 = (rd << 24) | (7 << 16) | 0x5757;
+        io_debug_rb_inst_0_bits_vecWrites_6_bits_data.write(vval_6);
+        io_debug_rb_inst_0_bits_vecWrites_6_bits_idx.write(rd);
         io_debug_rb_inst_0_bits_vecWrites_7_valid.write(true);
-        io_debug_rb_inst_0_bits_vecWrites_7_data.write(val_7);
-        io_debug_rb_inst_0_bits_vecWrites_7_idx.write(rd);
+        io_debug_rb_inst_0_bits_vecWrites_7_bits_data.write(vval_7);
+        io_debug_rb_inst_0_bits_vecWrites_7_bits_idx.write(rd);
       } else {
         io_debug_rb_inst_0_bits_vecWrites_0_valid.write(false);
         io_debug_rb_inst_0_bits_vecWrites_1_valid.write(false);
