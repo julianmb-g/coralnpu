@@ -1,27 +1,12 @@
 #!/bin/bash
 set -e
 
-# Build the simulator
-echo "Building simulator..."
-cat << 'EOF' > /tmp/main.cc
-#include <iostream>
-extern int sc_main(int argc, char* argv[]);
-int main(int argc, char* argv[]) {
-  return sc_main(argc, argv);
-}
-EOF
-
-# We need to compile with -include cstdlib to fix missing rand in fifo.h
-# And -DVERILATOR_MODEL=VCoreBarebones to use the barebones model
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -DVERILATOR_MODEL=VCoreBarebones -include cstdlib -include verilated_fst_c.h -c tests/verilator_sim/coralnpu/core_barebones_tb.cc -o /tmp/core_barebones_tb.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/elf.cc -o /tmp/elf.o
-g++ -std=c++20 -pthread -c /tmp/main.cc -o /tmp/main.o
-
-g++ /tmp/core_barebones_tb.o /tmp/elf.o /tmp/main.o -o /tmp/core_barebones_tb_bin
+# Cleanup trap
+trap 'rm -f ./gen_elf.cc ./gen_elf ./dummy.elf' EXIT
 
 # Generate a dummy valid ELF that loads at 0x80000000
 echo "Generating dummy ELF..."
-cat << 'EOF' > /tmp/gen_elf.cc
+cat << 'EOF' > ./gen_elf.cc
 #include <vector>
 #include <cstring>
 #include <elf.h>
@@ -70,11 +55,16 @@ int main(int argc, char* argv[]) {
 }
 EOF
 
-g++ /tmp/gen_elf.cc -o /tmp/gen_elf
-/tmp/gen_elf /tmp/dummy.elf
+# Compile helper in Podman
+echo "Compiling helper in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu g++ ./gen_elf.cc -o ./gen_elf
 
-# Run the simulator
-echo "Running simulator..."
-/tmp/core_barebones_tb_bin /tmp/dummy.elf
+# Generate ELF in Podman
+echo "Generating ELF in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu ./gen_elf $PWD/dummy.elf
+
+# Run simulator via Bazel in Podman
+echo "Running simulator via Bazel in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_barebones_sim -- $PWD/dummy.elf
 
 echo "E2E Baseline Emulation Test PASSED"
