@@ -13,7 +13,7 @@
 #define KP_dbusSize 4
 #define KP_retirementBufferIdxWidth 7
 #define KP_xlen 32
-#define KP_rvvVlen 256
+#define KP_rvvVlen 128
 #define KP_rvvRegCountWidth 5
 
 SC_MODULE(VCoreVerification) {
@@ -51,7 +51,6 @@ SC_MODULE(VCoreVerification) {
   sc_out<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_0_bits_idx;
   sc_out<sc_bv<KP_xlen>> io_debug_rb_inst_0_bits_data;
   sc_out<bool> io_debug_rb_inst_0_bits_trap;
-  sc_out<bool> io_trace_halt; // To simulate mpause (Temporary, to be removed)
 
   sc_out<bool> io_debug_rb_inst_0_bits_vecWrites_0_valid;
   sc_out<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_0_bits_data;
@@ -101,7 +100,6 @@ SC_MODULE(VCoreVerification) {
       io_debug_rb_inst_0_bits_idx.write(0);
       io_debug_rb_inst_0_bits_data.write(0);
       io_debug_rb_inst_0_bits_trap.write(false);
-      io_trace_halt.write(false);
       io_debug_rb_inst_0_bits_vecWrites_0_valid.write(false);
       io_debug_rb_inst_0_bits_vecWrites_0_bits_data.write(0);
       io_debug_rb_inst_0_bits_vecWrites_0_bits_idx.write(0);
@@ -239,18 +237,14 @@ SC_MODULE(VCoreVerification) {
       if (inst == 0x08000073) { // mpause
         halted = true;
         io_halted.write(true);
-        io_trace_halt.write(true);
       } else if (inst == 0x00100073) { // ebreak
         halted = true;
         io_halted.write(true);
-        io_trace_halt.write(true);
       } else {
         pc += 4; // increment pc
-        io_trace_halt.write(false);
       }
     } else {
       io_debug_rb_inst_0_valid.write(false);
-      io_trace_halt.write(false);
     }
   }
 

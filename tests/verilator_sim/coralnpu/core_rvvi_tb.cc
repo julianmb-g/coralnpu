@@ -62,9 +62,8 @@ struct CoreRvvi_tb : Sysc_tb {
   sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_0_bits_pc;
   sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_inst;
   sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_0_bits_idx;
-  sc_in<sc_bv<KP_xlen>> io_debug_rb_inst_0_bits_data;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_data;
   sc_in<bool> io_debug_rb_inst_0_bits_trap;
-  sc_in<bool> io_trace_halt;
 
   sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_0_valid;
   sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_0_bits_data;
@@ -93,6 +92,7 @@ struct CoreRvvi_tb : Sysc_tb {
 
 
   SpscRingBuffer<TracePacket, 4096>* buffer;
+  bool e_sent = false;
 
   CoreRvvi_tb(sc_module_name name, int cycles, bool random, SpscRingBuffer<TracePacket, 4096>* buf) 
     : Sysc_tb(name, cycles, random), buffer(buf) {}
@@ -216,12 +216,13 @@ struct CoreRvvi_tb : Sysc_tb {
         }
       }
 
-      if (io_trace_halt.read()) {
+      if (io_halted.read() && !e_sent) {
         TracePacket epacket = {};
         epacket.type = 'E';
         while (!buffer->Push(epacket)) {
           std::this_thread::yield();
         }
+        e_sent = true;
       }
     }
 
@@ -308,9 +309,8 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   sc_signal<sc_bv<KP_programCounterBits>> io_debug_rb_inst_0_bits_pc;
   sc_signal<sc_bv<32>> io_debug_rb_inst_0_bits_inst;
   sc_signal<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_0_bits_idx;
-  sc_signal<sc_bv<KP_xlen>> io_debug_rb_inst_0_bits_data;
+  sc_signal<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_data;
   sc_signal<bool> io_debug_rb_inst_0_bits_trap;
-  sc_signal<bool> io_trace_halt;
 
   sc_signal<bool> io_debug_rb_inst_0_bits_vecWrites_0_valid;
   sc_signal<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_0_bits_data;
@@ -346,7 +346,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   tb.io_debug_rb_inst_0_bits_idx(io_debug_rb_inst_0_bits_idx);
   tb.io_debug_rb_inst_0_bits_data(io_debug_rb_inst_0_bits_data);
   tb.io_debug_rb_inst_0_bits_trap(io_debug_rb_inst_0_bits_trap);
-  tb.io_trace_halt(io_trace_halt);
+
   tb.io_debug_rb_inst_0_bits_vecWrites_0_valid(io_debug_rb_inst_0_bits_vecWrites_0_valid);
   tb.io_debug_rb_inst_0_bits_vecWrites_0_bits_data(io_debug_rb_inst_0_bits_vecWrites_0_bits_data);
   tb.io_debug_rb_inst_0_bits_vecWrites_0_bits_idx(io_debug_rb_inst_0_bits_vecWrites_0_bits_idx);
@@ -402,7 +402,6 @@ static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
   core.io_debug_rb_inst_0_bits_idx(io_debug_rb_inst_0_bits_idx);
   core.io_debug_rb_inst_0_bits_data(io_debug_rb_inst_0_bits_data);
   core.io_debug_rb_inst_0_bits_trap(io_debug_rb_inst_0_bits_trap);
-  core.io_trace_halt(io_trace_halt);
   core.io_debug_rb_inst_0_bits_vecWrites_0_valid(io_debug_rb_inst_0_bits_vecWrites_0_valid);
   core.io_debug_rb_inst_0_bits_vecWrites_0_bits_data(io_debug_rb_inst_0_bits_vecWrites_0_bits_data);
   core.io_debug_rb_inst_0_bits_vecWrites_0_bits_idx(io_debug_rb_inst_0_bits_vecWrites_0_bits_idx);
