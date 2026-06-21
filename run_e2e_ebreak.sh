@@ -1,19 +1,12 @@
 #!/bin/bash
 set -e
 
-# Build the RVVI simulator
-echo "Building RVVI simulator..."
+# Cleanup trap
+trap 'rm -f ./gen_ebreak_elf.cc ./gen_ebreak_elf ./ebreak.elf' EXIT
 
-# Compile
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -DVERILATOR_MODEL=VCoreVerification -include cstdlib -include verilated_fst_c.h -c tests/verilator_sim/coralnpu/core_rvvi_tb.cc -o /tmp/core_rvvi_tb.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/elf.cc -o /tmp/elf.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/rvvi/trace_daemon.cc -o /tmp/trace_daemon.o
-
-g++ /tmp/core_rvvi_tb.o /tmp/elf.o /tmp/trace_daemon.o -o /tmp/core_rvvi_tb_bin
-
-# Generate a valid ELF that loads at 0x80000000
+# Generate a valid ELF that loads at 0x80000000 with ebreak...
 echo "Generating ELF at 0x80000000 with ebreak..."
-cat << 'EOF' > /tmp/gen_ebreak_elf.cc
+cat << 'EOF' > ./gen_ebreak_elf.cc
 #include <vector>
 #include <cstring>
 #include <elf.h>
@@ -62,12 +55,17 @@ int main(int argc, char* argv[]) {
 }
 EOF
 
-g++ /tmp/gen_ebreak_elf.cc -o /tmp/gen_ebreak_elf
-/tmp/gen_ebreak_elf /tmp/ebreak.elf
+# Compile helper in Podman
+echo "Compiling helper in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu g++ ./gen_ebreak_elf.cc -o ./gen_ebreak_elf
 
-# Run the simulator
-echo "Running RVVI simulator..."
-/tmp/core_rvvi_tb_bin /tmp/ebreak.elf
+# Generate ELF in Podman
+echo "Generating ELF in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu ./gen_ebreak_elf $PWD/ebreak.elf
+
+# Run simulator via Bazel in Podman
+echo "Running RVVI simulator via Bazel in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=$PWD/trace.rvvi $PWD/ebreak.elf
 
 echo "Checking RVVI trace output..."
 if ! grep -q "00100073" trace.rvvi; then

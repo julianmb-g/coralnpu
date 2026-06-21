@@ -1,19 +1,12 @@
 #!/bin/bash
 set -e
 
-# Build the RVVI simulator
-echo "Building RVVI simulator for Termination Test..."
-
-# Compile
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -DVERILATOR_MODEL=VCoreVerification -include cstdlib -include verilated_fst_c.h -c tests/verilator_sim/coralnpu/core_rvvi_tb.cc -o /tmp/core_rvvi_tb.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/elf.cc -o /tmp/elf.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/rvvi/trace_daemon.cc -o /tmp/trace_daemon.o
-
-g++ /tmp/core_rvvi_tb.o /tmp/elf.o /tmp/trace_daemon.o -o /tmp/core_rvvi_tb_bin
+# Cleanup trap
+trap 'rm -f ./gen_rvvi_elf.cc ./gen_rvvi_elf ./rvvi.elf' EXIT
 
 # Generate a valid ELF that loads at 0x80000000
 echo "Generating ELF at 0x80000000..."
-cat << 'EOF' > /tmp/gen_rvvi_elf.cc
+cat << 'EOF' > ./gen_rvvi_elf.cc
 #include <vector>
 #include <cstring>
 #include <elf.h>
@@ -64,12 +57,17 @@ int main(int argc, char* argv[]) {
 }
 EOF
 
-g++ /tmp/gen_rvvi_elf.cc -o /tmp/gen_rvvi_elf
-/tmp/gen_rvvi_elf /tmp/rvvi.elf
+# Compile helper in Podman
+echo "Compiling helper in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu g++ ./gen_rvvi_elf.cc -o ./gen_rvvi_elf
 
-# Run the simulator
-echo "Running RVVI simulator..."
-/tmp/core_rvvi_tb_bin /tmp/rvvi.elf
+# Generate ELF in Podman
+echo "Generating ELF in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu ./gen_rvvi_elf $PWD/rvvi.elf
+
+# Run simulator via Bazel in Podman
+echo "Running RVVI simulator via Bazel in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=$PWD/trace.rvvi $PWD/rvvi.elf
 
 echo "Checking RVVI trace output for graceful termination..."
 if ! tail -n 1 trace.rvvi | grep -q "08000073"; then

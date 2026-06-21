@@ -1,34 +1,11 @@
 #!/bin/bash
 set -e
 
-# Build the simulators
-echo "Building simulators..."
+# Cleanup trap
+trap 'rm -f ./gen_timeout_elf.cc ./gen_timeout_elf ./timeout.elf ./barebones_out.log ./rvvi_out.log' EXIT
 
-# Compile Barebones
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -DVERILATOR_MODEL=VCoreBarebones -include cstdlib -include verilated_fst_c.h -c tests/verilator_sim/coralnpu/core_barebones_tb.cc -o /tmp/core_barebones_tb.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/elf.cc -o /tmp/elf.o
-
-# Create main wrapper if not exists
-cat << 'EOF' > /tmp/main.cc
-#include <iostream>
-extern int sc_main(int argc, char* argv[]);
-int main(int argc, char* argv[]) {
-  return sc_main(argc, argv);
-}
-EOF
-g++ -std=c++20 -pthread -c /tmp/main.cc -o /tmp/main.o
-
-g++ /tmp/core_barebones_tb.o /tmp/elf.o /tmp/main.o -o /tmp/core_barebones_tb_bin
-
-# Compile RVVI
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -DVERILATOR_MODEL=VCoreVerification -include cstdlib -include verilated_fst_c.h -c tests/verilator_sim/coralnpu/core_rvvi_tb.cc -o /tmp/core_rvvi_tb.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/rvvi/trace_daemon.cc -o /tmp/trace_daemon.o
-
-g++ /tmp/core_rvvi_tb.o /tmp/elf.o /tmp/trace_daemon.o -o /tmp/core_rvvi_tb_bin
-
-# Generate a valid ELF that loads at 0x80000000 with 600,000 NOPs
 echo "Generating ELF at 0x80000000 with 600,000 NOPs..."
-cat << 'EOF' > /tmp/gen_timeout_elf.cc
+cat << 'EOF' > ./gen_timeout_elf.cc
 #include <vector>
 #include <cstring>
 #include <elf.h>
@@ -80,24 +57,29 @@ int main(int argc, char* argv[]) {
 }
 EOF
 
-g++ /tmp/gen_timeout_elf.cc -o /tmp/gen_timeout_elf
-/tmp/gen_timeout_elf /tmp/timeout.elf
+# Compile helper in Podman
+echo "Compiling helper in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu g++ ./gen_timeout_elf.cc -o ./gen_timeout_elf
+
+# Generate ELF in Podman
+echo "Generating ELF in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu ./gen_timeout_elf $PWD/timeout.elf
 
 # Run Barebones simulator and expect timeout
-echo "Running Barebones simulator (expecting timeout)..."
+echo "Running Barebones simulator via Bazel in Podman (expecting timeout)..."
 set +e
-/tmp/core_barebones_tb_bin /tmp/timeout.elf > /tmp/barebones_out.log 2>&1
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_barebones_sim -- $PWD/timeout.elf > ./barebones_out.log 2>&1
 EXIT_CODE=$?
 set -e
 
-cat /tmp/barebones_out.log
+cat ./barebones_out.log
 
 if [ $EXIT_CODE -ne 1 ]; then
   echo "Barebones simulator did not exit with code 1 (Exit Code: $EXIT_CODE)"
   exit 1
 fi
 
-if ! grep -q "Simulation TIMEOUT" /tmp/barebones_out.log; then
+if ! grep -q "Simulation TIMEOUT" ./barebones_out.log; then
   echo "Barebones simulator output missing 'Simulation TIMEOUT'"
   exit 1
 fi
@@ -105,20 +87,20 @@ fi
 echo "Barebones simulator timed out as expected."
 
 # Run RVVI simulator and expect timeout
-echo "Running RVVI simulator (expecting timeout)..."
+echo "Running RVVI simulator via Bazel in Podman (expecting timeout)..."
 set +e
-/tmp/core_rvvi_tb_bin /tmp/timeout.elf > /tmp/rvvi_out.log 2>&1
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=$PWD/trace.rvvi $PWD/timeout.elf > ./rvvi_out.log 2>&1
 EXIT_CODE=$?
 set -e
 
-cat /tmp/rvvi_out.log
+cat ./rvvi_out.log
 
 if [ $EXIT_CODE -ne 1 ]; then
   echo "RVVI simulator did not exit with code 1 (Exit Code: $EXIT_CODE)"
   exit 1
 fi
 
-if ! grep -q "Simulation TIMEOUT" /tmp/rvvi_out.log; then
+if ! grep -q "Simulation TIMEOUT" ./rvvi_out.log; then
   echo "RVVI simulator output missing 'Simulation TIMEOUT'"
   exit 1
 fi
