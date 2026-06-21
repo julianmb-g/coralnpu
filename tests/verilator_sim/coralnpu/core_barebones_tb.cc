@@ -108,6 +108,8 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   sc_signal<bool> io_fault;
   sc_signal<bool> io_wfi;
   sc_signal<bool> io_irq;
+  sc_signal<bool> io_timer_irq;
+  sc_signal<bool> io_software_irq;
   sc_signal<bool> io_debug_req;
   sc_signal<bool> io_ibus_valid;
   sc_signal<bool> io_ibus_ready;
@@ -123,6 +125,60 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   sc_signal<bool> io_dflush_ready;
   sc_signal<bool> io_dflush_all;
   sc_signal<bool> io_dflush_clean;
+
+  sc_signal<bool> io_ebus_dbus_valid;
+  sc_signal<bool> io_ebus_dbus_ready;
+  sc_signal<bool> io_ebus_dbus_write;
+  sc_signal<bool> io_ebus_internal;
+  sc_signal<bool> io_ebus_fault_valid;
+  sc_signal<bool> io_ebus_fault_bits_write;
+  sc_signal<sc_bv<32>> io_ebus_dbus_pc;
+  sc_signal<sc_bv<32>> io_ebus_dbus_addr;
+  sc_signal<sc_bv<32>> io_ebus_dbus_adrx;
+  sc_signal<sc_bv<5>> io_ebus_dbus_size;
+  sc_signal<sc_bv<128>> io_ebus_dbus_wdata;
+  sc_signal<sc_bv<16>> io_ebus_dbus_wmask;
+  sc_signal<sc_bv<128>> io_ebus_dbus_rdata;
+  sc_signal<sc_bv<32>> io_ebus_fault_bits_addr;
+  sc_signal<sc_bv<32>> io_ebus_fault_bits_epc;
+
+  sc_signal<bool> io_dm_debug_req;
+  sc_signal<bool> io_dm_resume_req;
+  sc_signal<bool> io_dm_csr_valid;
+  sc_signal<bool> io_dm_csr_rd_valid;
+  sc_signal<bool> io_dm_scalar_rd_ready;
+  sc_signal<bool> io_dm_scalar_rd_valid;
+  sc_signal<bool> io_dm_float_rd_valid;
+  sc_signal<bool> io_dm_float_rd_data_sign;
+  sc_signal<bool> io_dm_float_rs_valid;
+  sc_signal<bool> io_dm_float_rs_data_sign;
+  sc_signal<bool> io_dm_debug_mode;
+  sc_signal<sc_bv<5>> io_dm_csr_bits_addr;
+  sc_signal<sc_bv<12>> io_dm_csr_bits_index;
+  sc_signal<sc_bv<5>> io_dm_csr_bits_rs1;
+  sc_signal<sc_bv<2>> io_dm_csr_bits_op;
+  sc_signal<sc_bv<32>> io_dm_csr_rs1;
+  sc_signal<sc_bv<32>> io_dm_csr_rd_bits;
+  sc_signal<sc_bv<5>> io_dm_scalar_rd_bits_addr;
+  sc_signal<sc_bv<32>> io_dm_scalar_rd_bits_data;
+  sc_signal<sc_bv<5>> io_dm_scalar_rs_idx;
+  sc_signal<sc_bv<32>> io_dm_scalar_rs_data;
+  sc_signal<sc_bv<5>> io_dm_float_rd_addr;
+  sc_signal<sc_bv<23>> io_dm_float_rd_data_mantissa;
+  sc_signal<sc_bv<8>> io_dm_float_rd_data_exponent;
+  sc_signal<sc_bv<5>> io_dm_float_rs_addr;
+  sc_signal<sc_bv<23>> io_dm_float_rs_data_mantissa;
+  sc_signal<sc_bv<8>> io_dm_float_rs_data_exponent;
+
+#define DECLARE_CSR_OUT(x) sc_signal<sc_bv<32>> io_csr_out_value_##x;
+  REPEAT_8(DECLARE_CSR_OUT);
+  DECLARE_CSR_OUT(8);
+#undef DECLARE_CSR_OUT
+
+#define DECLARE_CSR_IN(x) sc_signal<sc_bv<32>> io_csr_in_value_##x;
+  REPEAT_13(DECLARE_CSR_IN);
+#undef DECLARE_CSR_IN
+
   sc_signal<sc_bv<KP_programCounterBits> > io_ibus_addr;
   sc_signal<sc_bv<KP_fetchDataBits> > io_ibus_rdata;
   sc_signal<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc;
@@ -135,8 +191,103 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   sc_signal<sc_bv<KP_lsuDataBits / 8> > io_dbus_wmask;
   sc_signal<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
 
+#define DECLARE_RB_DEBUG_IO(x) \
+  sc_signal<bool> io_debug_rb_inst_##x##_valid; \
+  sc_signal<sc_bv<32>> io_debug_rb_inst_##x##_bits_pc; \
+  sc_signal<sc_bv<32>> io_debug_rb_inst_##x##_bits_inst; \
+  sc_signal<sc_bv<7>> io_debug_rb_inst_##x##_bits_idx; \
+  sc_signal<sc_bv<32>> io_debug_rb_inst_##x##_bits_data; \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_trap;
+
+  REPEAT_8(DECLARE_RB_DEBUG_IO);
+#undef DECLARE_RB_DEBUG_IO
+
+  sc_signal<bool> io_debug_float_writeAddr_valid;
+  sc_signal<bool> io_debug_float_writeData_0_valid;
+  sc_signal<bool> io_debug_float_writeData_1_valid;
+  sc_signal<sc_bv<5>> io_debug_float_writeAddr_bits;
+  sc_signal<sc_bv<5>> io_debug_float_writeData_0_bits_addr;
+  sc_signal<sc_bv<32>> io_debug_float_writeData_0_bits_data;
+  sc_signal<sc_bv<5>> io_debug_float_writeData_1_bits_addr;
+  sc_signal<sc_bv<32>> io_debug_float_writeData_1_bits_data;
+
+#define DECLARE_REGFILE_WRITE_ADDR(x) \
+  sc_signal<bool> io_debug_regfile_writeAddr_##x##_valid; \
+  sc_signal<sc_bv<5>> io_debug_regfile_writeAddr_##x##_bits;
+
+#define DECLARE_REGFILE_WRITE_DATA(x) \
+  sc_signal<bool> io_debug_regfile_writeData_##x##_valid; \
+  sc_signal<sc_bv<5>> io_debug_regfile_writeData_##x##_bits_addr; \
+  sc_signal<sc_bv<32>> io_debug_regfile_writeData_##x##_bits_data;
+
+  REPEAT_4(DECLARE_REGFILE_WRITE_ADDR);
+  REPEAT_6(DECLARE_REGFILE_WRITE_DATA);
+
+#undef DECLARE_REGFILE_WRITE_ADDR
+#undef DECLARE_REGFILE_WRITE_DATA
+
+  sc_signal<sc_bv<4>> io_debug_en;
+  sc_signal<sc_bv<32>> io_debug_cycles;
+
+#define DECLARE_DEBUG_ADDR(x) sc_signal<sc_bv<32>> io_debug_addr_##x;
+#define DECLARE_DEBUG_INST(x) sc_signal<sc_bv<32>> io_debug_inst_##x;
+
+  REPEAT_4(DECLARE_DEBUG_ADDR);
+  REPEAT_4(DECLARE_DEBUG_INST);
+
+#undef DECLARE_DEBUG_ADDR
+#undef DECLARE_DEBUG_INST
+
+  sc_signal<bool> io_debug_dbus_valid;
+  sc_signal<sc_bv<32>> io_debug_dbus_bits_addr;
+  sc_signal<sc_bv<128>> io_debug_dbus_bits_wdata;
+  sc_signal<bool> io_debug_dbus_bits_write;
+
+#define DECLARE_DEBUG_DISPATCH(x) \
+  sc_signal<bool> io_debug_dispatch_##x##_instFire; \
+  sc_signal<sc_bv<32>> io_debug_dispatch_##x##_instAddr; \
+  sc_signal<sc_bv<32>> io_debug_dispatch_##x##_instInst;
+
+  REPEAT_4(DECLARE_DEBUG_DISPATCH);
+#undef DECLARE_DEBUG_DISPATCH
+
   io_iflush_ready = 1;
   io_dflush_ready = 1;
+  io_irq = 0;
+  io_timer_irq = 0;
+  io_software_irq = 0;
+  io_debug_req = 0;
+
+  io_ebus_dbus_ready = 1;
+  io_ebus_fault_valid = 0;
+  io_ebus_fault_bits_write = 0;
+  io_ebus_dbus_rdata = 0;
+  io_ebus_fault_bits_addr = 0;
+  io_ebus_fault_bits_epc = 0;
+
+  io_dm_debug_req = 0;
+  io_dm_resume_req = 0;
+  io_dm_csr_valid = 0;
+  io_dm_scalar_rd_valid = 0;
+  io_dm_float_rd_valid = 0;
+  io_dm_float_rd_data_sign = 0;
+  io_dm_float_rs_valid = 0;
+  io_dm_csr_bits_addr = 0;
+  io_dm_csr_bits_index = 0;
+  io_dm_csr_bits_rs1 = 0;
+  io_dm_csr_bits_op = 0;
+  io_dm_csr_rs1 = 0;
+  io_dm_scalar_rd_bits_addr = 0;
+  io_dm_scalar_rd_bits_data = 0;
+  io_dm_scalar_rs_idx = 0;
+  io_dm_float_rd_addr = 0;
+  io_dm_float_rd_data_mantissa = 0;
+  io_dm_float_rd_data_exponent = 0;
+  io_dm_float_rs_addr = 0;
+
+#define INIT_CSR_IN(x) io_csr_in_value_##x = 0;
+  REPEAT_13(INIT_CSR_IN);
+#undef INIT_CSR_IN
 
   tb.io_halted(io_halted);
   tb.io_fault(io_fault);
@@ -146,6 +297,12 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   core.io_halted(io_halted);
   core.io_fault(io_fault);
   core.io_wfi(io_wfi);
+  core.io_irq(io_irq);
+  core.io_timer_irq(io_timer_irq);
+  core.io_software_irq(io_software_irq);
+  core.io_debug_req(io_debug_req);
+  core.io_iflush_ready(io_iflush_ready);
+  core.io_dflush_ready(io_dflush_ready);
   core.io_ibus_valid(io_ibus_valid);
   core.io_ibus_ready(io_ibus_ready);
   core.io_ibus_addr(io_ibus_addr);
@@ -163,6 +320,126 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   core.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
   core.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
   core.io_dbus_adrx(io_dbus_adrx);
+  core.io_dbus_pc(io_dbus_pc);
+
+#define BIND_RB_DEBUG_IO(x) \
+  core.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid); \
+  core.io_debug_rb_inst_##x##_bits_pc(io_debug_rb_inst_##x##_bits_pc); \
+  core.io_debug_rb_inst_##x##_bits_inst(io_debug_rb_inst_##x##_bits_inst); \
+  core.io_debug_rb_inst_##x##_bits_idx(io_debug_rb_inst_##x##_bits_idx); \
+  core.io_debug_rb_inst_##x##_bits_data(io_debug_rb_inst_##x##_bits_data); \
+  core.io_debug_rb_inst_##x##_bits_trap(io_debug_rb_inst_##x##_bits_trap);
+
+  REPEAT_8(BIND_RB_DEBUG_IO);
+#undef BIND_RB_DEBUG_IO
+
+  core.io_debug_float_writeAddr_valid(io_debug_float_writeAddr_valid);
+  core.io_debug_float_writeData_0_valid(io_debug_float_writeData_0_valid);
+  core.io_debug_float_writeData_1_valid(io_debug_float_writeData_1_valid);
+  core.io_debug_float_writeAddr_bits(io_debug_float_writeAddr_bits);
+  core.io_debug_float_writeData_0_bits_addr(io_debug_float_writeData_0_bits_addr);
+  core.io_debug_float_writeData_0_bits_data(io_debug_float_writeData_0_bits_data);
+  core.io_debug_float_writeData_1_bits_addr(io_debug_float_writeData_1_bits_addr);
+  core.io_debug_float_writeData_1_bits_data(io_debug_float_writeData_1_bits_data);
+
+#define BIND_REGFILE_WRITE_ADDR(x) \
+  core.io_debug_regfile_writeAddr_##x##_valid(io_debug_regfile_writeAddr_##x##_valid); \
+  core.io_debug_regfile_writeAddr_##x##_bits(io_debug_regfile_writeAddr_##x##_bits);
+
+#define BIND_REGFILE_WRITE_DATA(x) \
+  core.io_debug_regfile_writeData_##x##_valid(io_debug_regfile_writeData_##x##_valid); \
+  core.io_debug_regfile_writeData_##x##_bits_addr(io_debug_regfile_writeData_##x##_bits_addr); \
+  core.io_debug_regfile_writeData_##x##_bits_data(io_debug_regfile_writeData_##x##_bits_data);
+
+  REPEAT_4(BIND_REGFILE_WRITE_ADDR);
+  REPEAT_6(BIND_REGFILE_WRITE_DATA);
+
+#undef BIND_REGFILE_WRITE_ADDR
+#undef BIND_REGFILE_WRITE_DATA
+
+  core.io_debug_en(io_debug_en);
+  core.io_debug_cycles(io_debug_cycles);
+
+#define BIND_DEBUG_ADDR(x) core.io_debug_addr_##x(io_debug_addr_##x);
+#define BIND_DEBUG_INST(x) core.io_debug_inst_##x(io_debug_inst_##x);
+
+  REPEAT_4(BIND_DEBUG_ADDR);
+  REPEAT_4(BIND_DEBUG_INST);
+
+#undef BIND_DEBUG_ADDR
+#undef BIND_DEBUG_INST
+
+  core.io_debug_dbus_valid(io_debug_dbus_valid);
+  core.io_debug_dbus_bits_addr(io_debug_dbus_bits_addr);
+  core.io_debug_dbus_bits_wdata(io_debug_dbus_bits_wdata);
+  core.io_debug_dbus_bits_write(io_debug_dbus_bits_write);
+
+  core.io_iflush_valid(io_iflush_valid);
+  core.io_iflush_pcNext(io_iflush_pcNext);
+  core.io_dflush_valid(io_dflush_valid);
+  core.io_dflush_all(io_dflush_all);
+  core.io_dflush_clean(io_dflush_clean);
+
+  core.io_ebus_dbus_valid(io_ebus_dbus_valid);
+  core.io_ebus_dbus_ready(io_ebus_dbus_ready);
+  core.io_ebus_dbus_write(io_ebus_dbus_write);
+  core.io_ebus_internal(io_ebus_internal);
+  core.io_ebus_fault_valid(io_ebus_fault_valid);
+  core.io_ebus_fault_bits_write(io_ebus_fault_bits_write);
+  core.io_ebus_dbus_pc(io_ebus_dbus_pc);
+  core.io_ebus_dbus_addr(io_ebus_dbus_addr);
+  core.io_ebus_dbus_adrx(io_ebus_dbus_adrx);
+  core.io_ebus_dbus_size(io_ebus_dbus_size);
+  core.io_ebus_dbus_wdata(io_ebus_dbus_wdata);
+  core.io_ebus_dbus_wmask(io_ebus_dbus_wmask);
+  core.io_ebus_dbus_rdata(io_ebus_dbus_rdata);
+  core.io_ebus_fault_bits_addr(io_ebus_fault_bits_addr);
+  core.io_ebus_fault_bits_epc(io_ebus_fault_bits_epc);
+
+  core.io_dm_debug_req(io_dm_debug_req);
+  core.io_dm_resume_req(io_dm_resume_req);
+  core.io_dm_csr_valid(io_dm_csr_valid);
+  core.io_dm_csr_rd_valid(io_dm_csr_rd_valid);
+  core.io_dm_scalar_rd_ready(io_dm_scalar_rd_ready);
+  core.io_dm_scalar_rd_valid(io_dm_scalar_rd_valid);
+  core.io_dm_float_rd_valid(io_dm_float_rd_valid);
+  core.io_dm_float_rd_data_sign(io_dm_float_rd_data_sign);
+  core.io_dm_float_rs_valid(io_dm_float_rs_valid);
+  core.io_dm_float_rs_data_sign(io_dm_float_rs_data_sign);
+  core.io_dm_debug_mode(io_dm_debug_mode);
+  core.io_dm_csr_bits_addr(io_dm_csr_bits_addr);
+  core.io_dm_csr_bits_index(io_dm_csr_bits_index);
+  core.io_dm_csr_bits_rs1(io_dm_csr_bits_rs1);
+  core.io_dm_csr_bits_op(io_dm_csr_bits_op);
+  core.io_dm_csr_rs1(io_dm_csr_rs1);
+  core.io_dm_csr_rd_bits(io_dm_csr_rd_bits);
+  core.io_dm_scalar_rd_bits_addr(io_dm_scalar_rd_bits_addr);
+  core.io_dm_scalar_rd_bits_data(io_dm_scalar_rd_bits_data);
+  core.io_dm_scalar_rs_idx(io_dm_scalar_rs_idx);
+  core.io_dm_scalar_rs_data(io_dm_scalar_rs_data);
+  core.io_dm_float_rd_addr(io_dm_float_rd_addr);
+  core.io_dm_float_rd_data_mantissa(io_dm_float_rd_data_mantissa);
+  core.io_dm_float_rd_data_exponent(io_dm_float_rd_data_exponent);
+  core.io_dm_float_rs_addr(io_dm_float_rs_addr);
+  core.io_dm_float_rs_data_mantissa(io_dm_float_rs_data_mantissa);
+  core.io_dm_float_rs_data_exponent(io_dm_float_rs_data_exponent);
+
+#define BIND_CSR_OUT(x) core.io_csr_out_value_##x(io_csr_out_value_##x);
+  REPEAT_8(BIND_CSR_OUT);
+  BIND_CSR_OUT(8);
+#undef BIND_CSR_OUT
+
+#define BIND_CSR_IN(x) core.io_csr_in_value_##x(io_csr_in_value_##x);
+  REPEAT_13(BIND_CSR_IN);
+#undef BIND_CSR_IN
+
+#define BIND_DEBUG_DISPATCH(x) \
+  core.io_debug_dispatch_##x##_instFire(io_debug_dispatch_##x##_instFire); \
+  core.io_debug_dispatch_##x##_instAddr(io_debug_dispatch_##x##_instAddr); \
+  core.io_debug_dispatch_##x##_instInst(io_debug_dispatch_##x##_instInst);
+
+  REPEAT_4(BIND_DEBUG_DISPATCH);
+#undef BIND_DEBUG_DISPATCH
 
   mif.clock(tb.clock);
   mif.reset(tb.reset);
