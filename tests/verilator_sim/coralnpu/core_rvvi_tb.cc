@@ -310,6 +310,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 
   SpscRingBuffer<TracePacket, 4096>* buffer;
   bool e_sent = false;
+  uint32_t internal_v_id = 0;
 
   CoreRvvi_tb(sc_module_name name, int cycles, bool random, SpscRingBuffer<TracePacket, 4096>* buf) 
     : Sysc_tb(name, cycles, random), buffer(buf) {}
@@ -318,7 +319,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     check(!io_fault, "io_fault");
     
     if (io_debug_rb_inst_0_valid.read()) {
-      uint32_t v_id = io_debug_rb_inst_0_bits_idx.read().to_uint();
+      uint32_t v_id = internal_v_id++;
       TracePacket ipacket = {};
       ipacket.type = 'I';
       ipacket.v_id = v_id;

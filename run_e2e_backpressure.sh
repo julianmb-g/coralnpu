@@ -1,33 +1,11 @@
 #!/bin/bash
 set -e
 
-echo "Building RVVI Backpressure simulator..."
+# Cleanup trap
+trap 'rm -f ./gen_rvvi_elf.cc ./gen_rvvi_elf ./rvvi.elf' EXIT
 
-cat << 'EOF' > /tmp/delay_formatter.h
-#pragma once
-#include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
-#include <thread>
-#include <chrono>
-
-namespace mpact::sim::riscv::rvvi {
-class DelayFormatter : public CustomFallbackFormatter {
-public:
-  std::string Disassemble(uint32_t inst) override {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    return CustomFallbackFormatter::Disassemble(inst);
-  }
-};
-}
-EOF
-
-g++ -std=c++20 -pthread -DDELAY_FORMATTER -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -DVERILATOR_MODEL=VCoreVerification -include cstdlib -include verilated_fst_c.h -c tests/verilator_sim/coralnpu/core_rvvi_tb.cc -o /tmp/core_rvvi_delay_tb.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/elf.cc -o /tmp/elf.o
-g++ -std=c++20 -pthread -DCORALNPU_SIMD=128 -I. -I/usr/local/google/home/julianmb/.gemini/tmp/coralnpu-verilator-core -c tests/verilator_sim/rvvi/trace_daemon.cc -o /tmp/trace_daemon.o
-
-g++ /tmp/core_rvvi_delay_tb.o /tmp/elf.o /tmp/trace_daemon.o -o /tmp/core_rvvi_delay_tb_bin
-
-echo "Generating ELF at 0x80000000..."
-cat << 'EOF' > /tmp/gen_rvvi_elf.cc
+echo "Generating ELF at 0x00000000..."
+cat << 'EOF' > ./gen_rvvi_elf.cc
 #include <vector>
 #include <cstring>
 #include <elf.h>
@@ -48,7 +26,7 @@ int main(int argc, char* argv[]) {
   ehdr.e_type = ET_EXEC;
   ehdr.e_machine = EM_RISCV;
   ehdr.e_version = EV_CURRENT;
-  ehdr.e_entry = 0x80000000;
+  ehdr.e_entry = 0x00000000;
   ehdr.e_phoff = sizeof(Elf32_Ehdr);
   ehdr.e_ehsize = sizeof(Elf32_Ehdr);
   ehdr.e_phentsize = sizeof(Elf32_Phdr);
@@ -58,8 +36,8 @@ int main(int argc, char* argv[]) {
   std::memset(&phdr, 0, sizeof(phdr));
   phdr.p_type = PT_LOAD;
   phdr.p_offset = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
-  phdr.p_vaddr = 0x80000000;
-  phdr.p_paddr = 0x80000000;
+  phdr.p_vaddr = 0x00000000;
+  phdr.p_paddr = 0x00000000;
   phdr.p_filesz = 8;
   phdr.p_memsz = 8;
   phdr.p_flags = PF_R | PF_X;
@@ -77,11 +55,17 @@ int main(int argc, char* argv[]) {
 }
 EOF
 
-g++ /tmp/gen_rvvi_elf.cc -o /tmp/gen_rvvi_elf
-/tmp/gen_rvvi_elf /tmp/rvvi.elf
+# Compile helper in Podman
+echo "Compiling helper in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu g++ ./gen_rvvi_elf.cc -o ./gen_rvvi_elf
 
-echo "Running RVVI Backpressure simulator..."
-time /tmp/core_rvvi_delay_tb_bin /tmp/rvvi.elf
+# Generate ELF in Podman
+echo "Generating ELF in Podman..."
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu ./gen_rvvi_elf $PWD/rvvi.elf
+
+# Run simulator via Bazel in Podman with DelayFormatter, explicit output path, and Bazel cache mapping
+echo "Running RVVI Backpressure simulator via Bazel in Podman..."
+time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run --copt=-DDELAY_FORMATTER //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=$PWD/trace.rvvi $PWD/rvvi.elf
 
 echo "Checking trace output..."
 if ! grep -q "00000013" trace.rvvi; then
