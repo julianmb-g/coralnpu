@@ -65,6 +65,7 @@ podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$
 
 # Run simulator via Bazel in Podman
 echo "Running simulator via Bazel in Podman..."
-podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_barebones_sim -- $PWD/dummy.elf
+mkdir -p ./tmp_log
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/dummy.elf 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/baseline_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)"
 
 echo "E2E Baseline Emulation Test PASSED"
