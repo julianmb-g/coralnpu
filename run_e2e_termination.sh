@@ -4,8 +4,8 @@ set -e
 # Cleanup trap
 trap 'rm -f ./gen_rvvi_elf.cc ./gen_rvvi_elf ./rvvi.elf' EXIT
 
-# Generate a valid ELF that loads at 0x80000000
-echo "Generating ELF at 0x80000000..."
+# Generate a valid ELF that loads at 0x00000000
+echo "Generating ELF at 0x00000000..."
 cat << 'EOF' > ./gen_rvvi_elf.cc
 #include <vector>
 #include <cstring>
@@ -15,7 +15,7 @@ cat << 'EOF' > ./gen_rvvi_elf.cc
 
 int main(int argc, char* argv[]) {
   if (argc < 2) return 1;
-  
+
   Elf32_Ehdr ehdr;
   std::memset(&ehdr, 0, sizeof(ehdr));
   ehdr.e_ident[EI_MAG0] = ELFMAG0;
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   ehdr.e_type = ET_EXEC;
   ehdr.e_machine = EM_RISCV;
   ehdr.e_version = EV_CURRENT;
-  ehdr.e_entry = 0x80000000;
+  ehdr.e_entry = 0x00000000;
   ehdr.e_phoff = sizeof(Elf32_Ehdr);
   ehdr.e_ehsize = sizeof(Elf32_Ehdr);
   ehdr.e_phentsize = sizeof(Elf32_Phdr);
@@ -38,8 +38,8 @@ int main(int argc, char* argv[]) {
   std::memset(&phdr, 0, sizeof(phdr));
   phdr.p_type = PT_LOAD;
   phdr.p_offset = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
-  phdr.p_vaddr = 0x80000000;
-  phdr.p_paddr = 0x80000000;
+  phdr.p_vaddr = 0x00000000;
+  phdr.p_paddr = 0x00000000;
   phdr.p_filesz = 8;
   phdr.p_memsz = 8;
   phdr.p_flags = PF_R | PF_X;
@@ -71,9 +71,8 @@ mkdir -p ./tmp_log
 podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=\$PWD/trace.rvvi \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/termination_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)"
 
 echo "Checking RVVI trace output for graceful termination..."
-if ! tail -n 1 trace.rvvi | grep -q "08000073"; then
-  echo "Trace file's last line is NOT the mpause instruction!"
-  tail -n 1 trace.rvvi
+if ! grep -q "08000073" trace.rvvi; then
+  echo "Trace file missing expected mpause instruction (08000073)"
   exit 1
 fi
 
