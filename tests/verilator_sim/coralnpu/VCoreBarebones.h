@@ -49,7 +49,7 @@ SC_MODULE(VCoreBarebones) {
   sc_in<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc;
   sc_out<sc_bv<KP_lsuAddrBits>> io_dbus_adrx;
 
-  uint32_t pc = 0x80000000;
+  uint32_t pc = 0x00000000;
   bool halted = false;
   uint32_t instruction_count = 0;
 
@@ -62,7 +62,7 @@ SC_MODULE(VCoreBarebones) {
 
   void eval() {
     if (reset.read()) {
-      pc = 0x80000000;
+      pc = 0x00000000;
       io_halted.write(false);
       io_fault.write(false);
       io_wfi.write(false);

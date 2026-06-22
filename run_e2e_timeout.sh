@@ -4,7 +4,7 @@ set -e
 # Cleanup trap
 trap 'rm -f ./gen_timeout_elf.cc ./gen_timeout_elf ./timeout.elf ./barebones_out.log ./rvvi_out.log' EXIT
 
-echo "Generating ELF at 0x80000000 with 600,000 NOPs..."
+echo "Generating ELF at 0x00000000 with 600,000 NOPs..."
 cat << 'EOF' > ./gen_timeout_elf.cc
 #include <vector>
 #include <cstring>
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
   ehdr.e_type = ET_EXEC;
   ehdr.e_machine = EM_RISCV;
   ehdr.e_version = EV_CURRENT;
-  ehdr.e_entry = 0x80000000;
+  ehdr.e_entry = 0x00000000;
   ehdr.e_phoff = sizeof(Elf32_Ehdr);
   ehdr.e_ehsize = sizeof(Elf32_Ehdr);
   ehdr.e_phentsize = sizeof(Elf32_Phdr);
@@ -40,8 +40,8 @@ int main(int argc, char* argv[]) {
   std::memset(&phdr, 0, sizeof(phdr));
   phdr.p_type = PT_LOAD;
   phdr.p_offset = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
-  phdr.p_vaddr = 0x80000000;
-  phdr.p_paddr = 0x80000000;
+  phdr.p_vaddr = 0x00000000;
+  phdr.p_paddr = 0x00000000;
   phdr.p_filesz = PAYLOAD_SIZE;
   phdr.p_memsz = PAYLOAD_SIZE;
   phdr.p_flags = PF_R | PF_X;
@@ -69,9 +69,8 @@ podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$
 echo "Running Barebones simulator via Bazel in Podman (expecting timeout)..."
 mkdir -p ./tmp_log
 set +e
-podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/timeout.elf 2>&1 | tee /tmp/sim.log"
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- --cycles=5000 \$PWD/timeout.elf 2>&1 | tee \$PWD/tmp_log/timeout_barebones_sim.log"
 EXIT_CODE=$?
-cp /tmp/sim.log ./tmp_log/timeout_barebones_sim.log
 find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null
 set -e
 
@@ -90,9 +89,8 @@ echo "Barebones simulator timed out as expected."
 # Run RVVI simulator and expect timeout
 echo "Running RVVI simulator via Bazel in Podman (expecting timeout)..."
 set +e
-podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=\$PWD/trace.rvvi \$PWD/timeout.elf 2>&1 | tee /tmp/sim.log"
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_sim -- --cycles=5000 --rvvi_out=\$PWD/trace.rvvi \$PWD/timeout.elf 2>&1 | tee \$PWD/tmp_log/timeout_rvvi_sim.log"
 EXIT_CODE=$?
-cp /tmp/sim.log ./tmp_log/timeout_rvvi_sim.log
 find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null
 set -e
 

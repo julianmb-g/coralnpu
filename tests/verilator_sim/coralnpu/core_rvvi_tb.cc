@@ -1,4 +1,5 @@
 // Copyright 2026 Google LLC
+// Dummy comment 2 to force Bazel recompile
 #define STRINGIZE(x) #x
 #define STR(x) STRINGIZE(x)
 #define MODEL_HEADER_SUFFIX .h
@@ -55,6 +56,12 @@ ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 
 struct CoreRvvi_tb : Sysc_tb {
   sc_in<bool> io_halted;
   sc_in<bool> io_fault;
+  sc_in<bool> io_ibus_valid;
+
+  uint64_t last_time = 0;
+  uint64_t last_delta = 0;
+
+  SC_HAS_PROCESS(CoreRvvi_tb);
 
   
   // RVVI ports
@@ -313,7 +320,25 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   uint32_t internal_v_id = 0;
 
   CoreRvvi_tb(sc_module_name name, int cycles, bool random, SpscRingBuffer<TracePacket, 4096>* buf) 
-    : Sysc_tb(name, cycles, random), buffer(buf) {}
+    : Sysc_tb(name, cycles, random), buffer(buf) {
+    SC_METHOD(monitor_delta);
+    sensitive << io_ibus_valid;
+  }
+
+  void monitor_delta() {
+    uint64_t current_time = sc_time_stamp().value();
+    uint64_t current_delta = sc_delta_count();
+    if (current_time == last_time) {
+        if (current_delta - last_delta > 5000) {
+            fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
+            sc_stop();
+            exit(65);
+        }
+    } else {
+        last_time = current_time;
+        last_delta = current_delta;
+    }
+  }
 
   void posedge() {
     check(!io_fault, "io_fault");
@@ -890,6 +915,7 @@ sc_signal<bool> io_debug_rb_inst_7_valid;
 
   tb.io_halted(io_halted);
   tb.io_fault(io_fault);
+  tb.io_ibus_valid(io_ibus_valid);
   tb.io_debug_rb_inst_0_valid(io_debug_rb_inst_0_valid);
   tb.io_debug_rb_inst_0_bits_pc(io_debug_rb_inst_0_bits_pc);
   tb.io_debug_rb_inst_0_bits_inst(io_debug_rb_inst_0_bits_inst);

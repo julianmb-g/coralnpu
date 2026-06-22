@@ -46,7 +46,32 @@ struct Core_tb : Sysc_tb {
   sc_in<bool> io_halted;
   sc_in<bool> io_fault;
 
-  using Sysc_tb::Sysc_tb;  // constructor
+  sc_in<bool> io_ibus_valid;
+
+  uint64_t last_time = 0;
+  uint64_t last_delta = 0;
+
+  SC_HAS_PROCESS(Core_tb);
+
+  Core_tb(sc_module_name name, int cycles, bool random) : Sysc_tb(name, cycles, random) {
+    SC_METHOD(monitor_delta);
+    sensitive << io_ibus_valid;
+  }
+
+  void monitor_delta() {
+    uint64_t current_time = sc_time_stamp().value();
+    uint64_t current_delta = sc_delta_count();
+    if (current_time == last_time) {
+        if (current_delta - last_delta > 5000) {
+            fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
+            sc_stop();
+            exit(65);
+        }
+    } else {
+        last_time = current_time;
+        last_delta = current_delta;
+    }
+  }
 
   void posedge() {
     check(!io_fault, "io_fault");
@@ -315,6 +340,7 @@ static int Core_run(const char* name, const char* bin, const int cycles,
 
   tb.io_halted(io_halted);
   tb.io_fault(io_fault);
+  tb.io_ibus_valid(io_ibus_valid);
 
   core.clock(tb.clock);
   core.reset(tb.reset);

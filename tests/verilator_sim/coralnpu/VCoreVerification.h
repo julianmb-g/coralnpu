@@ -295,7 +295,7 @@ sc_out<bool> io_debug_rb_inst_7_valid;
   sc_out<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_7_bits_idx;
 
 
-  uint32_t pc = 0x80000000;
+  uint32_t pc = 0x00000000;
   bool halted = false;
   uint32_t instruction_count = 0;
   int cycle_count;
@@ -304,7 +304,7 @@ sc_out<bool> io_debug_rb_inst_7_valid;
   void eval() {
     if (!clock.read() && !reset.read()) return;
     if (reset.read()) {
-      pc = 0x80000000;
+      pc = 0x00000000;
       io_halted.write(false);
       io_fault.write(false);
       io_wfi.write(false);
@@ -617,14 +617,14 @@ io_debug_rb_inst_7_valid.write(false);
       io_debug_rb_inst_0_bits_trap.write(false);
 
       if (opcode == 0x57) {
-        sc_bv<256> vval_0; for (int j = 0; j < 8; j++) vval_0.set_word(j, (rd << 24) | (0 << 20) | (j << 16) | 0x5757);
-        sc_bv<256> vval_1; for (int j = 0; j < 8; j++) vval_1.set_word(j, (rd << 24) | (1 << 20) | (j << 16) | 0x5757);
-        sc_bv<256> vval_2; for (int j = 0; j < 8; j++) vval_2.set_word(j, (rd << 24) | (2 << 20) | (j << 16) | 0x5757);
-        sc_bv<256> vval_3; for (int j = 0; j < 8; j++) vval_3.set_word(j, (rd << 24) | (3 << 20) | (j << 16) | 0x5757);
-        sc_bv<256> vval_4; for (int j = 0; j < 8; j++) vval_4.set_word(j, (rd << 24) | (4 << 20) | (j << 16) | 0x5757);
-        sc_bv<256> vval_5; for (int j = 0; j < 8; j++) vval_5.set_word(j, (rd << 24) | (5 << 20) | (j << 16) | 0x5757);
-        sc_bv<256> vval_6; for (int j = 0; j < 8; j++) vval_6.set_word(j, (rd << 24) | (6 << 20) | (j << 16) | 0x5757);
-        sc_bv<256> vval_7; for (int j = 0; j < 8; j++) vval_7.set_word(j, (rd << 24) | (7 << 20) | (j << 16) | 0x5757);
+        sc_bv<KP_rvvVlen> vval_0; for (int j = 0; j < (KP_rvvVlen / 32); j++) vval_0.set_word(j, (rd << 24) | (0 << 20) | (j << 16) | 0x5757);
+        sc_bv<KP_rvvVlen> vval_1; for (int j = 0; j < (KP_rvvVlen / 32); j++) vval_1.set_word(j, (rd << 24) | (1 << 20) | (j << 16) | 0x5757);
+        sc_bv<KP_rvvVlen> vval_2; for (int j = 0; j < (KP_rvvVlen / 32); j++) vval_2.set_word(j, (rd << 24) | (2 << 20) | (j << 16) | 0x5757);
+        sc_bv<KP_rvvVlen> vval_3; for (int j = 0; j < (KP_rvvVlen / 32); j++) vval_3.set_word(j, (rd << 24) | (3 << 20) | (j << 16) | 0x5757);
+        sc_bv<KP_rvvVlen> vval_4; for (int j = 0; j < (KP_rvvVlen / 32); j++) vval_4.set_word(j, (rd << 24) | (4 << 20) | (j << 16) | 0x5757);
+        sc_bv<KP_rvvVlen> vval_5; for (int j = 0; j < (KP_rvvVlen / 32); j++) vval_5.set_word(j, (rd << 24) | (5 << 20) | (j << 16) | 0x5757);
+        sc_bv<KP_rvvVlen> vval_6; for (int j = 0; j < (KP_rvvVlen / 32); j++) vval_6.set_word(j, (rd << 24) | (6 << 20) | (j << 16) | 0x5757);
+        sc_bv<KP_rvvVlen> vval_7; for (int j = 0; j < (KP_rvvVlen / 32); j++) vval_7.set_word(j, (rd << 24) | (7 << 20) | (j << 16) | 0x5757);
 
         io_debug_rb_inst_0_bits_vecWrites_0_valid.write(true);
         io_debug_rb_inst_0_bits_vecWrites_0_bits_data.write(vval_0);
@@ -684,7 +684,7 @@ io_debug_rb_inst_7_valid.write(false);
 
   SC_CTOR(VCoreVerification) {
     cycle_count = 0;
-    SC_METHOD(process);
+    SC_METHOD(eval);
     sensitive << clock.pos();
   }
 };
