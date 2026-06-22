@@ -477,12 +477,12 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 
 bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry_point) {
   int fd = open(file_name.c_str(), O_RDONLY);
-  if (fd < 0) return false;
+  if (fd < 0) { perror("open"); return false; }
   struct stat sb;
-  if (fstat(fd, &sb) != 0) { close(fd); return false; }
+  if (fstat(fd, &sb) != 0) { perror("fstat"); close(fd); return false; }
   auto file_size = sb.st_size;
   auto file_data = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-  if (file_data == MAP_FAILED) { close(fd); return false; }
+  if (file_data == MAP_FAILED) { perror("mmap"); close(fd); return false; }
   close(fd);
   uint32_t elf_magic = 0x464c457f;
   uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
@@ -492,12 +492,15 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry
               [&mif, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
                 if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
+                  fprintf(stderr, "[FATAL] ELF load violation. Requested write at %lx, count %zu\n", addr, count);
                   load_ok = false;
                 }
                 return dest;
               });
     munmap(file_data, file_size);
     return load_ok;
+  } else {
+    fprintf(stderr, "Invalid ELF magic\n");
   }
   munmap(file_data, file_size);
   return false;
