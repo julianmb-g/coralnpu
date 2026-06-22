@@ -39,8 +39,7 @@ struct Memory_if : Sysc_module {
   bool IsValidAddress(uint32_t addr) const {
     if (profile_ == "default") {
       if (addr >= 0x80000000) return true;
-      if (addr < 0x2000) return true; // ITCM: 8KB
-      if (addr >= 0x10000 && addr < 0x18000) return true; // DTCM: 32KB
+      if (addr < 0x400000) return true; // Matcha Memory Layout: 4MB contiguous SRAM
       return false;
     } else if (profile_ == "highmem") {
       if (addr >= 0x80000000) return true;
@@ -82,12 +81,8 @@ struct Memory_if : Sysc_module {
       delete [] fdata;
     } else {
       if (profile == "default") {
-        // ITCM: 8KB -> pages at 0x0, 0x1000
-        for (int addr = 0; addr < 0x2000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-        // DTCM: 32KB at 0x10000 -> pages from 0x10000 to 0x17FFF (i.e., less than 0x18000)
-        for (int addr = 0x10000; addr < 0x18000; addr += kPageSize) {
+        // Matcha Memory Layout: 4MB of contiguous SRAM from 0x0 to 0x400000
+        for (int addr = 0; addr < 0x400000; addr += kPageSize) {
           AddPage(addr, kPageSize, nullptr);
         }
       } else if (profile == "highmem") {
@@ -111,7 +106,8 @@ struct Memory_if : Sysc_module {
   bool Read(uint32_t addr, int bytes, uint8_t* data) {
     while (bytes > 0) {
       if (!IsValidAddress(addr)) {
-        printf("DEBUG: Read failed IsValidAddress addr=%08x\n", addr);
+        printf("DEBUG: Read failed IsValidAddress addr=%08x, bytes=%d\n", addr, bytes);
+        fflush(stdout);
         return false;
       }
       const uint32_t maddr = addr & kPageMask;
@@ -157,13 +153,13 @@ struct Memory_if : Sysc_module {
       auto& p = page_[maddr];
       uint8_t* d = p.data;
       memcpy(d + offset, data, len);
-#if 0
-      printf("WRITE %08x", addr);
-      for (int i = 0; i < len; i++) {
-        printf(" %02x", data[i]);
+      if (addr < 0x10010 || addr >= 0x11054) {
+        printf("WRITE %08x", addr);
+        for (int i = 0; i < len; i++) {
+          printf(" %02x", data[i]);
+        }
+        printf("\n");
       }
-      printf("\n");
-#endif
       addr += len;
       data += len;
       bytes -= len;

@@ -196,11 +196,35 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   sc_signal<sc_bv<32>> io_debug_rb_inst_##x##_bits_pc; \
   sc_signal<sc_bv<32>> io_debug_rb_inst_##x##_bits_inst; \
   sc_signal<sc_bv<7>> io_debug_rb_inst_##x##_bits_idx; \
-  sc_signal<sc_bv<32>> io_debug_rb_inst_##x##_bits_data; \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_data; \
   sc_signal<bool> io_debug_rb_inst_##x##_bits_trap;
 
   REPEAT_8(DECLARE_RB_DEBUG_IO);
 #undef DECLARE_RB_DEBUG_IO
+
+#define DECLARE_VEC_WRITES_Y(x, y) \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_##y##_valid; \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_data; \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_idx;
+
+#define DECLARE_VEC_WRITES_8_Y(x) \
+  DECLARE_VEC_WRITES_Y(x, 0) \
+  DECLARE_VEC_WRITES_Y(x, 1) \
+  DECLARE_VEC_WRITES_Y(x, 2) \
+  DECLARE_VEC_WRITES_Y(x, 3) \
+  DECLARE_VEC_WRITES_Y(x, 4) \
+  DECLARE_VEC_WRITES_Y(x, 5) \
+  DECLARE_VEC_WRITES_Y(x, 6) \
+  DECLARE_VEC_WRITES_Y(x, 7)
+
+#define DECLARE_VEC_WRITES_X(x) \
+  DECLARE_VEC_WRITES_8_Y(x)
+
+  REPEAT_8(DECLARE_VEC_WRITES_X);
+
+#undef DECLARE_VEC_WRITES_Y
+#undef DECLARE_VEC_WRITES_8_Y
+#undef DECLARE_VEC_WRITES_X
 
   sc_signal<bool> io_debug_float_writeAddr_valid;
   sc_signal<bool> io_debug_float_writeData_0_valid;
@@ -332,6 +356,30 @@ static int Core_run(const char* name, const char* bin, const int cycles,
 
   REPEAT_8(BIND_RB_DEBUG_IO);
 #undef BIND_RB_DEBUG_IO
+
+#define BIND_VEC_WRITES_Y(x, y) \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_##y##_valid(io_debug_rb_inst_##x##_bits_vecWrites_##y##_valid); \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_data); \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_idx);
+
+#define BIND_VEC_WRITES_8_Y(x) \
+  BIND_VEC_WRITES_Y(x, 0) \
+  BIND_VEC_WRITES_Y(x, 1) \
+  BIND_VEC_WRITES_Y(x, 2) \
+  BIND_VEC_WRITES_Y(x, 3) \
+  BIND_VEC_WRITES_Y(x, 4) \
+  BIND_VEC_WRITES_Y(x, 5) \
+  BIND_VEC_WRITES_Y(x, 6) \
+  BIND_VEC_WRITES_Y(x, 7)
+
+#define BIND_VEC_WRITES_X(x) \
+  BIND_VEC_WRITES_8_Y(x)
+
+  REPEAT_8(BIND_VEC_WRITES_X);
+
+#undef BIND_VEC_WRITES_Y
+#undef BIND_VEC_WRITES_8_Y
+#undef BIND_VEC_WRITES_X
 
   core.io_debug_float_writeAddr_valid(io_debug_float_writeAddr_valid);
   core.io_debug_float_writeData_0_valid(io_debug_float_writeData_0_valid);

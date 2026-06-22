@@ -27,3 +27,9 @@ tmp_log/
 __pycache__
 # downloaded bitstreams
 fpga/bitstreams
+# Untracked build artifacts
+examples/coralnpu_v2_rvv_add_intrinsic.elf
+gen_rvvi_elf
+gen_rvvi_elf.cc
+rvvi.elf
+
