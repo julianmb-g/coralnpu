@@ -11,8 +11,8 @@ if ! grep -Eq "[0-9a-fA-F]{6}57" trace.rvvi; then
   echo "Trace file missing vector instructions (opcode 57)"
   exit 1
 fi
-if ! grep -Eq "v[0-9]+:" trace.rvvi; then
-  echo "Trace file missing vector register updates"
+if ! grep -Eq "v[0-9]+:[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*" trace.rvvi; then
+  echo "Trace file missing non-zero vector register updates"
   exit 1
 fi
 
