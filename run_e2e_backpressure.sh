@@ -43,14 +43,21 @@ int main(int argc, char* argv[]) {
   phdr.p_flags = PF_R | PF_X;
   phdr.p_align = 4;
 
-  uint32_t payload[2];
-  payload[0] = 0x00000013; // nop
-  payload[1] = 0x08000073; // mpause
+  // Generate 5000 NOPs followed by 1 mpause
+  const int num_nops = 5000;
+  std::vector<uint32_t> payload(num_nops + 1);
+  for (int i = 0; i < num_nops; ++i) {
+    payload[i] = 0x00000013; // nop
+  }
+  payload[num_nops] = 0x08000073; // mpause
 
   std::ofstream ofs(argv[1], std::ios::binary);
   ofs.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr));
+  
+  phdr.p_filesz = payload.size() * sizeof(uint32_t);
+  phdr.p_memsz = payload.size() * sizeof(uint32_t);
   ofs.write(reinterpret_cast<const char*>(&phdr), sizeof(phdr));
-  ofs.write(reinterpret_cast<const char*>(payload), sizeof(payload));
+  ofs.write(reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(uint32_t));
   return 0;
 }
 EOF
@@ -69,8 +76,10 @@ mkdir -p ./tmp_log
 time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run --copt=-DDELAY_FORMATTER //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=\$PWD/trace.rvvi \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)"
 
 echo "Checking trace output..."
-if ! grep -q "00000013" trace.rvvi; then
-  echo "Trace file missing expected instruction (00000013)"
+# Verify 5000 nops and 1 mpause are present
+nop_count=$(grep -c "00000013" trace.rvvi)
+if [ "$nop_count" -lt 5000 ]; then
+  echo "Trace file missing expected NOP instructions: expected at least 5000, found $nop_count"
   exit 1
 fi
 if ! grep -q "08000073" trace.rvvi; then
