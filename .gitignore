@@ -21,6 +21,8 @@ tests/verilator_sim/rvvi/*.o
 tests/verilator_sim/rvvi/formatter_test
 tests/verilator_sim/rvvi/spsc_test
 tests/verilator_sim/rvvi/trace_test
+# Container logs
+tmp_log/
 # python
 __pycache__
 # downloaded bitstreams

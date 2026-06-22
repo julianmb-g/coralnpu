@@ -67,19 +67,20 @@ podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$
 
 # Run Barebones simulator and expect timeout
 echo "Running Barebones simulator via Bazel in Podman (expecting timeout)..."
+mkdir -p ./tmp_log
 set +e
-podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_barebones_sim -- $PWD/timeout.elf > ./barebones_out.log 2>&1
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/timeout.elf 2>&1 | tee /tmp/sim.log"
 EXIT_CODE=$?
+cp /tmp/sim.log ./tmp_log/timeout_barebones_sim.log
+find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null
 set -e
-
-cat ./barebones_out.log
 
 if [ $EXIT_CODE -ne 1 ]; then
   echo "Barebones simulator did not exit with code 1 (Exit Code: $EXIT_CODE)"
   exit 1
 fi
 
-if ! grep -q "Simulation TIMEOUT" ./barebones_out.log; then
+if ! grep -q "Simulation TIMEOUT" ./tmp_log/timeout_barebones_sim.log; then
   echo "Barebones simulator output missing 'Simulation TIMEOUT'"
   exit 1
 fi
@@ -89,18 +90,18 @@ echo "Barebones simulator timed out as expected."
 # Run RVVI simulator and expect timeout
 echo "Running RVVI simulator via Bazel in Podman (expecting timeout)..."
 set +e
-podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=$PWD/trace.rvvi $PWD/timeout.elf > ./rvvi_out.log 2>&1
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=\$PWD/trace.rvvi \$PWD/timeout.elf 2>&1 | tee /tmp/sim.log"
 EXIT_CODE=$?
+cp /tmp/sim.log ./tmp_log/timeout_rvvi_sim.log
+find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null
 set -e
-
-cat ./rvvi_out.log
 
 if [ $EXIT_CODE -ne 1 ]; then
   echo "RVVI simulator did not exit with code 1 (Exit Code: $EXIT_CODE)"
   exit 1
 fi
 
-if ! grep -q "Simulation TIMEOUT" ./rvvi_out.log; then
+if ! grep -q "Simulation TIMEOUT" ./tmp_log/timeout_rvvi_sim.log; then
   echo "RVVI simulator output missing 'Simulation TIMEOUT'"
   exit 1
 fi

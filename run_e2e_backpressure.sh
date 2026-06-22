@@ -65,7 +65,8 @@ podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$
 
 # Run simulator via Bazel in Podman with DelayFormatter, explicit output path, and Bazel cache mapping
 echo "Running RVVI Backpressure simulator via Bazel in Podman..."
-time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run --copt=-DDELAY_FORMATTER //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=$PWD/trace.rvvi $PWD/rvvi.elf
+mkdir -p ./tmp_log
+time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run --copt=-DDELAY_FORMATTER //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=\$PWD/trace.rvvi \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)"
 
 echo "Checking trace output..."
 if ! grep -q "00000013" trace.rvvi; then

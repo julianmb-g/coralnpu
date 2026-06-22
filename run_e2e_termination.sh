@@ -67,7 +67,8 @@ podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$
 
 # Run simulator via Bazel in Podman
 echo "Running RVVI simulator via Bazel in Podman..."
-podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=$PWD/trace.rvvi $PWD/rvvi.elf
+mkdir -p ./tmp_log
+podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_sim -- --rvvi_out=\$PWD/trace.rvvi \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/termination_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)"
 
 echo "Checking RVVI trace output for graceful termination..."
 if ! tail -n 1 trace.rvvi | grep -q "08000073"; then
