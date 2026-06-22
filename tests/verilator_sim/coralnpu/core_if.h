@@ -103,32 +103,35 @@ struct Core_if : Memory_if {
       if (io_dbus_valid && io_dbus_ready && !io_dbus_write) {
         sc_bv<KP_lsuDataBits> rdata;
         uint32_t addr = io_dbus_addr.read().get_word(0);
-        uint32_t words[KP_lsuDataBits / 32] = {0};
-        memset(words, 0xcc, sizeof(words));
-        int bytes = io_dbus_size.read().get_word(0);
-        if (Read(addr, bytes, reinterpret_cast<uint8_t*>(words))) {
-          ReadSwizzle(addr, KP_lsuDataBits / 8, reinterpret_cast<uint8_t*>(words));
+        constexpr int kLsuBytes = KP_lsuDataBits / 8;
+        uint32_t words[kLsuBytes / 4] = {0};
+        if (Read(addr, kLsuBytes, reinterpret_cast<uint8_t*>(words))) {
           for (int i = 0; i < KP_lsuDataBits / 32; ++i) {
             rdata.set_word(i, words[i]);
           }
           io_dbus_rdata = rdata;
         } else {
-          assert(false);
+          // soft fail
         }
       }
 
       // Data bus write.
       if (io_dbus_valid && io_dbus_ready && io_dbus_write) {
-        sc_bv<KP_lsuDataBits> wdata = io_dbus_wdata;
         uint32_t addr = io_dbus_addr.read().get_word(0);
-        uint32_t words[KP_lsuDataBits / 32];
-        int bytes = io_dbus_size.read().get_word(0);
+        constexpr int kLsuBytes = KP_lsuDataBits / 8;
+        uint8_t bytes[kLsuBytes] = {0};
+        uint32_t mask = io_dbus_wmask.read().get_word(0);
+        uint32_t wdata_words[kLsuBytes / 4] = {0};
+        sc_bv<KP_lsuDataBits> wdata = io_dbus_wdata;
         for (int i = 0; i < KP_lsuDataBits / 32; ++i) {
-          words[i] = wdata.get_word(i);
+          wdata_words[i] = wdata.get_word(i);
         }
-        WriteSwizzle(addr, KP_lsuDataBits / 8, reinterpret_cast<uint8_t*>(words));
-        if (!Write(addr, bytes, reinterpret_cast<uint8_t*>(words))) {
-          assert(false);
+        memcpy(bytes, wdata_words, kLsuBytes);
+        for (int i = 0; i < kLsuBytes; ++i) {
+          if ((mask >> i) & 1) {
+            uint8_t val = bytes[i];
+            Write(addr + i, 1, &val);
+          }
         }
       }
 
