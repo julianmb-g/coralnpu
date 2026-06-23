@@ -27,6 +27,10 @@ EXIT_CODE=$?
 find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null
 set -e
 
+if [ $EXIT_CODE -eq 65 ]; then
+  echo "Simulator incorrectly exited with 65 (ELF load failure code) instead of 1 on timeout/deadlock!"
+  exit 1
+fi
 if [ $EXIT_CODE -ne 1 ]; then
   echo "Barebones simulator did not exit with code 1 (Exit Code: $EXIT_CODE)"
   exit 1
@@ -52,6 +56,10 @@ EXIT_CODE=$?
 find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null
 set -e
 
+if [ $EXIT_CODE -eq 65 ]; then
+  echo "Simulator incorrectly exited with 65 (ELF load failure code) instead of 1 on timeout/deadlock!"
+  exit 1
+fi
 if [ $EXIT_CODE -ne 1 ]; then
   echo "RVVI simulator did not exit with code 1 (Exit Code: $EXIT_CODE)"
   exit 1

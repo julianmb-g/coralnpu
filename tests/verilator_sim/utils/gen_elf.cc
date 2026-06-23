@@ -7,14 +7,23 @@
 
 int main(int argc, char* argv[]) {
   if (argc < 2) {
-    std::cerr << "Usage: " << argv[0] << " <output_elf> [instructions_hex|--repeat count hex]..." << std::endl;
+    std::cerr << "Usage: " << argv[0] << " <output_elf> [--address hex] [instructions_hex|--repeat count hex]..." << std::endl;
     return 1;
   }
   
   std::vector<uint32_t> payload;
+  uint32_t load_address = 0x00000000;
   for (int i = 2; i < argc; ++i) {
     std::string arg = argv[i];
-    if (arg == "--repeat") {
+    if (arg == "--address") {
+      if (i + 1 < argc) {
+        load_address = std::stoul(argv[i+1], nullptr, 16);
+        i += 1;
+      } else {
+        std::cerr << "--address requires <hex>" << std::endl;
+        return 1;
+      }
+    } else if (arg == "--repeat") {
       if (i + 2 < argc) {
         uint32_t count = std::stoul(argv[i+1]);
         uint32_t inst = std::stoul(argv[i+2], nullptr, 16);
@@ -48,7 +57,7 @@ int main(int argc, char* argv[]) {
   ehdr.e_type = ET_EXEC;
   ehdr.e_machine = EM_RISCV;
   ehdr.e_version = EV_CURRENT;
-  ehdr.e_entry = 0x00000000;
+  ehdr.e_entry = load_address;
   ehdr.e_phoff = sizeof(Elf32_Ehdr);
   ehdr.e_ehsize = sizeof(Elf32_Ehdr);
   ehdr.e_phentsize = sizeof(Elf32_Phdr);
@@ -58,8 +67,8 @@ int main(int argc, char* argv[]) {
   std::memset(&phdr, 0, sizeof(phdr));
   phdr.p_type = PT_LOAD;
   phdr.p_offset = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
-  phdr.p_vaddr = 0x00000000;
-  phdr.p_paddr = 0x00000000;
+  phdr.p_vaddr = load_address;
+  phdr.p_paddr = load_address;
   phdr.p_filesz = payload.size() * sizeof(uint32_t);
   phdr.p_memsz = payload.size() * sizeof(uint32_t);
   phdr.p_flags = PF_R | PF_X;

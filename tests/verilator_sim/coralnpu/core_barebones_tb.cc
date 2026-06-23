@@ -37,6 +37,8 @@
 #include "tests/verilator_sim/sysc_tb.h"
 #include "tests/verilator_sim/util.h"
 #include "tests/verilator_sim/elf.h"
+#include "absl/log/log.h"
+#include "absl/strings/str_format.h"
 
 ABSL_FLAG(int, cycles, 500000, "Simulation cycles");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
@@ -65,7 +67,7 @@ struct Core_tb : Sysc_tb {
         if (current_delta - last_delta > 5000) {
             fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
             sc_stop();
-            exit(65);
+            exit(1);
         }
     } else {
         last_time = current_time;
@@ -106,6 +108,9 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry
               [&mif, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
                 if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
+                  uint64_t avail_end = (mif.profile_ == "highmem") ? 0x200000 : 0x400000;
+                  uint64_t delta = (addr + count > avail_end) ? (addr + count - avail_end) : 0;
+                  LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%lx - 0x%lx]. Available: [0x0 - 0x%lx]. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + count, avail_end, delta);
                   load_ok = false;
                 }
                 return dest;
@@ -126,7 +131,7 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   uint32_t entry_point = 0x80000000;
   if (!LoadElfToMemory(bin, mif, entry_point)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
-    exit(-1);
+    exit(65);
   }
 
   sc_signal<bool> io_halted;
