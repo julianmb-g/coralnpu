@@ -347,6 +347,15 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     
 #define PROCESS_LANE(x) \
     if (io_debug_rb_inst_##x##_valid.read()) { \
+      if (io_debug_rb_inst_##x##_bits_trap.read()) { \
+        TracePacket tpacket = {}; \
+        tpacket.type = 'T'; \
+        tpacket.v_id = internal_v_id++; \
+        while (!buffer->Push(tpacket)) { \
+          std::this_thread::yield(); \
+        } \
+        continue; \
+      } \
       uint32_t v_id = internal_v_id++; \
       TracePacket ipacket = {}; \
       ipacket.type = 'I'; \
@@ -459,15 +468,6 @@ sc_in<bool> io_debug_rb_inst_7_valid;
           } \
         } \
       } \
-      \
-      if (io_halted.read() && !e_sent) { \
-        TracePacket epacket = {}; \
-        epacket.type = 'E'; \
-        while (!buffer->Push(epacket)) { \
-          std::this_thread::yield(); \
-        } \
-        e_sent = true; \
-      } \
     }
 
     PROCESS_LANE(0);
@@ -480,6 +480,15 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     PROCESS_LANE(7);
 
 #undef PROCESS_LANE
+
+    if (io_halted.read() && !e_sent) { \
+      TracePacket epacket = {}; \
+      epacket.type = 'E'; \
+      while (!buffer->Push(epacket)) { \
+        std::this_thread::yield(); \
+      } \
+      e_sent = true; \
+    }
 
     if (io_halted.read()) {
       sc_stop();

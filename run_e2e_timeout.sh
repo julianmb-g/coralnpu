@@ -6,11 +6,11 @@ trap 'rm -f ./timeout.elf ./barebones_out.log ./rvvi_out.log' EXIT
 
 USE_PODMAN=${USE_PODMAN:-0}
 
-echo "Generating ELF at 0x00000000 with 600,000 NOPs via Bazel..."
+echo "Generating ELF at 0x00000000 with infinite loop (0x0000006f) via Bazel..."
 if [ "$USE_PODMAN" -eq 1 ]; then
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "bazel run //tests/verilator_sim:gen_elf -- \$PWD/timeout.elf --repeat 600000 0x00000013"
+  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "bazel run //tests/verilator_sim:gen_elf -- \$PWD/timeout.elf 0x0000006f"
 else
-  bazel run //tests/verilator_sim:gen_elf -- "$PWD/timeout.elf" --repeat 600000 0x00000013
+  bazel run //tests/verilator_sim:gen_elf -- "$PWD/timeout.elf" 0x0000006f
 fi
 
 # Run Barebones simulator and expect timeout

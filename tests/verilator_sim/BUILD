@@ -66,6 +66,10 @@ cc_library(
         "coralnpu/memory_if.h",
     ],
     defines = ["CORALNPU_SIMD=256"],
+    deps = [
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/strings:str_format",
+    ],
 )
 
 cc_binary(
