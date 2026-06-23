@@ -25,8 +25,9 @@ if ! grep -q "08000073" trace.rvvi; then
 fi
 
 # Verify 'R' packets are present
-if ! grep -Eq "x[0-9]+:[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*" trace.rvvi; then
-  echo "Trace file missing expected 'R' packets (register updates)"
+r_packet_count=$(grep -c "x[0-9]+:[0-9a-fA-F]*" trace.rvvi || true)
+if [ "$r_packet_count" -lt 5000 ]; then
+  echo "Trace file missing expected 'R' packets (register updates): expected at least 5000, found $r_packet_count"
   exit 1
 fi
 
