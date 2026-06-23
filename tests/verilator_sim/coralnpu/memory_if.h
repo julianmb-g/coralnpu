@@ -22,6 +22,9 @@
 #include <map>
 #include <string>
 
+#include "absl/log/log.h"
+#include "absl/strings/str_format.h"
+
 #include "tests/verilator_sim/sysc_module.h"
 
 // A memory model base class
@@ -36,18 +39,31 @@ struct Memory_if : Sysc_module {
 
   std::string profile_;
 
-  bool IsValidAddress(uint32_t addr) const {
+  bool IsValidAddress(uint32_t addr, uint32_t len) const {
+    uint32_t end_addr = addr + len;
     if (profile_ == "default") {
-      if (addr >= 0x80000000) return true;
-      if (addr < 0x400000) return true; // Matcha Memory Layout: 4MB contiguous SRAM
-      return false;
+      // ITCM: 8KB at 0x0
+      bool in_itcm = (addr < 0x2000 && end_addr <= 0x2000);
+      // DTCM: 32KB at 0x10000
+      bool in_dtcm = (addr >= 0x10000 && end_addr <= 0x18000);
+      return in_itcm || in_dtcm;
     } else if (profile_ == "highmem") {
-      if (addr >= 0x80000000) return true;
-      if (addr < 0x200000) return true; // ITCM + DTCM: 2MB total
-      return false;
+      // 1MB at 0x100000
+      return (addr >= 0x100000 && end_addr <= 0x200000);
     }
-    return true;
+    return true; // "all" or other profile
   }
+
+  std::string GetProfileBounds() const {
+    if (profile_ == "default") {
+      return "ITCM:[0x0 - 0x2000), DTCM:[0x10000 - 0x18000)";
+    } else if (profile_ == "highmem") {
+      return "[0x100000 - 0x200000)";
+    }
+    return "[0x0 - 0xFFFFFFFF)";
+  }
+
+  // ... (rest of constructor logic, replacing calls to IsValidAddress)
 
   Memory_if(sc_module_name n, const char* bin, int limit = -1, const std::string& profile = "all") :
       Sysc_module(n), profile_(profile) {
@@ -74,23 +90,33 @@ struct Memory_if : Sysc_module {
       }
       // Create pages for the rest of our memory space, that was not created
       // for inserting the binary.
-      for (; addr < 0x400000; addr += kPageSize) {
-        AddPage(addr, kPageSize, nullptr);
+      if (profile == "default") {
+        for (; addr < 0x18000; addr += kPageSize) {
+           if (IsValidAddress(addr, kPageSize)) AddPage(addr, kPageSize, nullptr);
+        }
+      } else if (profile == "highmem") {
+        for (; addr < 0x200000; addr += kPageSize) {
+           if (IsValidAddress(addr, kPageSize)) AddPage(addr, kPageSize, nullptr);
+        }
+      } else {
+        for (; addr < 0x400000; addr += kPageSize) {
+          AddPage(addr, kPageSize, nullptr);
+        }
       }
 
       delete [] fdata;
     } else {
       if (profile == "default") {
-        // Matcha Memory Layout: 4MB of contiguous SRAM from 0x0 to 0x400000
-        for (int addr = 0; addr < 0x400000; addr += kPageSize) {
+        // ITCM: 8KB at 0x0
+        for (int addr = 0; addr < 0x2000; addr += kPageSize) {
+          AddPage(addr, kPageSize, nullptr);
+        }
+        // DTCM: 32KB at 0x10000
+        for (int addr = 0x10000; addr < 0x18000; addr += kPageSize) {
           AddPage(addr, kPageSize, nullptr);
         }
       } else if (profile == "highmem") {
-        // ITCM: 1MB -> pages from 0 to 0xFFFFF (i.e., less than 0x100000)
-        for (int addr = 0; addr < 0x100000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-        // DTCM: 1MB at 0x100000 -> pages from 0x100000 to 0x1FFFFF (i.e., less than 0x200000)
+        // 1MB at 0x100000
         for (int addr = 0x100000; addr < 0x200000; addr += kPageSize) {
           AddPage(addr, kPageSize, nullptr);
         }
@@ -105,10 +131,9 @@ struct Memory_if : Sysc_module {
 
   bool Read(uint32_t addr, int bytes, uint8_t* data) {
     while (bytes > 0) {
-      if (!IsValidAddress(addr)) {
-        printf("DEBUG: Read failed IsValidAddress addr=%08x, bytes=%d\n", addr, bytes);
-        fflush(stdout);
-        return false;
+      if (!IsValidAddress(addr, kPageSize)) {
+        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: %s.", addr, addr + bytes, GetProfileBounds());
+        exit(65);
       }
       const uint32_t maddr = addr & kPageMask;
       const uint32_t offset = addr - maddr;
@@ -140,7 +165,10 @@ struct Memory_if : Sysc_module {
 
   bool Write(uint32_t addr, int bytes, const uint8_t* data) {
     while (bytes > 0) {
-      if (!IsValidAddress(addr)) return false;
+      if (!IsValidAddress(addr, kPageSize)) {
+        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: %s.", addr, addr + bytes, GetProfileBounds());
+        exit(65);
+      }
       const uint32_t maddr = addr & kPageMask;
       const uint32_t offset = addr - maddr;
       const int limit = kPageSize - offset;
