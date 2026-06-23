@@ -475,3 +475,11 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_binary(
+    name = "gen_elf",
+    srcs = [
+        "utils/gen_elf.cc",
+    ],
+    visibility = ["//visibility:public"],
+)
