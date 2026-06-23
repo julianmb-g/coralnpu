@@ -15,8 +15,8 @@ time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $
 echo "Checking trace output..."
 # Verify 5000 addi and 1 mpause are present
 addi_count=$(grep -c "00100093" trace.rvvi || true)
-if [ "$addi_count" -lt 5000 ]; then
-  echo "Trace file missing expected ADDI instructions: expected at least 5000, found $addi_count"
+if [ "$addi_count" -ne 5000 ]; then
+  echo "Trace file has unexpected ADDI instruction count: expected exactly 5000, found $addi_count"
   exit 1
 fi
 if ! grep -q "08000073" trace.rvvi; then
@@ -25,9 +25,11 @@ if ! grep -q "08000073" trace.rvvi; then
 fi
 
 # Verify 'R' packets are present
-r_packet_count=$(grep -c "x[0-9]+:[0-9a-fA-F]*" trace.rvvi || true)
-if [ "$r_packet_count" -lt 5000 ]; then
-  echo "Trace file missing expected 'R' packets (register updates): expected at least 5000, found $r_packet_count"
+r_packet_count=$(grep -E -o "x[0-9]+:[0-9a-fA-F]*" trace.rvvi | wc -l || true)
+# Trim whitespace from wc -l output
+r_packet_count=$(echo $r_packet_count | xargs)
+if [ "$r_packet_count" -ne 5000 ]; then
+  echo "Trace file has unexpected 'R' packet count (register updates): expected exactly 5000, found $r_packet_count"
   exit 1
 fi
 
