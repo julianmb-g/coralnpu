@@ -131,14 +131,15 @@ struct Memory_if : Sysc_module {
 
   bool Read(uint32_t addr, int bytes, uint8_t* data) {
     while (bytes > 0) {
-      if (!IsValidAddress(addr, kPageSize)) {
-        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: %s.", addr, addr + bytes, GetProfileBounds());
-        exit(65);
-      }
       const uint32_t maddr = addr & kPageMask;
       const uint32_t offset = addr - maddr;
       const int limit = kPageSize - offset;
       const int len = std::min(bytes, limit);
+
+      if (!IsValidAddress(addr, len)) {
+        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: %s.", addr, addr + len, GetProfileBounds());
+        exit(65);
+      }
 
       if (!HasPage(maddr)) {
         printf("DEBUG: Read failed HasPage addr=%08x maddr=%08x\n", addr, maddr);
@@ -165,14 +166,15 @@ struct Memory_if : Sysc_module {
 
   bool Write(uint32_t addr, int bytes, const uint8_t* data) {
     while (bytes > 0) {
-      if (!IsValidAddress(addr, kPageSize)) {
-        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: %s.", addr, addr + bytes, GetProfileBounds());
-        exit(65);
-      }
       const uint32_t maddr = addr & kPageMask;
       const uint32_t offset = addr - maddr;
       const int limit = kPageSize - offset;
       const int len = std::min(bytes, limit);
+
+      if (!IsValidAddress(addr, len)) {
+        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: %s.", addr, addr + len, GetProfileBounds());
+        exit(65);
+      }
 
       if (!HasPage(maddr)) {
         AddPage(maddr, kPageSize, nullptr);
