@@ -354,9 +354,8 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         while (!buffer->Push(tpacket)) { \
           std::this_thread::yield(); \
         } \
-        continue; \
-      } \
-      uint32_t v_id = internal_v_id++; \
+      } else { \
+        uint32_t v_id = internal_v_id++; \
       TracePacket ipacket = {}; \
       ipacket.type = 'I'; \
       ipacket.v_id = v_id; \
@@ -467,6 +466,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
             } \
           } \
         } \
+      } \
       } \
     }
 
