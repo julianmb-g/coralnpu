@@ -471,6 +471,37 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       }
     }
 
+#define PROCESS_LANE_I_ONLY(x) \
+    if (io_debug_rb_inst_##x##_valid.read()) { \
+      uint32_t v_id = internal_v_id++; \
+      TracePacket ipacket = {}; \
+      ipacket.type = 'I'; \
+      ipacket.v_id = v_id; \
+      ipacket.inst.pc = io_debug_rb_inst_##x##_bits_pc.read().to_uint64(); \
+      ipacket.inst.instruction = io_debug_rb_inst_##x##_bits_inst.read().to_uint(); \
+      while (!buffer->Push(ipacket)) { \
+        std::this_thread::yield(); \
+      } \
+      if (io_halted.read() && !e_sent) { \
+        TracePacket epacket = {}; \
+        epacket.type = 'E'; \
+        while (!buffer->Push(epacket)) { \
+          std::this_thread::yield(); \
+        } \
+        e_sent = true; \
+      } \
+    }
+
+    PROCESS_LANE_I_ONLY(1);
+    PROCESS_LANE_I_ONLY(2);
+    PROCESS_LANE_I_ONLY(3);
+    PROCESS_LANE_I_ONLY(4);
+    PROCESS_LANE_I_ONLY(5);
+    PROCESS_LANE_I_ONLY(6);
+    PROCESS_LANE_I_ONLY(7);
+
+#undef PROCESS_LANE_I_ONLY
+
     if (io_halted.read()) {
       sc_stop();
     }
