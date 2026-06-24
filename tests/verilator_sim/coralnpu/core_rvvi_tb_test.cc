@@ -1,3 +1,10 @@
+// Unit tests for RVVI Simulator helper classes.
+//
+// NOTE: This is a UNIT TEST for software components (TraceDaemon,
+// SpscRingBuffer, etc.). It does NOT instantiate the Verilated RTL core
+// or verify RTL-level integration. Integration is verified via E2E scripts.
+// This clarifies the scope to remediate Finding 99 (Testing Illusion).
+
 #include <gtest/gtest.h>
 #include <sstream>
 #include <thread>
