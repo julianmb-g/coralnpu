@@ -1,3 +1,10 @@
+// Unit tests for Barebones Simulator helper classes.
+//
+// NOTE: This is a UNIT TEST for software components (ELF loader, memory
+// interface, etc.). It does NOT instantiate the Verilated RTL core or verify
+// RTL-level integration. Integration is verified via E2E scripts.
+// This clarifies the scope to remediate Finding 99 (Testing Illusion).
+
 #include <gtest/gtest.h>
 #include <vector>
 #include <cstring>
