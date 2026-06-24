@@ -34,4 +34,9 @@ if ! grep -Eq "v[w]?add" trace.rvvi; then
   exit 1
 fi
 
+if ! grep -Eq "vsetvli" trace.rvvi; then
+  echo "Trace file missing vector setup instruction disassembly (vsetvli)"
+  exit 1
+fi
+
 echo "E2E RVVI Fidelity Test PASSED"

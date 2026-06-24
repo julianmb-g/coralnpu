@@ -343,7 +343,6 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   }
 
   void posedge() {
-    check(!io_fault, "io_fault");
     
 #define PROCESS_LANE(x) \
     if (io_debug_rb_inst_##x##_valid.read()) { \
@@ -351,6 +350,8 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         TracePacket tpacket = {}; \
         tpacket.type = 'T'; \
         tpacket.v_id = internal_v_id++; \
+        tpacket.inst.pc = io_debug_rb_inst_##x##_bits_pc.read().to_uint64(); \
+        tpacket.inst.instruction = io_debug_rb_inst_##x##_bits_inst.read().to_uint(); \
         while (!buffer->Push(tpacket)) { \
           std::this_thread::yield(); \
         } \
@@ -492,7 +493,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 
 #undef PROCESS_LANE
 
-    if (io_halted.read() && !e_sent) { \
+    if ((io_halted.read() || io_fault.read()) && !e_sent) { \
       TracePacket epacket = {}; \
       epacket.type = 'E'; \
       while (!buffer->Push(epacket)) { \
@@ -504,6 +505,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     if (io_halted.read()) {
       sc_stop();
     }
+    check(!io_fault, "io_fault");
   }
 };
 
