@@ -6,12 +6,13 @@ trap 'rm -f ./dummy.elf' EXIT
 
 USE_PODMAN=${USE_PODMAN:-0}
 
-# Generate a dummy valid ELF
-echo "Generating dummy ELF via Bazel..."
+# Build mandated binary
+echo "Building mandated binary via Bazel..."
 if [ "$USE_PODMAN" -eq 1 ]; then
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "bazel run //tests/verilator_sim:gen_elf -- \$PWD/dummy.elf 0x08000073"
+  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "bazel build //examples:coralnpu_v2_rvv_add_intrinsic && cp bazel-bin/examples/coralnpu_v2_rvv_add_intrinsic.elf \$PWD/dummy.elf"
 else
-  bazel run //tests/verilator_sim:gen_elf -- "$PWD/dummy.elf" 0x08000073
+  bazel build //examples:coralnpu_v2_rvv_add_intrinsic
+  cp bazel-bin/examples/coralnpu_v2_rvv_add_intrinsic.elf ./dummy.elf
 fi
 
 # Run simulator via Bazel
