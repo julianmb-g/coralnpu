@@ -375,94 +375,105 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       if (writes_rd) { \
         uint32_t rd = (inst >> 7) & 0x1f; \
         if (rd != 0 || opcode == 0x57) { \
-          int num_packets = (opcode == 0x57) ? 8 : 1; \
-          for (int i = 0; i < num_packets; ++i) { \
-            TracePacket rpacket = {}; \
-            rpacket.type = 'R'; \
-            rpacket.v_id = v_id; \
-            rpacket.reg.reg_type = (opcode == 0x57) ? 'V' : 'X'; \
-            rpacket.reg.index = rd; \
-            rpacket.reg.offset = i * 32; \
-            rpacket.reg.size = (opcode == 0x57) ? 32 : (KP_xlen / 8); \
-            rpacket.reg.total_size = (opcode == 0x57) ? 256 : (KP_xlen / 8); \
-            \
-            if (opcode == 0x57) { \
-              bool chunk_valid = false; \
-              sc_bv<KP_rvvVlen> vval; \
-              uint32_t chunk_idx = rd; \
-              switch (i) { \
-                case 0: \
-                  chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_0_valid.read(); \
-                  if (chunk_valid) { \
-                    vval = io_debug_rb_inst_##x##_bits_vecWrites_0_bits_data.read(); \
-                    chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_0_bits_idx.read().to_uint(); \
+          int num_vec_writes = (opcode == 0x57) ? 8 : 1; \
+          int sub_packets = (opcode == 0x57) ? ((KP_rvvVlen + 255) / 256) : 1; \
+          for (int i = 0; i < num_vec_writes; ++i) { \
+            for (int sp = 0; sp < sub_packets; ++sp) { \
+              TracePacket rpacket = {}; \
+              rpacket.type = 'R'; \
+              rpacket.v_id = v_id; \
+              rpacket.reg.reg_type = (opcode == 0x57) ? 'V' : 'X'; \
+              rpacket.reg.index = rd; \
+              rpacket.reg.offset = (opcode == 0x57) ? (sp * 32) : 0; \
+              rpacket.reg.size = (opcode == 0x57) ? (((KP_rvvVlen / 8) - sp * 32 < 32) ? ((KP_rvvVlen / 8) - sp * 32) : 32) : (KP_xlen / 8); \
+              rpacket.reg.total_size = (opcode == 0x57) ? (KP_rvvVlen / 8) : (KP_xlen / 8); \
+              \
+              if (opcode == 0x57) { \
+                bool chunk_valid = false; \
+                sc_bv<KP_rvvVlen> vval; \
+                uint32_t chunk_idx = rd; \
+                switch (i) { \
+                  case 0: \
+                    chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_0_valid.read(); \
+                    if (chunk_valid) { \
+                      vval = io_debug_rb_inst_##x##_bits_vecWrites_0_bits_data.read(); \
+                      chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_0_bits_idx.read().to_uint(); \
+                    } \
+                    break; \
+                  case 1: \
+                    chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_1_valid.read(); \
+                    if (chunk_valid) { \
+                      vval = io_debug_rb_inst_##x##_bits_vecWrites_1_bits_data.read(); \
+                      chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_1_bits_idx.read().to_uint(); \
+                    } \
+                    break; \
+                  case 2: \
+                    chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_2_valid.read(); \
+                    if (chunk_valid) { \
+                      vval = io_debug_rb_inst_##x##_bits_vecWrites_2_bits_data.read(); \
+                      chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_2_bits_idx.read().to_uint(); \
+                    } \
+                    break; \
+                  case 3: \
+                    chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_3_valid.read(); \
+                    if (chunk_valid) { \
+                      vval = io_debug_rb_inst_##x##_bits_vecWrites_3_bits_data.read(); \
+                      chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_3_bits_idx.read().to_uint(); \
+                    } \
+                    break; \
+                  case 4: \
+                    chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_4_valid.read(); \
+                    if (chunk_valid) { \
+                      vval = io_debug_rb_inst_##x##_bits_vecWrites_4_bits_data.read(); \
+                      chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_4_bits_idx.read().to_uint(); \
+                    } \
+                    break; \
+                  case 5: \
+                    chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_5_valid.read(); \
+                    if (chunk_valid) { \
+                      vval = io_debug_rb_inst_##x##_bits_vecWrites_5_bits_data.read(); \
+                      chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_5_bits_idx.read().to_uint(); \
+                    } \
+                    break; \
+                  case 6: \
+                    chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_6_valid.read(); \
+                    if (chunk_valid) { \
+                      vval = io_debug_rb_inst_##x##_bits_vecWrites_6_bits_data.read(); \
+                      chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_6_bits_idx.read().to_uint(); \
+                    } \
+                    break; \
+                  case 7: \
+                    chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_7_valid.read(); \
+                    if (chunk_valid) { \
+                      vval = io_debug_rb_inst_##x##_bits_vecWrites_7_bits_data.read(); \
+                      chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_7_bits_idx.read().to_uint(); \
+                    } \
+                    break; \
+                } \
+                if (chunk_valid) { \
+                  rpacket.reg.index = chunk_idx; \
+                  for (int w = 0; w < 4; ++w) { \
+                    uint64_t val64 = 0; \
+                    int word_idx_0 = (sp * 8) + (w * 2); \
+                    int word_idx_1 = word_idx_0 + 1; \
+                    if (word_idx_0 < (KP_rvvVlen / 32)) { \
+                      val64 |= vval.get_word(word_idx_0); \
+                    } \
+                    if (word_idx_1 < (KP_rvvVlen / 32)) { \
+                      val64 |= (static_cast<uint64_t>(vval.get_word(word_idx_1)) << 32); \
+                    } \
+                    rpacket.reg.value[w] = val64; \
                   } \
-                  break; \
-                case 1: \
-                  chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_1_valid.read(); \
-                  if (chunk_valid) { \
-                    vval = io_debug_rb_inst_##x##_bits_vecWrites_1_bits_data.read(); \
-                    chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_1_bits_idx.read().to_uint(); \
-                  } \
-                  break; \
-                case 2: \
-                  chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_2_valid.read(); \
-                  if (chunk_valid) { \
-                    vval = io_debug_rb_inst_##x##_bits_vecWrites_2_bits_data.read(); \
-                    chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_2_bits_idx.read().to_uint(); \
-                  } \
-                  break; \
-                case 3: \
-                  chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_3_valid.read(); \
-                  if (chunk_valid) { \
-                    vval = io_debug_rb_inst_##x##_bits_vecWrites_3_bits_data.read(); \
-                    chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_3_bits_idx.read().to_uint(); \
-                  } \
-                  break; \
-                case 4: \
-                  chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_4_valid.read(); \
-                  if (chunk_valid) { \
-                    vval = io_debug_rb_inst_##x##_bits_vecWrites_4_bits_data.read(); \
-                    chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_4_bits_idx.read().to_uint(); \
-                  } \
-                  break; \
-                case 5: \
-                  chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_5_valid.read(); \
-                  if (chunk_valid) { \
-                    vval = io_debug_rb_inst_##x##_bits_vecWrites_5_bits_data.read(); \
-                    chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_5_bits_idx.read().to_uint(); \
-                  } \
-                  break; \
-                case 6: \
-                  chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_6_valid.read(); \
-                  if (chunk_valid) { \
-                    vval = io_debug_rb_inst_##x##_bits_vecWrites_6_bits_data.read(); \
-                    chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_6_bits_idx.read().to_uint(); \
-                  } \
-                  break; \
-                case 7: \
-                  chunk_valid = io_debug_rb_inst_##x##_bits_vecWrites_7_valid.read(); \
-                  if (chunk_valid) { \
-                    vval = io_debug_rb_inst_##x##_bits_vecWrites_7_bits_data.read(); \
-                    chunk_idx = io_debug_rb_inst_##x##_bits_vecWrites_7_bits_idx.read().to_uint(); \
-                  } \
-                  break; \
-              } \
-              if (chunk_valid) { \
-                rpacket.reg.index = chunk_idx; \
-                rpacket.reg.value[0] = (static_cast<uint64_t>(vval.get_word(1)) << 32) | vval.get_word(0); \
-                rpacket.reg.value[1] = (static_cast<uint64_t>(vval.get_word(3)) << 32) | vval.get_word(2); \
-                rpacket.reg.value[2] = (static_cast<uint64_t>(vval.get_word(5)) << 32) | vval.get_word(4); \
-                rpacket.reg.value[3] = (static_cast<uint64_t>(vval.get_word(7)) << 32) | vval.get_word(6); \
+                } else { \
+                  continue; \
+                } \
               } else { \
-                continue; \
+                if (sp == 0) rpacket.reg.value[0] = io_debug_rb_inst_##x##_bits_data.read().to_uint64(); \
               } \
-            } else { \
-              if (i == 0) rpacket.reg.value[0] = io_debug_rb_inst_##x##_bits_data.read().to_uint64(); \
-            } \
-            \
-            while (!buffer->Push(rpacket)) { \
-              std::this_thread::yield(); \
+              \
+              while (!buffer->Push(rpacket)) { \
+                std::this_thread::yield(); \
+              } \
             } \
           } \
         } \

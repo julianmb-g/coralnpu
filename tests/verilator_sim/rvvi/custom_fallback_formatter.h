@@ -152,10 +152,30 @@ class CustomFallbackFormatter : public TraceFormatterInterface {
       return op + " " + std::string(reg_name(rs2)) + "," + std::to_string(imm) + "(" + reg_name(rs1) + ")";
     }
     if (opcode == 0x57) { // Vector Opcode
+      uint32_t funct3 = (inst >> 12) & 0x7;
+      uint32_t funct6 = (inst >> 26) & 0x3f;
+
+      if (funct3 == 7) { // vsetvli, vsetivli
+        return "vsetvli " + std::string(reg_name(rd)) + "," + reg_name(rs1) + "," + std::to_string(inst & 0x7ff);
+      }
+
+      if (funct6 == 0) { // vadd
+        if (funct3 == 0) return "vadd.vv v" + std::to_string(rd) + ",v" + std::to_string(rs2) + ",v" + std::to_string(rs1);
+        if (funct3 == 3) {
+          int32_t simm5 = rs1;
+          if (simm5 & 0x10) simm5 |= 0xffffffe0; // Sign extend 5-bit immediate
+          return "vadd.vi v" + std::to_string(rd) + ",v" + std::to_string(rs2) + "," + std::to_string(simm5);
+        }
+        if (funct3 == 4) return "vadd.vx v" + std::to_string(rd) + ",v" + std::to_string(rs2) + "," + reg_name(rs1);
+      }
+
+      if (funct6 == 0x31) { // vwadd.vv
+        if (funct3 == 0 || funct3 == 2) return "vwadd.vv v" + std::to_string(rd) + ",v" + std::to_string(rs2) + ",v" + std::to_string(rs1);
+        if (funct3 == 4 || funct3 == 6) return "vwadd.vx v" + std::to_string(rd) + ",v" + std::to_string(rs2) + "," + reg_name(rs1);
+      }
+
       char sbuf[32];
       std::snprintf(sbuf, sizeof(sbuf), "v_inst_0x%08x", inst);
-      uint32_t funct3 = (inst >> 12) & 0x7;
-      if (funct3 == 0) return "vsetvli " + std::string(reg_name(rd)) + "," + reg_name(rs1) + "," + std::to_string(inst & 0x3ff);
       return sbuf;
     }
     if (opcode == 0x73) { // SYSTEM

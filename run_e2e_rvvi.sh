@@ -29,4 +29,9 @@ if ! grep -Eq "v[0-9]+:[0-9a-fA-F]*[1-9a-fA-F][0-9a-fA-F]*" trace.rvvi; then
   exit 1
 fi
 
+if ! grep -Eq "v[w]?add" trace.rvvi; then
+  echo "Trace file missing vector instruction disassembly (e.g., vadd)"
+  exit 1
+fi
+
 echo "E2E RVVI Fidelity Test PASSED"
