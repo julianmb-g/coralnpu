@@ -321,6 +321,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 
   SpscRingBuffer<TracePacket, 4096>* buffer;
   bool e_sent = false;
+  bool ebreak_halt = false;
   uint32_t internal_v_id = 0;
   uint64_t instruction_count = 0;
   uint64_t instruction_limit = 500000;
@@ -350,12 +351,16 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     
 #define PROCESS_LANE(x) \
     if (io_debug_rb_inst_##x##_valid.read()) { \
+      uint32_t inst = io_debug_rb_inst_##x##_bits_inst.read().to_uint(); \
+      if (inst == 0x00100073) { \
+        ebreak_halt = true; \
+      } \
       if (io_debug_rb_inst_##x##_bits_trap.read()) { \
         TracePacket tpacket = {}; \
         tpacket.type = 'T'; \
         tpacket.v_id = internal_v_id++; \
         tpacket.inst.pc = io_debug_rb_inst_##x##_bits_pc.read().to_uint64(); \
-        tpacket.inst.instruction = io_debug_rb_inst_##x##_bits_inst.read().to_uint(); \
+        tpacket.inst.instruction = inst; \
         while (!buffer->Push(tpacket)) { \
           std::this_thread::yield(); \
         } \
@@ -365,13 +370,12 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       ipacket.type = 'I'; \
       ipacket.v_id = v_id; \
       ipacket.inst.pc = io_debug_rb_inst_##x##_bits_pc.read().to_uint64(); \
-      ipacket.inst.instruction = io_debug_rb_inst_##x##_bits_inst.read().to_uint(); \
+      ipacket.inst.instruction = inst; \
       \
       while (!buffer->Push(ipacket)) { \
         std::this_thread::yield(); \
       } \
       \
-      uint32_t inst = ipacket.inst.instruction; \
       uint32_t opcode = inst & 0x7f; \
       bool writes_rd = (opcode == 0x13) || (opcode == 0x33) || (opcode == 0x37) || \
                        (opcode == 0x17) || (opcode == 0x6f) || (opcode == 0x67) || \
@@ -513,7 +517,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         sc_stop();
     }
 
-    if ((io_halted.read() || io_fault.read()) && !e_sent) { \
+    if ((io_halted.read() || io_fault.read() || ebreak_halt) && !e_sent) { \
       TracePacket epacket = {}; \
       epacket.type = 'E'; \
       while (!buffer->Push(epacket)) { \
@@ -522,7 +526,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       e_sent = true; \
     }
 
-    if (io_halted.read()) {
+    if (io_halted.read() || ebreak_halt) {
       sc_stop();
     }
     check(!io_fault, "io_fault");
