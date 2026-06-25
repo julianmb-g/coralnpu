@@ -18,6 +18,7 @@
 #include <thread>
 #include <iostream>
 #include <fstream>
+#include <limits>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -50,7 +51,8 @@ public:
 
 using namespace mpact::sim::riscv::rvvi;
 
-ABSL_FLAG(int, cycles, 500000, "Simulation cycles");
+ABSL_FLAG(int, cycles, 500000, "Simulation cycles (Used as instruction timeout if --instructions not set)");
+ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, rvvi_out, "trace.rvvi", "RVVI trace output file");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
@@ -320,9 +322,11 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   SpscRingBuffer<TracePacket, 4096>* buffer;
   bool e_sent = false;
   uint32_t internal_v_id = 0;
+  uint64_t instruction_count = 0;
+  uint64_t instruction_limit = 500000;
 
-  CoreRvvi_tb(sc_module_name name, int cycles, bool random, SpscRingBuffer<TracePacket, 4096>* buf) 
-    : Sysc_tb(name, cycles, random), buffer(buf) {
+  CoreRvvi_tb(sc_module_name name, int instruction_limit, bool random, SpscRingBuffer<TracePacket, 4096>* buf) 
+    : Sysc_tb(name, std::numeric_limits<int>::max(), random), buffer(buf), instruction_limit(instruction_limit) {
     SC_METHOD(monitor_delta);
     sensitive << io_ibus_valid;
   }
@@ -493,6 +497,22 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 
 #undef PROCESS_LANE
 
+    uint64_t retiring_this_cycle = 0;
+    if (io_debug_rb_inst_0_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_1_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_2_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_3_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_4_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_5_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_6_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_7_valid.read()) retiring_this_cycle++;
+
+    instruction_count += retiring_this_cycle;
+
+    if (instruction_count >= instruction_limit) {
+        sc_stop();
+    }
+
     if ((io_halted.read() || io_fault.read()) && !e_sent) { \
       TracePacket epacket = {}; \
       epacket.type = 'E'; \
@@ -542,12 +562,12 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry
   return false;
 }
 
-static int CoreRvvi_run(const char* name, const char* bin, const int cycles,
+static int CoreRvvi_run(const char* name, const char* bin, const int instruction_limit,
                      const bool trace, const std::string& rvvi_out,
                      const std::string& memory_profile) {
   VERILATOR_MODEL core(name);
   SpscRingBuffer<TracePacket, 4096> buffer;
-  CoreRvvi_tb tb("CoreRvvi_tb", cycles, false, &buffer);
+  CoreRvvi_tb tb("CoreRvvi_tb", instruction_limit, false, &buffer);
   Core_if mif("Core_if", nullptr, memory_profile);
 
   uint32_t entry_point = 0x80000000;
@@ -1656,8 +1676,11 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   if (io_halted.read()) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
+  } else if (tb.instruction_count >= tb.instruction_limit) {
+    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
+    return 1;
   } else {
-    fprintf(stderr, "Simulation TIMEOUT after %d cycles.\n", cycles);
+    fprintf(stderr, "Simulation TIMEOUT after %d cycles.\n", instruction_limit);
     return 1;
   }
 }
@@ -1673,7 +1696,12 @@ int sc_main(int argc, char *argv[]) {
   }
   const char* path = argv[1];
 
-  return CoreRvvi_run(Sysc_tb::get_name(argv[0]), path, absl::GetFlag(FLAGS_cycles),
+  int timeout_limit = absl::GetFlag(FLAGS_instructions);
+  if (absl::GetFlag(FLAGS_cycles) != 500000 && absl::GetFlag(FLAGS_instructions) == 500000) {
+    timeout_limit = absl::GetFlag(FLAGS_cycles);
+  }
+
+  return CoreRvvi_run(Sysc_tb::get_name(argv[0]), path, timeout_limit,
            absl::GetFlag(FLAGS_trace), absl::GetFlag(FLAGS_rvvi_out),
            absl::GetFlag(FLAGS_memory_profile));
 }
