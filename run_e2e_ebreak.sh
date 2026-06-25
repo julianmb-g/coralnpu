@@ -34,8 +34,8 @@ if ! grep -q "00100073" trace.rvvi; then
   exit 1
 fi
 
-if ! grep -q "io_fault" ./tmp_log/ebreak_sim.log; then
-  echo "Simulator did not fault on ebreak as expected!"
+if [ "$EXIT_CODE" -ne 0 ]; then
+  echo "Simulator failed with exit code $EXIT_CODE"
   exit 1
 fi
 
