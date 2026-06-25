@@ -529,7 +529,9 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     if (io_halted.read() || ebreak_halt) {
       sc_stop();
     }
-    check(!io_fault, "io_fault");
+    if (!ebreak_halt) {
+      check(!io_fault, "io_fault");
+    }
   }
 };
 
@@ -1677,7 +1679,7 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   }
   daemon.Stop();
 
-  if (io_halted.read()) {
+  if (io_halted.read() || tb.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
   } else if (tb.instruction_count >= tb.instruction_limit) {
