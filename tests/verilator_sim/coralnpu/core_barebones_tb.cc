@@ -27,6 +27,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <limits>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -40,7 +41,8 @@
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
-ABSL_FLAG(int, cycles, 500000, "Simulation cycles");
+ABSL_FLAG(int, cycles, 500000, "Simulation cycles (Used as instruction timeout if --instructions not set)");
+ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
 
@@ -50,12 +52,25 @@ struct Core_tb : Sysc_tb {
 
   sc_in<bool> io_ibus_valid;
 
+#define DECLARE_RB_VALID(x) sc_in<bool> io_debug_rb_inst_##x##_valid;
+  REPEAT_8(DECLARE_RB_VALID);
+#undef DECLARE_RB_VALID
+
+#define DECLARE_RB_INST(x) sc_in<sc_bv<32>> io_debug_rb_inst_##x##_bits_inst;
+  REPEAT_8(DECLARE_RB_INST);
+#undef DECLARE_RB_INST
+
+  bool ebreak_halt = false;
+
   uint64_t last_time = 0;
   uint64_t last_delta = 0;
+  uint64_t instruction_count = 0;
+  uint64_t instruction_limit = 500000;
 
   SC_HAS_PROCESS(Core_tb);
 
-  Core_tb(sc_module_name name, int cycles, bool random) : Sysc_tb(name, cycles, random) {
+  Core_tb(sc_module_name name, int instruction_limit, bool random) 
+    : Sysc_tb(name, std::numeric_limits<int>::max(), random), instruction_limit(instruction_limit) {
     SC_METHOD(monitor_delta);
     sensitive << io_ibus_valid;
   }
@@ -76,8 +91,36 @@ struct Core_tb : Sysc_tb {
   }
 
   void posedge() {
-    check(!io_fault, "io_fault");
-    if (io_halted) sc_stop();
+    bool ebreak_detected = false;
+#define CHECK_EBREAK(x) \
+    if (io_debug_rb_inst_##x##_valid.read() && io_debug_rb_inst_##x##_bits_inst.read().to_uint() == 0x00100073) ebreak_detected = true;
+    REPEAT_8(CHECK_EBREAK);
+#undef CHECK_EBREAK
+
+    if (!ebreak_detected) {
+        check(!io_fault, "io_fault");
+    }
+
+    if (io_halted || ebreak_detected) {
+        if (ebreak_detected) ebreak_halt = true;
+        sc_stop();
+    }
+
+    uint64_t retiring_this_cycle = 0;
+    if (io_debug_rb_inst_0_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_1_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_2_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_3_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_4_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_5_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_6_valid.read()) retiring_this_cycle++;
+    if (io_debug_rb_inst_7_valid.read()) retiring_this_cycle++;
+
+    instruction_count += retiring_this_cycle;
+
+    if (instruction_count >= instruction_limit) {
+        sc_stop();
+    }
   }
 };
 
@@ -127,10 +170,10 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry
   return false;
 }
 
-static int Core_run(const char* name, const char* bin, const int cycles,
+static int Core_run(const char* name, const char* bin, const int instruction_limit,
                      const bool trace, const std::string& memory_profile) {
   VERILATOR_MODEL core(name);
-  Core_tb tb("Core_tb", cycles, /* random= */ false);
+  Core_tb tb("Core_tb", instruction_limit, /* random= */ false);
   Core_if mif("Core_if", nullptr, memory_profile); // nullptr since we will load ELF
 
   uint32_t entry_point = 0x80000000;
@@ -352,6 +395,14 @@ static int Core_run(const char* name, const char* bin, const int cycles,
   tb.io_fault(io_fault);
   tb.io_ibus_valid(io_ibus_valid);
 
+#define BIND_RB_VALID(x) tb.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid);
+  REPEAT_8(BIND_RB_VALID);
+#undef BIND_RB_VALID
+
+#define BIND_RB_INST(x) tb.io_debug_rb_inst_##x##_bits_inst(io_debug_rb_inst_##x##_bits_inst);
+  REPEAT_8(BIND_RB_INST);
+#undef BIND_RB_INST
+
   core.clock(tb.clock);
   core.reset(tb.reset);
   core.io_halted(io_halted);
@@ -551,11 +602,14 @@ static int Core_run(const char* name, const char* bin, const int cycles,
 
   tb.start();
 
-  if (io_halted.read()) {
+  if (io_halted.read() || tb.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
+  } else if (tb.instruction_count >= tb.instruction_limit) {
+    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
+    return 1;
   } else {
-    fprintf(stderr, "Simulation TIMEOUT after %d cycles.\n", cycles);
+    fprintf(stderr, "Simulation TIMEOUT after %d cycles.\n", instruction_limit);
     return 1;
   }
 }
@@ -571,6 +625,11 @@ int sc_main(int argc, char *argv[]) {
   }
   const char* path = argv[1];
 
-  return Core_run(Sysc_tb::get_name(argv[0]), path, absl::GetFlag(FLAGS_cycles),
+  int timeout_limit = absl::GetFlag(FLAGS_instructions);
+  if (absl::GetFlag(FLAGS_cycles) != 500000 && absl::GetFlag(FLAGS_instructions) == 500000) {
+    timeout_limit = absl::GetFlag(FLAGS_cycles);
+  }
+
+  return Core_run(Sysc_tb::get_name(argv[0]), path, timeout_limit,
                   absl::GetFlag(FLAGS_trace), absl::GetFlag(FLAGS_memory_profile));
 }
