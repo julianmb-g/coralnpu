@@ -609,7 +609,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
     fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
     return 1;
   } else {
-    fprintf(stderr, "Simulation TIMEOUT after %d cycles.\n", instruction_limit);
+    fprintf(stderr, "Simulation TIMEOUT after %d instructions.\n", instruction_limit);
     return 1;
   }
 }
@@ -626,10 +626,7 @@ int sc_main(int argc, char *argv[]) {
   const char* path = argv[1];
 
   int timeout_limit = absl::GetFlag(FLAGS_instructions);
-  if (absl::GetFlag(FLAGS_cycles) != 500000 && absl::GetFlag(FLAGS_instructions) == 500000) {
-    timeout_limit = absl::GetFlag(FLAGS_cycles);
-  }
-
+  
   return Core_run(Sysc_tb::get_name(argv[0]), path, timeout_limit,
                   absl::GetFlag(FLAGS_trace), absl::GetFlag(FLAGS_memory_profile));
 }
