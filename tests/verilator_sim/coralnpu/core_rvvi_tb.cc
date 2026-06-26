@@ -19,6 +19,7 @@
 #include <iostream>
 #include <fstream>
 #include <limits>
+#include <chrono>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -364,8 +365,16 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         tpacket.v_id = internal_v_id++; \
         tpacket.inst.pc = io_debug_rb_inst_##x##_bits_pc.read().to_uint64(); \
         tpacket.inst.instruction = inst; \
-        while (!buffer->Push(tpacket)) { \
-          std::this_thread::yield(); \
+        { \
+          auto start = std::chrono::steady_clock::now(); \
+          while (!buffer->Push(tpacket)) { \
+            std::this_thread::yield(); \
+            auto now = std::chrono::steady_clock::now(); \
+            if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
+              fprintf(stderr, "[FATAL] Queue backpressure timeout (T-packet)! Watchdog triggered.\n"); \
+              exit(1); \
+            } \
+          } \
         } \
       } else { \
         uint32_t v_id = internal_v_id++; \
@@ -375,8 +384,16 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       ipacket.inst.pc = io_debug_rb_inst_##x##_bits_pc.read().to_uint64(); \
       ipacket.inst.instruction = inst; \
       \
-      while (!buffer->Push(ipacket)) { \
-        std::this_thread::yield(); \
+      { \
+        auto start = std::chrono::steady_clock::now(); \
+        while (!buffer->Push(ipacket)) { \
+          std::this_thread::yield(); \
+          auto now = std::chrono::steady_clock::now(); \
+          if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
+            fprintf(stderr, "[FATAL] Queue backpressure timeout (I-packet)! Watchdog triggered.\n"); \
+            exit(1); \
+          } \
+        } \
       } \
       \
       uint32_t opcode = inst & 0x7f; \
@@ -483,8 +500,16 @@ sc_in<bool> io_debug_rb_inst_7_valid;
                 if (sp == 0) rpacket.reg.value[0] = io_debug_rb_inst_##x##_bits_data.read().to_uint64(); \
               } \
               \
-              while (!buffer->Push(rpacket)) { \
-                std::this_thread::yield(); \
+              { \
+                auto start = std::chrono::steady_clock::now(); \
+                while (!buffer->Push(rpacket)) { \
+                  std::this_thread::yield(); \
+                  auto now = std::chrono::steady_clock::now(); \
+                  if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
+                    fprintf(stderr, "[FATAL] Queue backpressure timeout (R-packet)! Watchdog triggered.\n"); \
+                    exit(1); \
+                  } \
+                } \
               } \
             } \
           } \
