@@ -321,7 +321,6 @@ cc_binary(
     ],
     defines = [
         "VERILATOR_MODEL=VCoreBarebones",
-        "TRACE_ENABLED=1",
     ],
     deps = [
         ":coralnpu_if",
@@ -362,14 +361,13 @@ cc_binary(
 )
 
 cc_binary(
-    name = "core_rvvi_sim",
+    name = "core_rvvi_traced_sim",
     srcs = [
-        "coralnpu/core_rvvi_tb.cc",
+        "coralnpu/core_rvvi_traced_sim.cc",
         "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreVerification_parameters.h",
     ],
     defines = [
         "VERILATOR_MODEL=VCoreVerification",
-        "TRACE_ENABLED=1",
     ],
     deps = [
         ":coralnpu_if",

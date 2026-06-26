@@ -283,7 +283,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
 #define DECLARE_VEC_WRITES_Y(x, y) \
   sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_##y##_valid; \
   sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_data; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_idx;
+  sc_signal<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_idx;
 
 #define DECLARE_VEC_WRITES_8_Y(x) \
   DECLARE_VEC_WRITES_Y(x, 0) \
