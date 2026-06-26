@@ -63,10 +63,10 @@ bazel-bin/tests/verilator_sim/core_barebones_sim --binary path/to/your_test.elf
 **RVVI Traced Core (Asynchronous):**
 ```bash
 # Build the simulator:
-bazel build //tests/verilator_sim:core_rvvi_sim
+bazel build //tests/verilator_sim:core_rvvi_traced_sim
 
 # Run an ELF and generate trace.rvvi:
-bazel-bin/tests/verilator_sim/core_rvvi_sim --binary path/to/your_test.elf
+bazel-bin/tests/verilator_sim/core_rvvi_traced_sim --binary path/to/your_test.elf
 
 # Or use the convenience script:
 ./run_e2e_rvvi.sh

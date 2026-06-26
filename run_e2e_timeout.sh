@@ -34,11 +34,11 @@ find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null
 set -e
 
 if [ $EXIT_CODE -eq 65 ]; then
-  echo "Simulator incorrectly exited with 65 (ELF load failure code) instead of 1 on timeout/deadlock!"
+  echo "Simulator incorrectly exited with 65 (ELF load failure code) instead of 124 on timeout/deadlock!"
   exit 1
 fi
-if [ $EXIT_CODE -ne 1 ]; then
-  echo "Barebones simulator did not exit with code 1 (Exit Code: $EXIT_CODE)"
+if [ $EXIT_CODE -ne 124 ]; then
+  echo "Barebones simulator did not exit with code 124 (Exit Code: $EXIT_CODE)"
   exit 1
 fi
 
@@ -53,21 +53,21 @@ echo "Barebones simulator timed out as expected."
 echo "Running RVVI simulator via Bazel (expecting timeout)..."
 set +e
 if [ "$USE_PODMAN" -eq 1 ]; then
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_sim -- --instructions=5000 --rvvi_out=\$PWD/trace.rvvi \$PWD/timeout.elf 2>&1 | tee \$PWD/tmp_log/timeout_rvvi_sim.log"
+  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out=\$PWD/trace.rvvi \$PWD/timeout.elf 2>&1 | tee \$PWD/tmp_log/timeout_rvvi_sim.log"
 else
   set -o pipefail
-  bazel run //tests/verilator_sim:core_rvvi_sim -- --instructions=5000 --rvvi_out="$PWD/trace.rvvi" "$PWD/timeout.elf" 2>&1 | tee "$PWD/tmp_log/timeout_rvvi_sim.log"
+  bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out="$PWD/trace.rvvi" "$PWD/timeout.elf" 2>&1 | tee "$PWD/tmp_log/timeout_rvvi_sim.log"
 fi
 EXIT_CODE=$?
 find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null
 set -e
 
 if [ $EXIT_CODE -eq 65 ]; then
-  echo "Simulator incorrectly exited with 65 (ELF load failure code) instead of 1 on timeout/deadlock!"
+  echo "Simulator incorrectly exited with 65 (ELF load failure code) instead of 124 on timeout/deadlock!"
   exit 1
 fi
-if [ $EXIT_CODE -ne 1 ]; then
-  echo "RVVI simulator did not exit with code 1 (Exit Code: $EXIT_CODE)"
+if [ $EXIT_CODE -ne 124 ]; then
+  echo "RVVI simulator did not exit with code 124 (Exit Code: $EXIT_CODE)"
   exit 1
 fi
 

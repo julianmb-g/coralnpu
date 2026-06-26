@@ -29,6 +29,11 @@ else
   bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/dummy_fail.elf" 2>&1 | tee ./tmp_log/elf_load_fail.log && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
 fi
 
+if [ $EXIT_CODE -ne 65 ]; then
+  echo "Expected exit code 65, got $EXIT_CODE"
+  exit 1
+fi
+
 grep -q "\[FATAL\] ELF load violation" ./tmp_log/elf_load_fail.log || { echo "Log format mismatch"; exit 1; }
 
 echo "E2E ELF Load Fail Test PASSED"
