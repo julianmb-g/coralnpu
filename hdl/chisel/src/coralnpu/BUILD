@@ -871,6 +871,32 @@ chisel_cc_library(
     ],
 )
 
+CORE_BAREBONES_VOPTS = [
+    "-DTRACE_ENABLED=1",
+    "-DUSE_GENERIC",
+    # RVV
+    "-DTB_SUPPORT",
+    "-DVLEN_128",
+    "-DZVE32F_ON",
+    "-Wno-WIDTH",
+    "-Wno-CASEINCOMPLETE",
+    "-Wno-LATCH",
+    "-Wno-SIDEEFFECT",
+    "-Wno-MULTIDRIVEN",
+    "-Wno-UNOPTFLAT",
+    "-Wno-BLKANDNBLK",
+    "-Wno-CASEX",
+    # FPNEW
+    "-Wno-ASCRANGE",
+    "-Wno-WIDTHEXPAND",
+    "-Wno-WIDTHTRUNC",
+    "-Wno-UNSIGNED",
+    "-Wno-WIDTHCONCAT",
+    "-Ihdl/verilog/rvv/design/FPnew/common_cells/inc",
+]
+
+# ... existing code ...
+
 chisel_cc_library(
     name = "core_barebones_cc_library",
     chisel_lib = ":coralnpu",
@@ -889,26 +915,5 @@ chisel_cc_library(
         "--moduleName=CoreBarebones",
     ],
     module_name = "CoreBarebones",
-    vopts = [
-        "-DUSE_GENERIC",
-        # RVV
-        "-DTB_SUPPORT",
-        "-DVLEN_128",
-        "-DZVE32F_ON",
-        "-Wno-WIDTH",
-        "-Wno-CASEINCOMPLETE",
-        "-Wno-LATCH",
-        "-Wno-SIDEEFFECT",
-        "-Wno-MULTIDRIVEN",
-        "-Wno-UNOPTFLAT",
-        "-Wno-BLKANDNBLK",
-        "-Wno-CASEX",
-        # FPNEW
-        "-Wno-ASCRANGE",
-        "-Wno-WIDTHEXPAND",
-        "-Wno-WIDTHTRUNC",
-        "-Wno-UNSIGNED",
-        "-Wno-WIDTHCONCAT",
-        "-Ihdl/verilog/rvv/design/FPnew/common_cells/inc",
-    ],
+    vopts = CORE_BAREBONES_VOPTS,
 )

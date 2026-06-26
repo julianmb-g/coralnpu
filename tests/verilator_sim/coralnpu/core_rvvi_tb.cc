@@ -31,9 +31,12 @@
 #include "tests/verilator_sim/elf.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
+#if TRACE_ENABLED
+#include <thread>
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
 #include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
+#endif
 
 #ifdef DELAY_FORMATTER
 #include <chrono>
@@ -572,8 +575,12 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
                      const bool trace, const std::string& rvvi_out,
                      const std::string& memory_profile) {
   VERILATOR_MODEL core(name);
+#if TRACE_ENABLED
   SpscRingBuffer<TracePacket, 4096> buffer;
   CoreRvvi_tb tb("CoreRvvi_tb", instruction_limit, false, &buffer);
+#else
+  CoreRvvi_tb tb("CoreRvvi_tb", instruction_limit, false, nullptr);
+#endif
   Core_if mif("Core_if", nullptr, memory_profile);
 
   uint32_t entry_point = 0x80000000;
@@ -582,6 +589,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
     exit(65);
   }
 
+#if TRACE_ENABLED
   std::ofstream trace_stream(rvvi_out);
   TraceDaemon daemon(&buffer, &trace_stream);
 #ifdef DELAY_FORMATTER
@@ -591,6 +599,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
 #endif
   daemon.SetTraceFormatter(&formatter);
   daemon.Start();
+#endif
 
   sc_signal<bool> io_halted;
   sc_signal<bool> io_fault;
@@ -1673,11 +1682,13 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
 
   tb.start();
 
+#if TRACE_ENABLED
   // Wait for buffer to drain
   while(!buffer.IsEmpty()) {
     std::this_thread::yield();
   }
   daemon.Stop();
+#endif
 
   if (io_halted.read() || tb.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
