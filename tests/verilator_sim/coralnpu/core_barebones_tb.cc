@@ -41,7 +41,6 @@
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
-ABSL_FLAG(int, cycles, 500000, "Simulation cycles (Used as instruction timeout if --instructions not set)");
 ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
@@ -101,6 +100,7 @@ struct Core_tb : Sysc_tb {
 
     if (ebreak_detected) {
         ebreak_halt = true;
+        fault_cycles_ = 0;
     }
 
     if (io_halted || ebreak_halt) {
@@ -615,10 +615,10 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
     return 0;
   } else if (tb.instruction_count >= tb.instruction_limit) {
     fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
-    return 1;
+    return 124;
   } else {
     fprintf(stderr, "Simulation TIMEOUT after %d instructions.\n", instruction_limit);
-    return 1;
+    return 124;
   }
 }
 
