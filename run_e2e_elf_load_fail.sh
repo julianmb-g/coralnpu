@@ -4,7 +4,13 @@ set -e
 # Cleanup trap
 trap 'rm -f ./dummy_fail.elf' EXIT
 
-USE_PODMAN=${USE_PODMAN:-0}
+if [ -z "${USE_PODMAN}" ]; then
+  USE_PODMAN=0
+  if ! command -v bazel &> /dev/null && command -v podman &> /dev/null; then
+    echo "Bazel not found natively. Falling back to Podman..."
+    USE_PODMAN=1
+  fi
+fi
 
 echo "Generating out-of-bounds ELF via Bazel..."
 if [ "$USE_PODMAN" -eq 1 ]; then

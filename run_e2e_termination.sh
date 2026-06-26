@@ -4,7 +4,13 @@ set -e
 # Cleanup trap
 trap 'rm -f ./rvvi.elf' EXIT
 
-USE_PODMAN=${USE_PODMAN:-0}
+if [ -z "${USE_PODMAN}" ]; then
+  USE_PODMAN=0
+  if ! command -v bazel &> /dev/null && command -v podman &> /dev/null; then
+    echo "Bazel not found natively. Falling back to Podman..."
+    USE_PODMAN=1
+  fi
+fi
 
 # Generate a valid ELF that loads at 0x00000000
 echo "Generating ELF at 0x00000000 via Bazel..."
