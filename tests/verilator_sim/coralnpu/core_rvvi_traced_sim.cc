@@ -55,6 +55,7 @@ ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 
 
 struct RvviTraced_tb : Sysc_tb {
   sc_in<bool> io_halted;
+  sc_in<bool> io_ibus_valid;
   
   // RVVI ports
   // Note: These must match the Core module's RvviTrace interface
@@ -69,11 +70,31 @@ struct RvviTraced_tb : Sysc_tb {
   uint32_t internal_v_id = 0;
   uint64_t instruction_count = 0;
   uint64_t instruction_limit = 500000;
+  
+  uint64_t last_time = 0;
+  uint64_t last_delta = 0;
 
   SC_HAS_PROCESS(RvviTraced_tb);
 
   RvviTraced_tb(sc_module_name name, int instruction_limit, SpscRingBuffer<TracePacket, 4096>* buf) 
     : Sysc_tb(name, std::numeric_limits<int>::max(), false), buffer(buf), instruction_limit(instruction_limit) {
+    SC_METHOD(monitor_delta);
+    sensitive << io_ibus_valid;
+  }
+
+  void monitor_delta() {
+    uint64_t current_time = sc_time_stamp().value();
+    uint64_t current_delta = sc_delta_count();
+    if (current_time == last_time) {
+        if (current_delta - last_delta > 10000) {
+            fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
+            sc_stop();
+            exit(1);
+        }
+    } else {
+        last_time = current_time;
+        last_delta = current_delta;
+    }
   }
 
   void posedge() {
@@ -162,10 +183,15 @@ int sc_main(int argc, char *argv[]) {
   if (!LoadElfToMemory(bin, mif)) { return 65; }
 
   sc_signal<bool> io_halted;
+  sc_signal<bool> io_ibus_valid;
+  
   core.clock(tb.clock);
   core.reset(tb.reset);
   core.io_halted(io_halted);
+  core.io_ibus_valid(io_ibus_valid);
+  
   tb.io_halted(io_halted);
+  tb.io_ibus_valid(io_ibus_valid);
   
   // RVVI port mapping
   sc_signal<bool> io_debug_rb_inst_0_valid;
