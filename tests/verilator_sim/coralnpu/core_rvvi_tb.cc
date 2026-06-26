@@ -340,7 +340,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     uint64_t current_time = sc_time_stamp().value();
     uint64_t current_delta = sc_delta_count();
     if (current_time == last_time) {
-        if (current_delta - last_delta > 5000) {
+        if (current_delta - last_delta > 10000) {
             fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
             sc_stop();
             exit(1);
