@@ -55,7 +55,6 @@ public:
 
 using namespace mpact::sim::riscv::rvvi;
 
-ABSL_FLAG(int, cycles, 500000, "Simulation cycles (Used as instruction timeout if --instructions not set)");
 ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, rvvi_out, "trace.rvvi", "RVVI trace output file");
@@ -1720,10 +1719,10 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
     return 0;
   } else if (tb.instruction_count >= tb.instruction_limit) {
     fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
-    return 1;
+    return 124;
   } else {
     fprintf(stderr, "Simulation TIMEOUT after %d instructions.\n", instruction_limit);
-    return 1;
+    return 124;
   }
 }
 
