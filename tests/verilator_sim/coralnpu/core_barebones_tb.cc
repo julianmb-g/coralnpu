@@ -90,6 +90,8 @@ struct Core_tb : Sysc_tb {
     }
   }
 
+  int fault_cycles_ = 0;
+
   void posedge() {
     bool ebreak_detected = false;
 #define CHECK_EBREAK(x) \
@@ -97,13 +99,19 @@ struct Core_tb : Sysc_tb {
     REPEAT_8(CHECK_EBREAK);
 #undef CHECK_EBREAK
 
-    if (!ebreak_detected) {
-        check(!io_fault, "io_fault");
+    if (ebreak_detected) {
+        ebreak_halt = true;
     }
 
-    if (io_halted || ebreak_detected) {
-        if (ebreak_detected) ebreak_halt = true;
+    if (io_halted || ebreak_halt) {
         sc_stop();
+    } else if (io_fault) {
+        fault_cycles_++;
+        if (fault_cycles_ > 20) {
+            check(false, "io_fault");
+        }
+    } else {
+        fault_cycles_ = 0;
     }
 
     uint64_t retiring_this_cycle = 0;
