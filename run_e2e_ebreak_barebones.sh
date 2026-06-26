@@ -25,12 +25,15 @@ echo "Running Barebones simulator..."
 mkdir -p ./tmp_log
 set +e
 if [ "$USE_PODMAN" -eq 1 ]; then
-  podman run --userns=keep-id:uid=1000,gid=1000 -v $PWD:$PWD -w $PWD -e GIT_CONFIG_GLOBAL=/tmp/gitconfig localhost/coralnpu bash -c "set -o pipefail; touch /tmp/gitconfig && git config --global --add safe.directory /usr/local/google/home/julianmb/coralnpu-verilator-core && bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/ebreak.elf 2>&1 | tee \$PWD/tmp_log/ebreak_barebones.log"
+  podman run --userns=keep-id:uid=1000,gid=1000 -v $PWD:$PWD -w $PWD -e GIT_CONFIG_GLOBAL=/tmp/gitconfig localhost/coralnpu bash -c "set -o pipefail; touch /tmp/gitconfig && git config --global --add safe.directory /usr/local/google/home/julianmb/coralnpu-verilator-core && bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/ebreak.elf 2>&1 | tee \$PWD/tmp_log/ebreak_barebones.log; exit \${PIPESTATUS[0]}"
 else
   set -o pipefail
   bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/ebreak.elf" 2>&1 | tee "$PWD/tmp_log/ebreak_barebones.log"
+  EXIT_CODE=${PIPESTATUS[0]}
 fi
-EXIT_CODE=$?
+if [ "$USE_PODMAN" -eq 1 ]; then
+  EXIT_CODE=$?
+fi
 set -e
 
 if [ "$EXIT_CODE" -ne 0 ]; then
