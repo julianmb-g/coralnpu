@@ -93,12 +93,20 @@ void TraceDaemon::FlushPendingInstruction() {
   if (!has_any_pending_) return;
 
   if (!has_pending_inst_) {
-    // We have register updates but no instruction packet. This might happen 
-    // if a trap occurred and we missed the instruction, or if reassembly failed.
-    // In RVVI, we generally need the 'I' packet to anchor the trace line.
     num_accumulated_updates_ = 0;
     has_any_pending_ = false;
     return;
+  }
+
+  // Validate that all chunks were received for each register update
+  for (size_t i = 0; i < num_accumulated_updates_; ++i) {
+    const auto& update = accumulated_updates_[i];
+    uint32_t num_chunks = (update.total_size + 31) / 32;
+    uint64_t expected_mask = (1ULL << num_chunks) - 1;
+    if (update.received_chunks_mask != expected_mask) {
+      fprintf(stderr, "[WARNING] Trace reassembly error: Incomplete chunks for %c%d. Mask: 0x%lx, Expected: 0x%lx\n",
+              update.reg_type, update.index, update.received_chunks_mask, expected_mask);
+    }
   }
 
   std::string disasm;
@@ -199,6 +207,7 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
         ru->index = packet.reg.index;
         // Cap total_size to prevent buffer over-read in FlushPendingInstruction.
         ru->total_size = std::min(packet.reg.total_size, static_cast<uint16_t>(sizeof(ru->data)));
+        ru->received_chunks_mask = 0;
         std::memset(ru->data, 0, sizeof(ru->data));
       }
     }
@@ -207,7 +216,13 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
       size_t size = packet.reg.size;
       size_t offset = packet.reg.offset;
       if (offset + size <= sizeof(ru->data) && offset + size <= ru->total_size) {
+        uint32_t chunk_idx = offset / 32;
+        if (ru->received_chunks_mask & (1ULL << chunk_idx)) {
+          fprintf(stderr, "[WARNING] Trace reassembly error: Duplicate chunk %d for %c%d at v_id %u\n",
+                  chunk_idx, ru->reg_type, ru->index, packet.v_id);
+        }
         std::memcpy(ru->data + offset, packet.reg.value, size);
+        ru->received_chunks_mask |= (1ULL << chunk_idx);
       }
     }
     return;

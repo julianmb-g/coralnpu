@@ -54,6 +54,7 @@ class TraceDaemon {
     uint16_t index;
     uint16_t total_size;
     uint8_t data[256]; // Fixed size to support up to 2048-bit vector registers
+    uint64_t received_chunks_mask; // Bitmask of received 32-byte chunks
   };
 
   SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer_;

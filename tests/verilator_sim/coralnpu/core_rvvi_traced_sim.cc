@@ -1698,8 +1698,14 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
 
 #if TRACE_ENABLED
   // Wait for buffer to drain
+  auto flush_start = std::chrono::steady_clock::now();
   while(!buffer.IsEmpty()) {
     std::this_thread::yield();
+    auto flush_now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::seconds>(flush_now - flush_start).count() > 5) {
+      fprintf(stderr, "[FATAL] Queue flush timeout (5s) exceeded! Trace daemon may be hung. Exiting with code 124.\n");
+      exit(124);
+    }
   }
   daemon.Stop();
 #endif
