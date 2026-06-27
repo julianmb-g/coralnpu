@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 
 namespace mpact::sim::riscv::rvvi {
 
@@ -201,15 +202,18 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
     }
 
     if (!ru) {
-      if (num_accumulated_updates_ < kMaxAccumulatedUpdates) {
-        ru = &accumulated_updates_[num_accumulated_updates_++];
-        ru->reg_type = packet.reg.reg_type;
-        ru->index = packet.reg.index;
-        // Cap total_size to prevent buffer over-read in FlushPendingInstruction.
-        ru->total_size = std::min(packet.reg.total_size, static_cast<uint16_t>(sizeof(ru->data)));
-        ru->received_chunks_mask = 0;
-        std::memset(ru->data, 0, sizeof(ru->data));
+      if (num_accumulated_updates_ >= kMaxAccumulatedUpdates) {
+        fprintf(stderr, "[FATAL] Trace reassembly error: num_accumulated_updates_ (%zu) exceeds kMaxAccumulatedUpdates (%d). Buffer overflow.\n",
+                num_accumulated_updates_, kMaxAccumulatedUpdates);
+        std::exit(1);
       }
+      ru = &accumulated_updates_[num_accumulated_updates_++];
+      ru->reg_type = packet.reg.reg_type;
+      ru->index = packet.reg.index;
+      // Cap total_size to prevent buffer over-read in FlushPendingInstruction.
+      ru->total_size = std::min(packet.reg.total_size, static_cast<uint16_t>(sizeof(ru->data)));
+      ru->received_chunks_mask = 0;
+      std::memset(ru->data, 0, sizeof(ru->data));
     }
 
     if (ru) {
