@@ -207,6 +207,11 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
                 num_accumulated_updates_, kMaxAccumulatedUpdates);
         std::exit(1);
       }
+      if (packet.reg.total_size > sizeof(ru->data)) {
+        fprintf(stderr, "[FATAL] Trace reassembly error: packet.reg.total_size (%d) exceeds ru->data size (%zu).\n",
+                packet.reg.total_size, sizeof(ru->data));
+        std::exit(1);
+      }
       ru = &accumulated_updates_[num_accumulated_updates_++];
       ru->reg_type = packet.reg.reg_type;
       ru->index = packet.reg.index;
