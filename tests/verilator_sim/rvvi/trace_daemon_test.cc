@@ -159,6 +159,34 @@ TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
   // because running_ was set to false by ProcessPacket, making Stop() return early.
 }
 
+TEST_F(TraceDaemonTest, DuplicateChunkWarning) {
+  // Capture stderr to verify the warning message.
+  testing::internal::CaptureStderr();
+
+  TraceDaemon daemon(&buffer_, &output_stream_);
+  daemon.SetTraceFormatter(&formatter_);
+  daemon.Start();
+
+  // Inject duplicate chunks (same offset, same register)
+  TracePacket r_packet = {};
+  r_packet.type = 'R';
+  r_packet.v_id = 1;
+  r_packet.reg.reg_type = 'X';
+  r_packet.reg.index = 10;
+  r_packet.reg.offset = 0;
+  r_packet.reg.total_size = 8;
+  r_packet.reg.size = 8;
+  r_packet.reg.value[0] = 0x1111111111111111;
+  
+  EXPECT_TRUE(buffer_.Push(r_packet));
+  EXPECT_TRUE(buffer_.Push(r_packet)); // Duplicate
+
+  daemon.Stop();
+  
+  std::string stderr_output = testing::internal::GetCapturedStderr();
+  EXPECT_NE(stderr_output.find("[WARNING] Trace reassembly error: Duplicate chunk"), std::string::npos);
+}
+
 TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
   TraceDaemon daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);

@@ -45,4 +45,9 @@ if ! grep -Eq "vsetvli" trace.rvvi; then
   exit 1
 fi
 
+if [ "$(grep -c "rvvi" trace.rvvi)" -lt 10 ]; then
+  echo "Trace file too short (potential memcpy truncation)"
+  exit 1
+fi
+
 echo "E2E RVVI Fidelity Test PASSED"
