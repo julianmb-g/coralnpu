@@ -64,7 +64,7 @@ class TraceDaemon {
   
   std::function<std::string(uint64_t)> symbol_resolver_;
   
-  static constexpr int kMaxAccumulatedUpdates = 16;
+  static constexpr int kMaxAccumulatedUpdates = 64;
   RegisterUpdate accumulated_updates_[kMaxAccumulatedUpdates];
   size_t num_accumulated_updates_ = 0;
 
