@@ -300,6 +300,7 @@ cc_test(
     ],
     deps = [
         ":coralnpu_if",
+        ":elf",
         ":sim_libs",
         ":util",
         "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
