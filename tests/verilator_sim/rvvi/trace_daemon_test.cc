@@ -174,7 +174,10 @@ TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
   r_packet.reg.size = 32;
   for (int i = 0; i < 4; ++i) r_packet.reg.value[i] = 0x1111111111111111;
   
-  EXPECT_TRUE(buffer_.Push(r_packet));
+  for (int i = 0; i < 4; ++i) {
+    r_packet.reg.offset = i * 32;
+    EXPECT_TRUE(buffer_.Push(r_packet));
+  }
 
   TracePacket i_packet = {};
   i_packet.type = 'I';

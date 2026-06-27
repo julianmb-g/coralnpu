@@ -105,8 +105,9 @@ void TraceDaemon::FlushPendingInstruction() {
     uint32_t num_chunks = (update.total_size + 31) / 32;
     uint64_t expected_mask = (1ULL << num_chunks) - 1;
     if (update.received_chunks_mask != expected_mask) {
-      fprintf(stderr, "[WARNING] Trace reassembly error: Incomplete chunks for %c%d. Mask: 0x%lx, Expected: 0x%lx\n",
+      fprintf(stderr, "[FATAL] Trace reassembly error: Incomplete chunks for %c%d. Mask: 0x%lx, Expected: 0x%lx\n",
               update.reg_type, update.index, update.received_chunks_mask, expected_mask);
+      std::exit(1);
     }
   }
 
