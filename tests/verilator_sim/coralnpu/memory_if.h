@@ -183,6 +183,7 @@ struct Memory_if : Sysc_module {
       auto& p = page_[maddr];
       uint8_t* d = p.data;
       memcpy(d + offset, data, len);
+#if 0
       if (addr < 0x10010 || addr >= 0x11054) {
         printf("WRITE %08x", addr);
         for (int i = 0; i < len; i++) {
@@ -190,6 +191,7 @@ struct Memory_if : Sysc_module {
         }
         printf("\n");
       }
+#endif
       addr += len;
       data += len;
       bytes -= len;
