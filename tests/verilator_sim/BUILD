@@ -307,6 +307,18 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "core_rvvi_tb_test",
+    srcs = [
+        "coralnpu/core_rvvi_tb_test.cc",
+    ],
+    deps = [
+        ":spsc_ring_buffer",
+        ":trace_daemon",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_binary(
     name = "core_scalar_sim",
     srcs = [

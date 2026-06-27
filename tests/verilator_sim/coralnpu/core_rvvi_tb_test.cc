@@ -9,7 +9,7 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
-#include "tests/verilator_sim/coralnpu/VCoreVerification.h"
+#include <gtest/gtest.h>
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
 #include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
