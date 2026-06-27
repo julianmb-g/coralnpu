@@ -293,6 +293,20 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "core_barebones_tb_test",
+    srcs = [
+        "coralnpu/core_barebones_tb_test.cc",
+    ],
+    deps = [
+        ":coralnpu_if",
+        ":sim_libs",
+        ":util",
+        "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_binary(
     name = "core_scalar_sim",
     srcs = [
