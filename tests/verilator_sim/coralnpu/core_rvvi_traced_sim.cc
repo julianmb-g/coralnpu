@@ -41,19 +41,11 @@
 #include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
 #endif
 
-#ifdef DELAY_FORMATTER
-#include <chrono>
-
-namespace mpact::sim::riscv::rvvi {
-class DelayFormatter : public CustomFallbackFormatter {
-public:
-  std::string Disassemble(uint32_t inst) override {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    return CustomFallbackFormatter::Disassemble(inst);
-  }
-};
-}
+#ifndef BUFFER_SIZE
+#define BUFFER_SIZE 4096
 #endif
+
+
 
 using namespace mpact::sim::riscv::rvvi;
 
@@ -324,14 +316,14 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_7_bits_idx;
 
 
-  SpscRingBuffer<TracePacket, 4096>* buffer;
+  SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer;
   bool e_sent = false;
   bool ebreak_halt = false;
   uint32_t internal_v_id = 0;
   uint64_t instruction_count = 0;
   uint64_t instruction_limit = 500000;
 
-  CoreRvvi_tb(sc_module_name name, int instruction_limit, bool random, SpscRingBuffer<TracePacket, 4096>* buf) 
+  CoreRvvi_tb(sc_module_name name, int instruction_limit, bool random, SpscRingBuffer<TracePacket, BUFFER_SIZE>* buf) 
     : Sysc_tb(name, std::numeric_limits<int>::max(), random), buffer(buf), instruction_limit(instruction_limit) {
     SC_METHOD(monitor_delta);
     sensitive << io_ibus_valid;
@@ -602,7 +594,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
                      const std::string& memory_profile) {
   VERILATOR_MODEL core(name);
 #if TRACE_ENABLED
-  SpscRingBuffer<TracePacket, 4096> buffer;
+  SpscRingBuffer<TracePacket, BUFFER_SIZE> buffer;
   CoreRvvi_tb tb("CoreRvvi_tb", instruction_limit, false, &buffer);
 #else
   CoreRvvi_tb tb("CoreRvvi_tb", instruction_limit, false, nullptr);
@@ -618,11 +610,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
 #if TRACE_ENABLED
   std::ofstream trace_stream(rvvi_out);
   TraceDaemon daemon(&buffer, &trace_stream);
-#ifdef DELAY_FORMATTER
-  DelayFormatter formatter;
-#else
   CustomFallbackFormatter formatter;
-#endif
   daemon.SetTraceFormatter(&formatter);
   daemon.Start();
 #endif

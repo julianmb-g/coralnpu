@@ -40,7 +40,7 @@ namespace mpact::sim::riscv::rvvi {
  *   that the last instructions and termination states (e.g. mpause) are written to the trace.
  */
 
-TraceDaemon::TraceDaemon(SpscRingBuffer<TracePacket, 4096>* buffer, std::ostream* output_stream)
+TraceDaemon::TraceDaemon(SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer, std::ostream* output_stream)
     : buffer_(buffer), output_stream_(output_stream), running_(false) {}
 
 TraceDaemon::~TraceDaemon() {

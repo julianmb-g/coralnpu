@@ -28,9 +28,13 @@
 
 namespace mpact::sim::riscv::rvvi {
 
+#ifndef BUFFER_SIZE
+#define BUFFER_SIZE 4096
+#endif
+
 class TraceDaemon {
  public:
-  TraceDaemon(SpscRingBuffer<TracePacket, 4096>* buffer, std::ostream* output_stream);
+  TraceDaemon(SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer, std::ostream* output_stream);
   ~TraceDaemon();
 
   void Start();
@@ -52,7 +56,7 @@ class TraceDaemon {
     uint8_t data[256]; // Fixed size to support up to 2048-bit vector registers
   };
 
-  SpscRingBuffer<TracePacket, 4096>* buffer_;
+  SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer_;
   std::ostream* output_stream_;
   std::thread daemon_thread_;
   std::atomic<bool> running_;
