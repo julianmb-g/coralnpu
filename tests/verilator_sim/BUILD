@@ -337,30 +337,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "core_barebones_single_threaded_sim",
-    srcs = [
-        "coralnpu/core_barebones_tb.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
-    ],
-    defines = [
-        "VERILATOR_MODEL=VCoreBarebones",
-        "TRACE_ENABLED=0",
-    ],
-    deps = [
-        ":coralnpu_if",
-        ":elf",
-        ":sim_libs",
-        ":util",
-        "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/flags:usage",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/strings:str_format",
-    ],
-)
-
-cc_binary(
     name = "core_rvvi_traced_sim",
     srcs = [
         "coralnpu/core_rvvi_traced_sim.cc",
