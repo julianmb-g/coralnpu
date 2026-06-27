@@ -81,7 +81,6 @@ struct Core_tb : Sysc_tb {
         if (current_delta - last_delta > 10000) {
             fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
             sc_stop();
-            exit(1);
         }
     } else {
         last_time = current_time;

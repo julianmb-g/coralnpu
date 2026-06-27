@@ -137,7 +137,9 @@ struct Memory_if : Sysc_module {
       const int len = std::min(bytes, limit);
 
       if (!IsValidAddress(addr, len)) {
-        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: %s.", addr, addr + len, GetProfileBounds());
+        uint64_t avail_end = (profile_ == "highmem") ? 0x200000 : 0x400000;
+        uint64_t delta = (addr + len > avail_end) ? (addr + len - avail_end) : 0;
+        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: [0x0 - 0x%08x]. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, avail_end, delta);
         exit(65);
       }
 
@@ -172,7 +174,9 @@ struct Memory_if : Sysc_module {
       const int len = std::min(bytes, limit);
 
       if (!IsValidAddress(addr, len)) {
-        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: %s.", addr, addr + len, GetProfileBounds());
+        uint64_t avail_end = (profile_ == "highmem") ? 0x200000 : 0x400000;
+        uint64_t delta = (addr + len > avail_end) ? (addr + len - avail_end) : 0;
+        LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08x - 0x%08x]. Available: [0x0 - 0x%08x]. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, avail_end, delta);
         exit(65);
       }
 
