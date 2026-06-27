@@ -510,6 +510,18 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "mpact_trace_formatter_test",
+    srcs = [
+        "rvvi/mpact_trace_formatter_test.cc",
+        "rvvi/mpact_trace_formatter.h",
+    ],
+    deps = [
+        ":trace_daemon",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_binary(
     name = "gen_elf",
     srcs = [
