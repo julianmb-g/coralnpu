@@ -226,4 +226,26 @@ TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
   EXPECT_EQ(hex.length(), 256); // 128 bytes * 2 hex chars/byte
 }
 
+TEST_F(TraceDaemonTest, ExceedsMaxAccumulatedUpdates) {
+  EXPECT_DEATH({
+    TraceDaemon daemon(&buffer_, &output_stream_);
+    daemon.SetTraceFormatter(&formatter_);
+    daemon.Start();
+    for (int i = 0; i < 100; ++i) {
+      TracePacket r_packet = {};
+      r_packet.type = 'R';
+      r_packet.v_id = 1; // Same v_id to prevent flushing
+      r_packet.reg.reg_type = 'X';
+      r_packet.reg.index = i; // Different index to accumulate new updates
+      r_packet.reg.offset = 0;
+      r_packet.reg.total_size = 8;
+      r_packet.reg.size = 8;
+      r_packet.reg.value[0] = 0;
+      while (!buffer_.Push(r_packet)) std::this_thread::yield();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    daemon.Stop();
+  }, "exceeds kMaxAccumulatedUpdates");
+}
+
 } // namespace mpact::sim::riscv::rvvi
