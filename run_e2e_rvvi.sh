@@ -46,8 +46,16 @@ if ! grep -Eq "vsetvli" trace.rvvi; then
 fi
 
 echo "Checking RVVI trace output for vector load/store instructions..."
+if ! grep -Eq ",[0-9a-fA-F]{6}07," trace.rvvi; then
+  echo "Trace file missing Vector Load opcode (07) in instruction field"
+  exit 1
+fi
 if ! grep -Eq "vload" trace.rvvi; then
   echo "Trace file missing vector load instruction disassembly (vload)"
+  exit 1
+fi
+if ! grep -Eq "vload.*v[0-9]+:" trace.rvvi; then
+  echo "Trace file missing vector load register updates"
   exit 1
 fi
 if ! grep -Eq "vstore" trace.rvvi; then
