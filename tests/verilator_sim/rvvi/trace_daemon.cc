@@ -106,6 +106,10 @@ void TraceDaemon::FlushPendingInstruction() {
   for (size_t i = 0; i < num_accumulated_updates_; ++i) {
     const auto& update = accumulated_updates_[i];
     uint32_t num_chunks = (update.total_size + 31) / 32;
+    if (num_chunks >= 64) {
+      fprintf(stderr, "[FATAL] Trace reassembly error: num_chunks (%u) is too large.\n", num_chunks);
+      std::exit(1);
+    }
     uint64_t expected_mask = (1ULL << num_chunks) - 1;
     if (update.received_chunks_mask != expected_mask) {
       fprintf(stderr, "[FATAL] Trace reassembly error: Incomplete chunks for %c%d. Mask: 0x%lx, Expected: 0x%lx\n",
