@@ -541,8 +541,16 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     if ((io_halted.read() || io_fault.read() || ebreak_halt) && !e_sent) {
       TracePacket epacket = {};
       epacket.type = 'E';
-      while (!buffer->Push(epacket)) {
-        std::this_thread::yield();
+      {
+        auto start = std::chrono::steady_clock::now();
+        while (!buffer->Push(epacket)) {
+          std::this_thread::yield();
+          auto now = std::chrono::steady_clock::now();
+          if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) {
+            fprintf(stderr, "[FATAL] Queue backpressure timeout (E-packet)! Watchdog triggered.\n");
+            exit(1);
+          }
+        }
       }
       e_sent = true;
     }
