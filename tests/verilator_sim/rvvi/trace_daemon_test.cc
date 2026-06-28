@@ -248,4 +248,27 @@ TEST_F(TraceDaemonTest, ExceedsMaxAccumulatedUpdates) {
   }, "exceeds kMaxAccumulatedUpdates");
 }
 
+TEST_F(TraceDaemonTest, ExceedsMaxChunkCount) {
+  EXPECT_EXIT({
+    TraceDaemon daemon(&buffer_, &output_stream_);
+    daemon.SetTraceFormatter(&formatter_);
+    daemon.Start();
+    TracePacket r_packet = {};
+    r_packet.type = 'R';
+    r_packet.v_id = 1;
+    r_packet.reg.reg_type = 'X';
+    r_packet.reg.index = 1;
+    r_packet.reg.total_size = 2048; // num_chunks = 64
+    r_packet.reg.size = 32;
+    r_packet.reg.offset = 0;
+    while (!buffer_.Push(r_packet)) std::this_thread::yield();
+    TracePacket e_packet;
+    e_packet.type = 'E';
+    buffer_.Push(e_packet);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    daemon.Stop();
+    std::exit(0); // Should be unreachable
+  }, ::testing::ExitedWithCode(1), "exceeds ru->data size");
+}
+
 } // namespace mpact::sim::riscv::rvvi
