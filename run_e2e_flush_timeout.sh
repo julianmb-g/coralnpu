@@ -25,10 +25,10 @@ echo "Running RVVI Flush Timeout simulator via Bazel..."
 
 set +e
 if [ "$USE_PODMAN" -eq 1 ]; then
-  time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=all --rvvi_out=\$PWD/trace.rvvi --artificial_delay_ms=10000 \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log"
+  time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out=\$PWD/trace.rvvi --artificial_delay_ms=10000 \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log"
   EXIT_CODE=$?
 else
-  time bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=all --rvvi_out="$PWD/trace.rvvi" --artificial_delay_ms=10000 "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log
+  time bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out="$PWD/trace.rvvi" --artificial_delay_ms=10000 "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log
   EXIT_CODE=$?
 fi
 set -e
