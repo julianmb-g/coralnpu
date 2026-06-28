@@ -1,5 +1,4 @@
 // Copyright 2026 Google LLC
-// Dummy comment 2 to force Bazel recompile
 #define STRINGIZE(x) #x
 #define STR(x) STRINGIZE(x)
 #define MODEL_HEADER_SUFFIX .h
