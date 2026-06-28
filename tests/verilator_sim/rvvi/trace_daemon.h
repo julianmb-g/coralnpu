@@ -44,12 +44,10 @@ class TraceDaemon {
 
   void SetSymbolResolver(std::function<std::string(uint64_t)> resolver);
   void SetTraceFormatter(TraceFormatterInterface* formatter);
-  void SetArtificialDelay(std::chrono::milliseconds delay) { artificial_delay_ = delay; }
 
  private:
   void DaemonLoop();
   void ProcessPacket(const TracePacket& packet);
-  std::chrono::milliseconds artificial_delay_{0};
 
   struct RegisterUpdate {
     uint8_t reg_type;

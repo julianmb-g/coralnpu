@@ -23,13 +23,13 @@ fi
 mkdir -p ./tmp_log
 if [ "$USE_PODMAN" -eq 1 ]; then
   echo "Running RVVI Backpressure simulator via Bazel in Podman..."
-  # Use 50ms artificial delay to guarantee backpressure
-  time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run --copt=-DBUFFER_SIZE=2 //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out=\$PWD/trace.rvvi --artificial_delay_ms=50 \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)"
+  # Run without artificial delay
+  time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run --copt=-DBUFFER_SIZE=2 //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out=\$PWD/trace.rvvi \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)"
 else
   echo "Running RVVI Backpressure simulator via Bazel natively..."
   set -o pipefail
-  # Use 50ms artificial delay to guarantee backpressure
-  time bazel run --copt=-DBUFFER_SIZE=2 //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out="$PWD/trace.rvvi" --artificial_delay_ms=50 "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)
+  # Run without artificial delay
+  time bazel run --copt=-DBUFFER_SIZE=2 //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out="$PWD/trace.rvvi" "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)
 fi
 
 echo "Checking trace output..."

@@ -144,7 +144,6 @@ struct Memory_if : Sysc_module {
       }
 
       if (!HasPage(maddr)) {
-        printf("DEBUG: Read failed HasPage addr=%08x maddr=%08x\n", addr, maddr);
         return false;
       }
 

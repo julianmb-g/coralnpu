@@ -83,9 +83,6 @@ void TraceDaemon::DaemonLoop() {
   while (running_ || !buffer_->IsEmpty()) {
     TracePacket packet;
     if (buffer_->Pop(packet)) {
-      if (artificial_delay_.count() > 0) {
-        std::this_thread::sleep_for(artificial_delay_);
-      }
       ProcessPacket(packet);
     } else {
       std::this_thread::yield();

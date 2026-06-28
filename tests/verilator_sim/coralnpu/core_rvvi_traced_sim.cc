@@ -51,7 +51,6 @@ using namespace mpact::sim::riscv::rvvi;
 ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, rvvi_out, "trace.rvvi", "RVVI trace output file");
-ABSL_FLAG(int, artificial_delay_ms, 0, "Artificial delay in ms for backpressure testing");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
 
 struct CoreRvvi_tb : Sysc_tb {
@@ -611,7 +610,6 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
 #if TRACE_ENABLED
   std::ofstream trace_stream(rvvi_out);
   TraceDaemon daemon(&buffer, &trace_stream);
-  daemon.SetArtificialDelay(std::chrono::milliseconds(absl::GetFlag(FLAGS_artificial_delay_ms)));
   CustomFallbackFormatter formatter;
   daemon.SetTraceFormatter(&formatter);
   daemon.Start();
