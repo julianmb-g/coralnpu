@@ -297,6 +297,7 @@ cc_test(
     name = "core_barebones_tb_test",
     srcs = [
         "coralnpu/core_barebones_tb_test.cc",
+        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
     ],
     deps = [
         ":coralnpu_if",
@@ -304,7 +305,7 @@ cc_test(
         ":sim_libs",
         ":util",
         "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
     ],
 )
 
