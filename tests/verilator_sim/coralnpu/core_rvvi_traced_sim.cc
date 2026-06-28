@@ -538,13 +538,13 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         sc_stop();
     }
 
-    if ((io_halted.read() || io_fault.read() || ebreak_halt) && !e_sent) { \
-      TracePacket epacket = {}; \
-      epacket.type = 'E'; \
-      while (!buffer->Push(epacket)) { \
-        std::this_thread::yield(); \
-      } \
-      e_sent = true; \
+    if ((io_halted.read() || io_fault.read() || ebreak_halt) && !e_sent) {
+      TracePacket epacket = {};
+      epacket.type = 'E';
+      while (!buffer->Push(epacket)) {
+        std::this_thread::yield();
+      }
+      e_sent = true;
     }
 
     if (io_halted.read() || ebreak_halt) {
