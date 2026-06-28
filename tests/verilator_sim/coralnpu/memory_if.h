@@ -63,6 +63,18 @@ struct Memory_if : Sysc_module {
     return "[0x0 - 0xFFFFFFFF)";
   }
 
+  uint64_t GetOverflowDelta(uint32_t addr, uint32_t len) const {
+    uint32_t end_addr = addr + len;
+    if (profile_ == "default") {
+      if (addr < 0x10000 && end_addr > 0x2000) return end_addr - 0x2000;
+      if (end_addr > 0x18000) return end_addr - 0x18000;
+    } else if (profile_ == "highmem") {
+      if (addr < 0x100000) return 0x100000 - addr;
+      if (end_addr > 0x200000) return end_addr - 0x200000;
+    }
+    return 0;
+  }
+
   // ... (rest of constructor logic, replacing calls to IsValidAddress)
 
   Memory_if(sc_module_name n, const char* bin, int limit = -1, const std::string& profile = "all") :
@@ -137,9 +149,7 @@ struct Memory_if : Sysc_module {
       const int len = std::min(bytes, limit);
 
       if (!IsValidAddress(addr, len)) {
-        uint64_t avail_end = (profile_ == "highmem") ? 0x200000 : ((profile_ == "default") ? 0x18000 : 0x400000);
-        uint64_t delta = (addr + len > avail_end) ? (addr + len - avail_end) : 0;
-        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: [0x0 - 0x%08x]. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, avail_end, delta);
+        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, GetProfileBounds(), GetOverflowDelta(addr, len));
         return false;
       }
 
@@ -173,9 +183,7 @@ struct Memory_if : Sysc_module {
       const int len = std::min(bytes, limit);
 
       if (!IsValidAddress(addr, len)) {
-        uint64_t avail_end = (profile_ == "highmem") ? 0x200000 : ((profile_ == "default") ? 0x18000 : 0x400000);
-        uint64_t delta = (addr + len > avail_end) ? (addr + len - avail_end) : 0;
-        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: [0x0 - 0x%08x]. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, avail_end, delta);
+        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, GetProfileBounds(), GetOverflowDelta(addr, len));
         return false;
       }
 

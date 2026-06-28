@@ -2,7 +2,7 @@
 set -e
 
 # Cleanup trap
-trap 'rm -f ./dummy_fail.elf ./dummy_fail_tight.elf' EXIT
+trap 'rm -f ./dummy_fail.elf ./dummy_fail_tight.elf ./dummy_fail_tight_dtcm.elf' EXIT
 
 if [ -z "${USE_PODMAN}" ]; then
   USE_PODMAN=0
@@ -58,5 +58,28 @@ if [ $EXIT_CODE -ne 65 ]; then
 fi
 
 grep -q "\[FATAL\] ELF load violation" ./tmp_log/elf_load_fail_tight.log || { echo "Log format mismatch"; exit 1; }
+
+echo "Generating tight boundary ELF (DTCM upper bound) via Bazel..."
+if [ "$USE_PODMAN" -eq 1 ]; then
+  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "bazel run //tests/verilator_sim:gen_elf -- \$PWD/dummy_fail_tight_dtcm.elf --address 0x00018000 0x08000073"
+else
+  bazel run //tests/verilator_sim:gen_elf -- "$PWD/dummy_fail_tight_dtcm.elf" --address 0x00018000 0x08000073
+fi
+
+if [ "$USE_PODMAN" -eq 1 ]; then
+  echo "Running simulator via Bazel in Podman (DTCM tight boundary)..."
+  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/dummy_fail_tight_dtcm.elf 2>&1 | tee ./tmp_log/elf_load_fail_tight_dtcm.log" && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
+else
+  echo "Running simulator via Bazel natively (DTCM tight boundary)..."
+  set -o pipefail
+  bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/dummy_fail_tight_dtcm.elf" 2>&1 | tee ./tmp_log/elf_load_fail_tight_dtcm.log && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
+fi
+
+if [ $EXIT_CODE -ne 65 ]; then
+  echo "Expected exit code 65, got $EXIT_CODE"
+  exit 1
+fi
+
+grep -q "\[FATAL\] ELF load violation" ./tmp_log/elf_load_fail_tight_dtcm.log || { echo "Log format mismatch"; exit 1; }
 
 echo "E2E ELF Load Fail Test PASSED"

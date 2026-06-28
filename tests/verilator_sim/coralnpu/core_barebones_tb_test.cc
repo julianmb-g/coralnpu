@@ -108,7 +108,7 @@ TEST(BarebonesMemoryTest, MemoryProfileEnforcementDefault) {
   EXPECT_TRUE(mem.Write(0x17FFC, 4, data));
 
   // DTCM out of bounds
-  EXPECT_FALSE(mem.Write(0x18000, 4, data));
+  EXPECT_FALSE(mem.Write(0x18000, 1, data));
 }
 
 TEST(BarebonesMemoryTest, MemoryProfileEnforcementHighmem) {

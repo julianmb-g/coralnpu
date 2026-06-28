@@ -581,13 +581,7 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry
               [&mif, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
                 if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
-                  uint64_t avail_end = 0;
-                  if (mif.profile_ == "default") avail_end = 0x18000;
-                  else if (mif.profile_ == "highmem") avail_end = 0x200000;
-                  else avail_end = 0x400000;
-
-                  uint64_t delta = (addr + count > avail_end) ? (addr + count - avail_end) : 0;
-                  LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08lx - 0x%08lx]. Available: [0x0 - 0x%08lx]. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + count, avail_end, delta);
+                  LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08lx - 0x%08lx]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + count, mif.GetProfileBounds(), mif.GetOverflowDelta(addr, count));
                   load_ok = false;
                 }
                 return dest;
@@ -1716,7 +1710,7 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
     auto flush_now = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::seconds>(flush_now - flush_start).count() > 5) {
       fprintf(stderr, "[FATAL] Queue flush timeout (5s) exceeded! Trace daemon may be hung. Exiting with code 124.\n");
-      exit(124);
+      _exit(124);
     }
   }
   daemon.Stop();

@@ -173,6 +173,7 @@ void TraceDaemon::FlushPendingInstruction() {
 
   if (output_stream_) {
     *output_stream_ << line << "\n";
+    output_stream_->flush();
   }
   
   num_accumulated_updates_ = 0;
