@@ -151,6 +151,16 @@ class CustomFallbackFormatter : public TraceFormatterInterface {
       else if (funct3 == 2) op = "sw";
       return op + " " + std::string(reg_name(rs2)) + "," + std::to_string(imm) + "(" + reg_name(rs1) + ")";
     }
+    if (opcode == 0x07) { // Vector Load
+      char sbuf[32];
+      std::snprintf(sbuf, sizeof(sbuf), "vload_0x%08x", inst);
+      return sbuf;
+    }
+    if (opcode == 0x27) { // Vector Store
+      char sbuf[32];
+      std::snprintf(sbuf, sizeof(sbuf), "vstore_0x%08x", inst);
+      return sbuf;
+    }
     if (opcode == 0x57) { // Vector Opcode
       uint32_t funct3 = (inst >> 12) & 0x7;
       uint32_t funct6 = (inst >> 26) & 0x3f;

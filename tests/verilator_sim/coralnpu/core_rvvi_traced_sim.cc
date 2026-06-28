@@ -393,25 +393,26 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       uint32_t opcode = inst & 0x7f; \
       bool writes_rd = (opcode == 0x13) || (opcode == 0x33) || (opcode == 0x37) || \
                        (opcode == 0x17) || (opcode == 0x6f) || (opcode == 0x67) || \
-                       (opcode == 0x03) || (opcode == 0x73) || (opcode == 0x57); \
+                       (opcode == 0x03) || (opcode == 0x73) || (opcode == 0x57) || \
+                       (opcode == 0x07); \
       \
       if (writes_rd) { \
         uint32_t rd = (inst >> 7) & 0x1f; \
-        if (rd != 0 || opcode == 0x57) { \
-          int num_vec_writes = (opcode == 0x57) ? 8 : 1; \
-          int sub_packets = (opcode == 0x57) ? ((KP_rvvVlen + 255) / 256) : 1; \
+        if (rd != 0 || opcode == 0x57 || opcode == 0x07) { \
+          int num_vec_writes = (opcode == 0x57 || opcode == 0x07) ? 8 : 1; \
+          int sub_packets = (opcode == 0x57 || opcode == 0x07) ? ((KP_rvvVlen + 255) / 256) : 1; \
           for (int i = 0; i < num_vec_writes; ++i) { \
             for (int sp = 0; sp < sub_packets; ++sp) { \
               TracePacket rpacket = {}; \
               rpacket.type = 'R'; \
               rpacket.v_id = v_id; \
-              rpacket.reg.reg_type = (opcode == 0x57) ? 'V' : 'X'; \
+              rpacket.reg.reg_type = (opcode == 0x57 || opcode == 0x07) ? 'V' : 'X'; \
               rpacket.reg.index = rd; \
-              rpacket.reg.offset = (opcode == 0x57) ? (sp * 32) : 0; \
-              rpacket.reg.size = (opcode == 0x57) ? (((KP_rvvVlen / 8) - sp * 32 < 32) ? ((KP_rvvVlen / 8) - sp * 32) : 32) : (KP_xlen / 8); \
-              rpacket.reg.total_size = (opcode == 0x57) ? (KP_rvvVlen / 8) : (KP_xlen / 8); \
+              rpacket.reg.offset = (opcode == 0x57 || opcode == 0x07) ? (sp * 32) : 0; \
+              rpacket.reg.size = (opcode == 0x57 || opcode == 0x07) ? (((KP_rvvVlen / 8) - sp * 32 < 32) ? ((KP_rvvVlen / 8) - sp * 32) : 32) : (KP_xlen / 8); \
+              rpacket.reg.total_size = (opcode == 0x57 || opcode == 0x07) ? (KP_rvvVlen / 8) : (KP_xlen / 8); \
               \
-              if (opcode == 0x57) { \
+              if (opcode == 0x57 || opcode == 0x07) { \
                 bool chunk_valid = false; \
                 sc_bv<KP_rvvVlen> vval; \
                 uint32_t chunk_idx = rd; \

@@ -45,6 +45,16 @@ if ! grep -Eq "vsetvli" trace.rvvi; then
   exit 1
 fi
 
+echo "Checking RVVI trace output for vector load/store instructions..."
+if ! grep -Eq "vload" trace.rvvi; then
+  echo "Trace file missing vector load instruction disassembly (vload)"
+  exit 1
+fi
+if ! grep -Eq "vstore" trace.rvvi; then
+  echo "Trace file missing vector store instruction disassembly (vstore)"
+  exit 1
+fi
+
 if [ "$(grep -c "rvvi" trace.rvvi)" -lt 10 ]; then
   echo "Trace file too short (potential memcpy truncation)"
   exit 1
