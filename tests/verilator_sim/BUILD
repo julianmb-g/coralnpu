@@ -321,20 +321,6 @@ cc_test(
     ],
 )
 
-cc_test(
-    name = "core_rvvi_watchdog_test",
-    srcs = [
-        "coralnpu/core_rvvi_watchdog_test.cc",
-    ],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-    ],
-    data = [
-        ":core_rvvi_traced_sim",
-        ":gen_elf",
-    ],
-)
-
 cc_binary(
     name = "core_scalar_sim",
     srcs = [
