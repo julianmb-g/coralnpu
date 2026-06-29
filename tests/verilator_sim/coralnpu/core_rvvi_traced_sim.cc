@@ -501,7 +501,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
                   auto now = std::chrono::steady_clock::now(); \
                   if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
                     fprintf(stderr, "[FATAL] Queue backpressure timeout (R-packet)! Watchdog triggered.\n"); \
-                    exit(1); \
+                    exit(124); \
                   } \
                 } \
               } \
