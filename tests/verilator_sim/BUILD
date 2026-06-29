@@ -321,6 +321,20 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "core_rvvi_watchdog_test",
+    srcs = [
+        "coralnpu/core_rvvi_watchdog_test.cc",
+    ],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+    ],
+    data = [
+        ":core_rvvi_traced_sim",
+        ":gen_elf",
+    ],
+)
+
 cc_binary(
     name = "core_scalar_sim",
     srcs = [
@@ -505,6 +519,17 @@ cc_test(
     name = "trace_daemon_test",
     srcs = [
         "rvvi/trace_daemon_test.cc",
+    ],
+    deps = [
+        ":trace_daemon",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "trace_daemon_chunk_test",
+    srcs = [
+        "rvvi/trace_daemon_chunk_test.cc",
     ],
     deps = [
         ":trace_daemon",

@@ -80,7 +80,8 @@ void TraceDaemon::SetTraceFormatter(TraceFormatterInterface* formatter) {
 }
 
 void TraceDaemon::DaemonLoop() {
-  while (running_ || !buffer_->IsEmpty()) {
+  fprintf(stderr, "[DEBUG] DaemonLoop started, running_=%d\n", running_.load());
+  while (running_.load() || !buffer_->IsEmpty()) {
     TracePacket packet;
     if (buffer_->Pop(packet)) {
       ProcessPacket(packet);
@@ -88,6 +89,7 @@ void TraceDaemon::DaemonLoop() {
       std::this_thread::yield();
     }
   }
+  fprintf(stderr, "[DEBUG] DaemonLoop finished\n");
 }
 
 void TraceDaemon::FlushPendingInstruction() {
@@ -105,15 +107,13 @@ void TraceDaemon::FlushPendingInstruction() {
     uint32_t num_chunks = (update.total_size + 31) / 32;
     if (num_chunks >= 64) {
       fprintf(stderr, "[ERROR] Trace reassembly error: num_chunks (%u) is too large.\n", num_chunks);
-      running_ = false;
-      return;
+      continue;
     }
     uint64_t expected_mask = (1ULL << num_chunks) - 1;
     if (update.received_chunks_mask != expected_mask) {
       fprintf(stderr, "[ERROR] Trace reassembly error: Incomplete chunks for %c%d. Mask: 0x%lx, Expected: 0x%lx\n",
               update.reg_type, update.index, update.received_chunks_mask, expected_mask);
-      running_ = false;
-      return;
+      continue;
     }
   }
 
@@ -146,6 +146,14 @@ void TraceDaemon::FlushPendingInstruction() {
 
   for (size_t i = 0; i < num_accumulated_updates_; ++i) {
     const auto& update = accumulated_updates_[i];
+    uint32_t num_chunks = (update.total_size + 31) / 32;
+    if (num_chunks >= 64) continue;
+    uint64_t expected_mask = (1ULL << num_chunks) - 1;
+    if (update.received_chunks_mask != expected_mask) {
+        fprintf(stderr, "[FATAL] Incomplete vector chunks detected for register %c%d. Mask: 0x%016llx. Expected: 0x%016llx\n", update.reg_type, update.index, update.received_chunks_mask, expected_mask);
+        std::exit(1);
+    }
+
     std::string reg_prefix;
     if (update.reg_type == 'X') reg_prefix = "x";
     else if (update.reg_type == 'F') reg_prefix = "f";
@@ -196,7 +204,6 @@ void TraceDaemon::FlushPendingInstruction() {
 void TraceDaemon::ProcessPacket(const TracePacket& packet) {
   if (packet.type == 'E') {
     FlushPendingInstruction();
-    running_ = false;
     return;
   }
 
@@ -221,14 +228,14 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
 
     if (!ru) {
       if (num_accumulated_updates_ >= kMaxAccumulatedUpdates) {
-        fprintf(stderr, "[FATAL] Trace reassembly error: num_accumulated_updates_ (%zu) exceeds kMaxAccumulatedUpdates (%d). Buffer overflow.\n",
+        fprintf(stderr, "[ERROR] Trace reassembly error: num_accumulated_updates_ (%zu) exceeds kMaxAccumulatedUpdates (%d). Buffer overflow.\n",
                 num_accumulated_updates_, kMaxAccumulatedUpdates);
-        std::exit(1);
+        return;
       }
       if (packet.reg.total_size > sizeof(RegisterUpdate::data)) {
-        fprintf(stderr, "[FATAL] Trace reassembly error: packet.reg.total_size (%d) exceeds ru->data size (%zu).\n",
+        fprintf(stderr, "[ERROR] Trace reassembly error: packet.reg.total_size (%d) exceeds ru->data size (%zu).\n",
                 packet.reg.total_size, sizeof(RegisterUpdate::data));
-        std::exit(1);
+        return;
       }
       ru = &accumulated_updates_[num_accumulated_updates_++];
       ru->reg_type = packet.reg.reg_type;
@@ -249,6 +256,9 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
         }
         std::memcpy(ru->data + offset, packet.reg.value, size);
         ru->received_chunks_mask |= (1ULL << chunk_idx);
+      } else {
+        fprintf(stderr, "[ERROR] Trace reassembly error: Invalid offset %zu + size %zu for %c%d. Max offset: %zu, Total Size: %d. Packet discarded.\n",
+                offset, size, ru->reg_type, ru->index, sizeof(ru->data), ru->total_size);
       }
     }
     return;
