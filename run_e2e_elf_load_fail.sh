@@ -34,7 +34,7 @@ if [ $EXIT_CODE -ne 65 ]; then
   exit 1
 fi
 
-grep -q "\[FATAL\] ELF load violation" ./tmp_log/elf_load_fail.log || { echo "Log format mismatch"; exit 1; }
+grep -q "\[FATAL\] ELF load violation.*Delta: Exceeds bounds by 0x7e8004 bytes\." ./tmp_log/elf_load_fail.log || { echo "Log format mismatch or incorrect delta"; exit 1; }
 
 echo "Generating tight boundary ELF (ITCM upper bound) via Bazel..."
 if [ "$USE_PODMAN" -eq 1 ]; then
@@ -57,7 +57,7 @@ if [ $EXIT_CODE -ne 65 ]; then
   exit 1
 fi
 
-grep -q "\[FATAL\] ELF load violation" ./tmp_log/elf_load_fail_tight.log || { echo "Log format mismatch"; exit 1; }
+grep -q "\[FATAL\] ELF load violation.*Delta: Exceeds bounds by 0x4 bytes\." ./tmp_log/elf_load_fail_tight.log || { echo "Log format mismatch or incorrect delta"; exit 1; }
 
 echo "Generating tight boundary ELF (DTCM upper bound) via Bazel..."
 if [ "$USE_PODMAN" -eq 1 ]; then
@@ -80,6 +80,6 @@ if [ $EXIT_CODE -ne 65 ]; then
   exit 1
 fi
 
-grep -q "\[FATAL\] ELF load violation" ./tmp_log/elf_load_fail_tight_dtcm.log || { echo "Log format mismatch"; exit 1; }
+grep -q "\[FATAL\] ELF load violation.*Delta: Exceeds bounds by 0x4 bytes\." ./tmp_log/elf_load_fail_tight_dtcm.log || { echo "Log format mismatch or incorrect delta"; exit 1; }
 
 echo "E2E ELF Load Fail Test PASSED"
