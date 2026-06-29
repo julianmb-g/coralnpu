@@ -1748,7 +1748,3 @@ int sc_main(int argc, char *argv[]) {
            absl::GetFlag(FLAGS_trace), absl::GetFlag(FLAGS_rvvi_out),
            absl::GetFlag(FLAGS_memory_profile));
 }
-
-int main(int argc, char* argv[]) {
-  return sc_main(argc, argv);
-}
