@@ -346,6 +346,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 
   void posedge() {
     
+    if (!e_sent) {
 #define PROCESS_LANE(x) \
     if (io_debug_rb_inst_##x##_valid.read()) { \
       uint32_t inst = io_debug_rb_inst_##x##_bits_inst.read().to_uint(); \
@@ -522,6 +523,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     PROCESS_LANE(7);
 
 #undef PROCESS_LANE
+    }
 
     uint64_t retiring_this_cycle = 0;
     if (io_debug_rb_inst_0_valid.read()) retiring_this_cycle++;
