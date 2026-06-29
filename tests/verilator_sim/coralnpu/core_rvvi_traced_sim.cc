@@ -12,6 +12,7 @@
 
 #define TRACE_ENABLED 1
 
+
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -364,7 +365,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
             auto now = std::chrono::steady_clock::now(); \
             if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
               fprintf(stderr, "[FATAL] Queue backpressure timeout (T-packet)! Watchdog triggered.\n"); \
-              exit(1); \
+              exit(124); \
             } \
           } \
         } \
@@ -618,7 +619,9 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
   TraceDaemon daemon(&buffer, &trace_stream);
   CustomFallbackFormatter formatter;
   daemon.SetTraceFormatter(&formatter);
+
   daemon.Start();
+
 #endif
 
   sc_signal<bool> io_halted;
