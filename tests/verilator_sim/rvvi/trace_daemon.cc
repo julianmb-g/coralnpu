@@ -41,20 +41,24 @@ namespace mpact::sim::riscv::rvvi {
  *   that the last instructions and termination states (e.g. mpause) are written to the trace.
  */
 
-TraceDaemon::TraceDaemon(SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer, std::ostream* output_stream)
+template<size_t VLEN, size_t MAX_UPDATES>
+TraceDaemon<VLEN, MAX_UPDATES>::TraceDaemon(SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer, std::ostream* output_stream)
     : buffer_(buffer), output_stream_(output_stream), running_(false) {}
 
-TraceDaemon::~TraceDaemon() {
+template<size_t VLEN, size_t MAX_UPDATES>
+TraceDaemon<VLEN, MAX_UPDATES>::~TraceDaemon() {
   Stop();
 }
 
-void TraceDaemon::Start() {
+template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::Start() {
   if (running_) return;
   running_ = true;
   daemon_thread_ = std::thread(&TraceDaemon::DaemonLoop, this);
 }
 
-void TraceDaemon::Stop() {
+template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::Stop() {
   running_ = false;
   if (daemon_thread_.joinable()) {
     daemon_thread_.join();
@@ -71,15 +75,18 @@ void TraceDaemon::Stop() {
   }
 }
 
-void TraceDaemon::SetSymbolResolver(std::function<std::string(uint64_t)> resolver) {
+template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::SetSymbolResolver(std::function<std::string(uint64_t)> resolver) {
   symbol_resolver_ = resolver;
 }
 
-void TraceDaemon::SetTraceFormatter(TraceFormatterInterface* formatter) {
+template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::SetTraceFormatter(TraceFormatterInterface* formatter) {
   trace_formatter_ = formatter;
 }
 
-void TraceDaemon::DaemonLoop() {
+template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::DaemonLoop() {
   while (running_.load() || !buffer_->IsEmpty()) {
     TracePacket packet;
     if (buffer_->Pop(packet)) {
@@ -90,7 +97,8 @@ void TraceDaemon::DaemonLoop() {
   }
 }
 
-void TraceDaemon::FlushPendingInstruction() {
+template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::FlushPendingInstruction() {
   if (!has_any_pending_) return;
 
   if (!has_pending_inst_) {
@@ -103,8 +111,8 @@ void TraceDaemon::FlushPendingInstruction() {
   for (size_t i = 0; i < num_accumulated_updates_; ++i) {
     const auto& update = accumulated_updates_[i];
     uint32_t num_chunks = (update.total_size + 31) / 32;
-    if (num_chunks >= 64) {
-      fprintf(stderr, "[FATAL] Trace reassembly error: num_chunks (%u) is too large.\n", num_chunks);
+    if (num_chunks >= sizeof(update.received_chunks_mask) * 8) {
+      fprintf(stderr, "[FATAL] Trace reassembly error: num_chunks (%u) exceeds mask capacity.\n", num_chunks);
       std::exit(1);
     }
     uint64_t expected_mask = (1ULL << num_chunks) - 1;
@@ -145,8 +153,8 @@ void TraceDaemon::FlushPendingInstruction() {
   for (size_t i = 0; i < num_accumulated_updates_; ++i) {
     const auto& update = accumulated_updates_[i];
     uint32_t num_chunks = (update.total_size + 31) / 32;
-    if (num_chunks >= 64) {
-      fprintf(stderr, "[FATAL] Trace reassembly error: num_chunks (%u) is too large.\n", num_chunks);
+    if (num_chunks >= sizeof(update.received_chunks_mask) * 8) {
+      fprintf(stderr, "[FATAL] Trace reassembly error: num_chunks (%u) exceeds mask capacity.\n", num_chunks);
       std::exit(1);
     }
     uint64_t expected_mask = (1ULL << num_chunks) - 1;
@@ -202,7 +210,8 @@ void TraceDaemon::FlushPendingInstruction() {
   has_any_pending_ = false;
 }
 
-void TraceDaemon::ProcessPacket(const TracePacket& packet) {
+template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::ProcessPacket(const TracePacket& packet) {
   if (packet.type == 'E') {
     FlushPendingInstruction();
     return;
@@ -271,5 +280,11 @@ void TraceDaemon::ProcessPacket(const TracePacket& packet) {
     has_pending_inst_ = true;
   }
 }
+
+// Explicit Instantiations
+template class TraceDaemon<128, 64>;
+template class TraceDaemon<256, 64>;
+template class TraceDaemon<512, 64>;
+template class TraceDaemon<2048, 64>; // Default
 
 } // namespace mpact::sim::riscv::rvvi

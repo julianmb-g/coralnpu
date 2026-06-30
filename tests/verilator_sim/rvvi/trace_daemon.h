@@ -32,6 +32,7 @@ namespace mpact::sim::riscv::rvvi {
 #define BUFFER_SIZE 4096
 #endif
 
+template<size_t VLEN = 2048, size_t MAX_UPDATES = 64>
 class TraceDaemon {
  public:
   TraceDaemon(SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer, std::ostream* output_stream);
@@ -53,7 +54,7 @@ class TraceDaemon {
     uint8_t reg_type;
     uint16_t index;
     uint16_t total_size;
-    uint8_t data[256]; // Fixed size to support up to 2048-bit vector registers
+    uint8_t data[VLEN / 8]; // Parameterized size based on VLEN (in bits)
     uint64_t received_chunks_mask; // Bitmask of received 32-byte chunks
   };
 
@@ -64,7 +65,7 @@ class TraceDaemon {
   
   std::function<std::string(uint64_t)> symbol_resolver_;
   
-  static constexpr int kMaxAccumulatedUpdates = 64;
+  static constexpr int kMaxAccumulatedUpdates = MAX_UPDATES;
   RegisterUpdate accumulated_updates_[kMaxAccumulatedUpdates];
   size_t num_accumulated_updates_ = 0;
 

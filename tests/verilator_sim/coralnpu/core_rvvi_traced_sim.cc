@@ -618,7 +618,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
 
 #if TRACE_ENABLED
   std::ofstream trace_stream(rvvi_out);
-  TraceDaemon daemon(&buffer, &trace_stream);
+  TraceDaemon<KP_rvvVlen> daemon(&buffer, &trace_stream);
   CustomFallbackFormatter formatter;
   daemon.SetTraceFormatter(&formatter);
 
