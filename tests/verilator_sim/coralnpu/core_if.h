@@ -63,6 +63,11 @@ struct Core_if : Memory_if {
   sc_in<sc_bv<KP_lsuDataBits / 8> > io_dbus_wmask;
   sc_out<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
 
+  sc_out<bool> io_ebus_fault_valid;
+  sc_out<bool> io_ebus_fault_bits_write;
+  sc_out<sc_bv<32>> io_ebus_fault_bits_addr;
+  sc_out<sc_bv<32>> io_ebus_fault_bits_epc;
+
   Core_if(sc_module_name n, const char* bin, const std::string& profile = "all") : Memory_if(n, bin, -1, profile) {
     for (int i = 0; i < KP_lsuDataBits / 32; ++i) {
       runused_.set_word(i, 0);
@@ -75,6 +80,7 @@ struct Core_if : Memory_if {
     } else if (clock.read()) {
       cycle_++;
 
+      io_ebus_fault_valid = false;
       io_ibus_ready = rand_bool_ibus();
       io_dbus_ready = rand_bool_dbus();
 
@@ -94,6 +100,8 @@ struct Core_if : Memory_if {
           io_ibus_fault_bits_write = false;
           io_ibus_fault_bits_addr = 0;
           io_ibus_fault_bits_epc = addr;
+          sc_stop();
+          exit(1);
         }
       } else {
        io_ibus_fault_valid = false;
@@ -111,7 +119,12 @@ struct Core_if : Memory_if {
           }
           io_dbus_rdata = rdata;
         } else {
-          // soft fail
+          io_ebus_fault_valid = true;
+          io_ebus_fault_bits_write = false;
+          io_ebus_fault_bits_addr = addr;
+          io_ebus_fault_bits_epc = 0; // PC not easily available here
+          sc_stop();
+          exit(1);
         }
       }
 
@@ -130,7 +143,14 @@ struct Core_if : Memory_if {
         for (int i = 0; i < kLsuBytes; ++i) {
           if ((mask >> i) & 1) {
             uint8_t val = bytes[i];
-            Write(addr + i, 1, &val);
+            if (!Write(addr + i, 1, &val)) {
+              io_ebus_fault_valid = true;
+              io_ebus_fault_bits_write = true;
+              io_ebus_fault_bits_addr = addr + i;
+              io_ebus_fault_bits_epc = 0;
+              sc_stop();
+              exit(1);
+            }
           }
         }
       }
