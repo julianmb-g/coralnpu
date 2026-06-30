@@ -319,6 +319,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer;
   bool e_sent = false;
   bool ebreak_halt = false;
+  bool had_io_fault = false;
   uint32_t internal_v_id = 0;
   uint64_t instruction_count = 0;
   uint64_t instruction_limit = 500000;
@@ -1705,6 +1706,10 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   mif.io_ibus_fault_bits_write(io_ibus_fault_bits_write);
   mif.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
   mif.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
+  mif.io_ebus_fault_valid(io_ebus_fault_valid);
+  mif.io_ebus_fault_bits_write(io_ebus_fault_bits_write);
+  mif.io_ebus_fault_bits_addr(io_ebus_fault_bits_addr);
+  mif.io_ebus_fault_bits_epc(io_ebus_fault_bits_epc);
 
   if (trace) {
     tb.trace(&core);

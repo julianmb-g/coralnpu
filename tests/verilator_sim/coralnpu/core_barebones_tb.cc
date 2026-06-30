@@ -362,11 +362,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   io_debug_req = 0;
 
   io_ebus_dbus_ready = 1;
-  io_ebus_fault_valid = 0;
-  io_ebus_fault_bits_write = 0;
   io_ebus_dbus_rdata = 0;
-  io_ebus_fault_bits_addr = 0;
-  io_ebus_fault_bits_epc = 0;
 
   io_dm_debug_req = 0;
   io_dm_resume_req = 0;
@@ -596,6 +592,10 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   mif.io_ibus_fault_bits_write(io_ibus_fault_bits_write);
   mif.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
   mif.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
+  mif.io_ebus_fault_valid(io_ebus_fault_valid);
+  mif.io_ebus_fault_bits_write(io_ebus_fault_bits_write);
+  mif.io_ebus_fault_bits_addr(io_ebus_fault_bits_addr);
+  mif.io_ebus_fault_bits_epc(io_ebus_fault_bits_epc);
 
   if (trace) {
     tb.trace(&core);
