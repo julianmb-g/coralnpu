@@ -161,6 +161,7 @@ struct Core_if : Memory_if {
   }
 
   int pending_exit_code() const { return pending_exit_code_; }
+  void SetPendingExitCode(int code) { pending_exit_code_ = code; }
 
  private:
   uint32_t cycle_ = 0;
