@@ -1731,6 +1731,10 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   daemon.Stop();
 #endif
 
+  if (mif.pending_exit_code() != 0) {
+    return mif.pending_exit_code();
+  }
+
   if (tb.had_io_fault) {
     fprintf(stderr, "Simulation failed due to io_fault.\n");
     return 1;

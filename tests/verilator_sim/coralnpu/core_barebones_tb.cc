@@ -603,6 +603,10 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
 
   tb.start();
 
+  if (mif.pending_exit_code() != 0) {
+    return mif.pending_exit_code();
+  }
+
   if (io_halted.read() || tb.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
