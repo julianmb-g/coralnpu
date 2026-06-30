@@ -560,6 +560,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 
     if (io_fault) {
       fprintf(stderr, "[ERROR] io_fault asserted\n");
+      had_io_fault = true;
       sc_stop();
     }
     if (io_halted.read() || ebreak_halt) {
@@ -1725,7 +1726,10 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   daemon.Stop();
 #endif
 
-  if (io_halted.read() || tb.ebreak_halt) {
+  if (tb.had_io_fault) {
+    fprintf(stderr, "Simulation failed due to io_fault.\n");
+    return 1;
+  } else if (io_halted.read() || tb.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
   } else if (tb.instruction_count >= tb.instruction_limit) {
