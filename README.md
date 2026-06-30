@@ -54,7 +54,7 @@ For ultra-fast validation of self-checking binaries, use the barebones targets w
 bazel build //tests/verilator_sim:core_barebones_sim
 
 # Run an ELF (standard CoralNPU load address 0x80000000):
-bazel-bin/tests/verilator_sim/core_barebones_sim --binary path/to/your_test.elf
+bazel-bin/tests/verilator_sim/core_barebones_sim path/to/your_test.elf
 
 # Or use the convenience script:
 ./run_e2e_baseline.sh
@@ -66,7 +66,7 @@ bazel-bin/tests/verilator_sim/core_barebones_sim --binary path/to/your_test.elf
 bazel build //tests/verilator_sim:core_rvvi_traced_sim
 
 # Run an ELF and generate trace.rvvi:
-bazel-bin/tests/verilator_sim/core_rvvi_traced_sim --binary path/to/your_test.elf
+bazel-bin/tests/verilator_sim/core_rvvi_traced_sim path/to/your_test.elf
 
 # Or use the convenience script:
 ./run_e2e_rvvi.sh

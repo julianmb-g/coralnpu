@@ -285,6 +285,7 @@ void TraceDaemon<VLEN, MAX_UPDATES>::ProcessPacket(const TracePacket& packet) {
 template class TraceDaemon<128, 64>;
 template class TraceDaemon<256, 64>;
 template class TraceDaemon<512, 64>;
+template class TraceDaemon<1024, 64>;
 template class TraceDaemon<2048, 64>; // Default
 
 } // namespace mpact::sim::riscv::rvvi

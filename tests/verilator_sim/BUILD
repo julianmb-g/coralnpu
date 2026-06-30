@@ -480,6 +480,7 @@ cc_library(
     srcs = ["rvvi/trace_daemon.cc"],
     hdrs = [
         "rvvi/custom_fallback_formatter.h",
+        "rvvi/mpact_trace_formatter.h",
         "rvvi/trace_daemon.h",
         "rvvi/trace_formatter_interface.h",
     ],

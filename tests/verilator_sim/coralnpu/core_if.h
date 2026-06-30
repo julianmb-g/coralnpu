@@ -26,7 +26,7 @@ static bool rand_bool() {
 }
 
 static bool rand_bool_ibus() {
-#if 1
+#if 0
   return rand_bool();
 #else
   return true;
@@ -34,7 +34,7 @@ static bool rand_bool_ibus() {
 }
 
 static bool rand_bool_dbus() {
-#if 1
+#if 0
   return rand_bool();
 #else
   return true;

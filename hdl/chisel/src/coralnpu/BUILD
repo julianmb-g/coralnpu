@@ -872,7 +872,6 @@ chisel_cc_library(
 )
 
 CORE_BAREBONES_VOPTS = [
-    "-DTRACE_ENABLED=1",
     "-DUSE_GENERIC",
     # RVV
     "-DTB_SUPPORT",

@@ -38,7 +38,7 @@
 #include <thread>
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
-#include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
+#include "tests/verilator_sim/rvvi/mpact_trace_formatter.h"
 #endif
 
 #ifndef BUFFER_SIZE
@@ -558,11 +558,15 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       e_sent = true;
     }
 
+    if (io_fault) {
+      fprintf(stderr, "[ERROR] io_fault asserted\n");
+      sc_stop();
+    }
     if (io_halted.read() || ebreak_halt) {
       sc_stop();
     }
-    if (!ebreak_halt) {
-      check(!io_fault, "io_fault");
+    if (!ebreak_halt && !io_fault) {
+      // already stopped if io_fault
     }
   }
 };
@@ -619,7 +623,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
 #if TRACE_ENABLED
   std::ofstream trace_stream(rvvi_out);
   TraceDaemon<KP_rvvVlen> daemon(&buffer, &trace_stream);
-  CustomFallbackFormatter formatter;
+  MpactTraceFormatter formatter;
   daemon.SetTraceFormatter(&formatter);
 
   daemon.Start();
