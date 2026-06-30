@@ -542,7 +542,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         sc_stop();
     }
 
-    if ((io_halted.read() || io_fault.read() || ebreak_halt) && !e_sent) {
+    if ((io_halted.read() || io_fault.read() || ebreak_halt || instruction_count >= instruction_limit) && !e_sent) {
       TracePacket epacket = {};
       epacket.type = 'E';
       {
@@ -616,7 +616,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
 #endif
   Core_if mif("Core_if", nullptr, memory_profile);
 
-  uint32_t entry_point = 0x80000000;
+  uint32_t entry_point = 0x00000000;
   if (!LoadElfToMemory(bin, mif, entry_point)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
     exit(65);

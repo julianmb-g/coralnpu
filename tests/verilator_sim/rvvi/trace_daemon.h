@@ -54,7 +54,7 @@ class TraceDaemon {
     uint8_t reg_type;
     uint16_t index;
     uint16_t total_size;
-    uint8_t data[VLEN / 8]; // Parameterized size based on VLEN (in bits)
+    uint8_t data[256]; // Hardcoded to 256 bytes to prevent dynamic allocation and satisfy the minimum support requirement.
     uint64_t received_chunks_mask; // Bitmask of received 32-byte chunks
   };
 

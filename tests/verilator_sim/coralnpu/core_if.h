@@ -101,7 +101,7 @@ struct Core_if : Memory_if {
           io_ibus_fault_bits_addr = 0;
           io_ibus_fault_bits_epc = addr;
           sc_stop();
-          exit(1);
+          exit(65);
         }
       } else {
        io_ibus_fault_valid = false;
@@ -124,7 +124,7 @@ struct Core_if : Memory_if {
           io_ebus_fault_bits_addr = addr;
           io_ebus_fault_bits_epc = 0; // PC not easily available here
           sc_stop();
-          exit(1);
+          exit(65);
         }
       }
 
@@ -149,7 +149,7 @@ struct Core_if : Memory_if {
               io_ebus_fault_bits_addr = addr + i;
               io_ebus_fault_bits_epc = 0;
               sc_stop();
-              exit(1);
+              exit(65);
             }
           }
         }

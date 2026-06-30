@@ -177,7 +177,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   Core_tb tb("Core_tb", instruction_limit, /* random= */ false);
   Core_if mif("Core_if", nullptr, memory_profile); // nullptr since we will load ELF
 
-  uint32_t entry_point = 0x80000000;
+  uint32_t entry_point = 0x00000000;
   if (!LoadElfToMemory(bin, mif, entry_point)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
     exit(65);
