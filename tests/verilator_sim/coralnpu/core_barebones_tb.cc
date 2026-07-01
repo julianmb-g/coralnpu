@@ -46,6 +46,7 @@ ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
 
 struct Core_tb : Sysc_tb {
+  using Sysc_tb::cycle;
   sc_in<bool> io_halted;
   sc_in<bool> io_fault;
 
@@ -603,20 +604,27 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
 
   tb.start();
 
+  if (io_halted.read() || tb.ebreak_halt) {
+    printf("Simulation HALTED gracefully.\n");
+    return 0;
+  }
+
+  if (tb.cycle() >= static_cast<uint32_t>(instruction_limit)) {
+    fprintf(stderr, "Simulation TIMEOUT after %u cycles.\n", tb.cycle());
+    return 124;
+  }
+
+  if (tb.instruction_count >= tb.instruction_limit) {
+    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
+    return 124;
+  }
+
   if (mif.pending_exit_code() != 0) {
     return mif.pending_exit_code();
   }
 
-  if (io_halted.read() || tb.ebreak_halt) {
-    printf("Simulation HALTED gracefully.\n");
-    return 0;
-  } else if (tb.instruction_count >= tb.instruction_limit) {
-    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
-    return 124;
-  } else {
-    fprintf(stderr, "Simulation TIMEOUT after %d instructions.\n", instruction_limit);
-    return 124;
-  }
+  fprintf(stderr, "Simulation TIMEOUT after %d instructions.\n", instruction_limit);
+  return 124;
 }
 
 int sc_main(int argc, char *argv[]) {
