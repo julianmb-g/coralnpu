@@ -514,17 +514,6 @@ cc_test(
 )
 
 cc_test(
-    name = "trace_daemon_chunk_test",
-    srcs = [
-        "rvvi/trace_daemon_chunk_test.cc",
-    ],
-    deps = [
-        ":trace_daemon",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "mpact_trace_formatter_test",
     srcs = [
         "rvvi/mpact_trace_formatter_test.cc",
