@@ -36,6 +36,7 @@ if [ $EXIT_CODE -ne 65 ]; then
 fi
 
 grep -q "\[FATAL\] Runtime memory violation" ./tmp_log/runtime_fail_read.log || { echo "Log format mismatch or missing runtime violation log"; exit 1; }
+grep -q "Delta: Exceeds bounds by 0x3010 bytes." ./tmp_log/runtime_fail_read.log || { echo "Incorrect Delta calculation or missing Delta in Data Read log"; exit 1; }
 echo "Data Read Violation Test PASSED."
 
 # Scenario 2: Data Write Violation
@@ -60,6 +61,7 @@ if [ $EXIT_CODE -ne 65 ]; then
 fi
 
 grep -q "\[FATAL\] Runtime memory violation" ./tmp_log/runtime_fail_write.log || { echo "Log format mismatch or missing runtime violation log"; exit 1; }
+grep -q "Delta: Exceeds bounds by 0x3001 bytes." ./tmp_log/runtime_fail_write.log || { echo "Incorrect Delta calculation or missing Delta in Data Write log"; exit 1; }
 echo "Data Write Violation Test PASSED."
 
 # Scenario 3: Instruction Fetch Violation
@@ -84,6 +86,7 @@ if [ $EXIT_CODE -ne 65 ]; then
 fi
 
 grep -q "\[FATAL\] Runtime memory violation" ./tmp_log/runtime_fail_fetch.log || { echo "Log format mismatch or missing runtime violation log"; exit 1; }
+grep -q "Delta: Exceeds bounds by 0x7e8020 bytes." ./tmp_log/runtime_fail_fetch.log || { echo "Incorrect Delta calculation or missing Delta in Instruction Fetch log"; exit 1; }
 echo "Instruction Fetch Violation Test PASSED."
 
 # Scenario 4: Data Read Violation in RVVI mode
@@ -108,6 +111,7 @@ if [ $EXIT_CODE -ne 65 ]; then
 fi
 
 grep -q "\[FATAL\] Runtime memory violation" ./tmp_log/runtime_fail_read_rvvi.log || { echo "Log format mismatch or missing runtime violation log"; exit 1; }
+grep -q "Delta: Exceeds bounds by 0x3010 bytes." ./tmp_log/runtime_fail_read_rvvi.log || { echo "Incorrect Delta calculation or missing Delta in RVVI Data Read log"; exit 1; }
 
 echo "Verifying zero trace loss in RVVI mode..."
 if [ ! -f trace_runtime_fail.rvvi ]; then
