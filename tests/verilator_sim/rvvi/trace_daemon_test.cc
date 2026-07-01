@@ -272,46 +272,42 @@ TEST_F(TraceDaemonTest, ExceedsMaxChunkCount) {
 }
 
 TEST_F(TraceDaemonTest, IncompleteChunkSequenceDiscarded) {
-  // Capture stderr to verify the error message.
-  testing::internal::CaptureStderr();
+  EXPECT_EXIT({
+    TraceDaemon daemon(&buffer_, &output_stream_);
+    daemon.SetTraceFormatter(&formatter_);
+    daemon.Start();
 
-  TraceDaemon daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
-  daemon.Start();
+    // Inject incomplete chunk (total_size = 64, but only one 32-byte chunk pushed)
+    TracePacket r_packet = {};
+    r_packet.type = 'R';
+    r_packet.v_id = 1;
+    r_packet.reg.reg_type = 'X';
+    r_packet.reg.index = 10;
+    r_packet.reg.offset = 0;
+    r_packet.reg.total_size = 64; // Requires 2 chunks
+    r_packet.reg.size = 32;
+    r_packet.reg.value[0] = 0x1111111111111111;
+    
+    EXPECT_TRUE(buffer_.Push(r_packet));
+    // We do NOT push the second chunk.
 
-  // Inject incomplete chunk (total_size = 64, but only one 32-byte chunk pushed)
-  TracePacket r_packet = {};
-  r_packet.type = 'R';
-  r_packet.v_id = 1;
-  r_packet.reg.reg_type = 'X';
-  r_packet.reg.index = 10;
-  r_packet.reg.offset = 0;
-  r_packet.reg.total_size = 64; // Requires 2 chunks
-  r_packet.reg.size = 32;
-  r_packet.reg.value[0] = 0x1111111111111111;
-  
-  EXPECT_TRUE(buffer_.Push(r_packet));
-  // We do NOT push the second chunk.
+    // Push instruction to trigger flush
+    TracePacket i_packet = {};
+    i_packet.type = 'I';
+    i_packet.v_id = 1;
+    i_packet.inst.pc = 0x80000000;
+    i_packet.inst.instruction = 0x00000013;
+    
+    EXPECT_TRUE(buffer_.Push(i_packet));
 
-  // Push instruction to trigger flush
-  TracePacket i_packet = {};
-  i_packet.type = 'I';
-  i_packet.v_id = 1;
-  i_packet.inst.pc = 0x80000000;
-  i_packet.inst.instruction = 0x00000013;
-  
-  EXPECT_TRUE(buffer_.Push(i_packet));
+    // Wait for processing
+    while (!buffer_.IsEmpty()) {
+      std::this_thread::yield();
+    }
 
-  // Wait for processing
-  while (!buffer_.IsEmpty()) {
-    std::this_thread::yield();
-  }
-
-  daemon.Stop();
-  
-  std::string stderr_output = testing::internal::GetCapturedStderr();
-  // Expect error log about missing chunks
-  EXPECT_NE(stderr_output.find("[ERROR] Trace reassembly error: Incomplete chunks"), std::string::npos);
+    daemon.Stop();
+    std::exit(0); // Should be unreachable
+  }, ::testing::ExitedWithCode(1), "Trace reassembly error: Incomplete chunks");
 }
 
 } // namespace mpact::sim::riscv::rvvi
