@@ -19,6 +19,13 @@ float input2[8] __attribute__((section(".data")));
 float output[8] __attribute__((section(".data")));
 
 int main() {
+  input1[0] = 1.0f;
+  input2[0] = 2.0f;
+
+  // Explicitly write to f0 (boundary FPR, wb_idx 32) to catch Mutant 3.
+  asm volatile("flw f0, %0" : : "m"(input1[0]));
+  asm volatile("flw f1, %0" : : "m"(input2[0]));
+
   for (int i = 0; i < 8; i++) {
     output[i] = input1[i] + input2[i];
   }
