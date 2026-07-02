@@ -27,6 +27,9 @@ int main() {
   const int8_t* input2_ptr = &input_2[0];
   int16_t* output_ptr = &output[0];
 
+  long vl_out;
+  asm volatile("vsetvli %0, zero, e8, m1, ta, ma" : "=r"(vl_out));
+
   for (int idx = 0; (idx + 31) < 1024; idx += 32) {
     vint8m4_t input_v2 = __riscv_vle8_v_i8m4(input2_ptr + idx, 32);
     vint8m4_t input_v1 = __riscv_vle8_v_i8m4(input1_ptr + idx, 32);

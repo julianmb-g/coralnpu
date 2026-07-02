@@ -40,8 +40,8 @@ if ! grep -Eq "v[w]?add" trace.rvvi; then
   exit 1
 fi
 
-if ! grep -Eq "vsetvli" trace.rvvi; then
-  echo "Trace file missing vector setup instruction disassembly (vsetvli)"
+if ! grep -Eq "vsetvli.*,x[1-9][0-9]*:" trace.rvvi; then
+  echo "Trace file missing vector setup instruction disassembly (vsetvli) with register update"
   exit 1
 fi
 
