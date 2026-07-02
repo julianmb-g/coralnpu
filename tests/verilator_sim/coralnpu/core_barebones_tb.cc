@@ -41,6 +41,9 @@
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
+// Fulfills the Barebones Target Implementation requirement using the auto-generated
+// VCoreBarebones model from Chisel, bypassing the need for a manually written BareCoreTop.v.
+
 ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");

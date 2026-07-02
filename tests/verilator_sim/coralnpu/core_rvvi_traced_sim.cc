@@ -49,6 +49,9 @@
 
 using namespace mpact::sim::riscv::rvvi;
 
+// Fulfills the RVVI Traced Target Implementation requirement. Extracts state from
+// io_debug_rb_... ports and formats it using the asynchronous trace daemon.
+
 ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, rvvi_out, "trace.rvvi", "RVVI trace output file");
