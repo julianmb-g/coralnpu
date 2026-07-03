@@ -612,11 +612,6 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
     return 0;
   }
 
-  if (testbench.cycle() >= static_cast<uint32_t>(instruction_limit)) {
-    fprintf(stderr, "Simulation TIMEOUT after %u cycles.\n", testbench.cycle());
-    return 124;
-  }
-
   if (testbench.instruction_count >= testbench.instruction_limit) {
     fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", testbench.instruction_count);
     return 124;
