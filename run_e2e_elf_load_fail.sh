@@ -22,7 +22,7 @@ fi
 mkdir -p ./tmp_log
 if [ "$USE_PODMAN" -eq 1 ]; then
   echo "Running simulator via Bazel in Podman..."
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/dummy_fail.elf 2>&1 | tee ./tmp_log/elf_load_fail.log" && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
+  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/dummy_fail.elf 2>&1 | tee ./tmp_log/elf_load_fail.log" && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
 else
   echo "Running simulator via Bazel natively..."
   set -o pipefail
@@ -45,7 +45,7 @@ fi
 
 if [ "$USE_PODMAN" -eq 1 ]; then
   echo "Running simulator via Bazel in Podman (tight boundary)..."
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/dummy_fail_tight.elf 2>&1 | tee ./tmp_log/elf_load_fail_tight.log" && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
+  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/dummy_fail_tight.elf 2>&1 | tee ./tmp_log/elf_load_fail_tight.log" && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
 else
   echo "Running simulator via Bazel natively (tight boundary)..."
   set -o pipefail
@@ -68,7 +68,7 @@ fi
 
 if [ "$USE_PODMAN" -eq 1 ]; then
   echo "Running simulator via Bazel in Podman (DTCM tight boundary)..."
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/dummy_fail_tight_dtcm.elf 2>&1 | tee ./tmp_log/elf_load_fail_tight_dtcm.log" && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
+  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run //tests/verilator_sim:core_barebones_sim -- \$PWD/dummy_fail_tight_dtcm.elf 2>&1 | tee ./tmp_log/elf_load_fail_tight_dtcm.log" && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?
 else
   echo "Running simulator via Bazel natively (DTCM tight boundary)..."
   set -o pipefail
