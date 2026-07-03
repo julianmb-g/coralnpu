@@ -532,3 +532,69 @@ cc_binary(
     ],
     visibility = ["//visibility:public"],
 )
+
+sh_test(
+    name = "run_e2e_baseline_test",
+    srcs = ["//:run_e2e_baseline.sh"],
+    data = ["//:run_e2e_baseline.sh"],
+)
+
+sh_test(
+    name = "run_e2e_backpressure_test",
+    srcs = ["//:run_e2e_backpressure.sh"],
+    data = ["//:run_e2e_backpressure.sh"],
+)
+
+sh_test(
+    name = "run_e2e_elf_load_fail_test",
+    srcs = ["//:run_e2e_elf_load_fail.sh"],
+    data = ["//:run_e2e_elf_load_fail.sh"],
+)
+
+sh_test(
+    name = "run_e2e_flush_timeout_test",
+    srcs = ["//:run_e2e_flush_timeout.sh"],
+    data = ["//:run_e2e_flush_timeout.sh"],
+)
+
+sh_test(
+    name = "run_e2e_rvvi_test",
+    srcs = ["//:run_e2e_rvvi.sh"],
+    data = ["//:run_e2e_rvvi.sh"],
+)
+
+sh_test(
+    name = "run_e2e_timeout_test",
+    srcs = ["//:run_e2e_timeout.sh"],
+    data = ["//:run_e2e_timeout.sh"],
+)
+
+sh_test(
+    name = "run_e2e_runtime_violation_test",
+    srcs = ["//:run_e2e_runtime_violation.sh"],
+    data = ["//:run_e2e_runtime_violation.sh"],
+)
+
+sh_test(
+    name = "run_e2e_ebreak_test",
+    srcs = ["//:run_e2e_ebreak.sh"],
+    data = ["//:run_e2e_ebreak.sh"],
+)
+
+sh_test(
+    name = "run_e2e_real_address_test",
+    srcs = ["//:run_e2e_real_address.sh"],
+    data = ["//:run_e2e_real_address.sh"],
+)
+
+sh_test(
+    name = "run_e2e_termination_test",
+    srcs = ["//:run_e2e_termination.sh"],
+    data = ["//:run_e2e_termination.sh"],
+)
+
+sh_test(
+    name = "run_e2e_ebreak_barebones_test",
+    srcs = ["//:run_e2e_ebreak_barebones.sh"],
+    data = ["//:run_e2e_ebreak_barebones.sh"],
+)
