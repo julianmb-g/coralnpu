@@ -66,6 +66,7 @@ struct CoreRvvi_tb : Sysc_tb {
 
   uint64_t last_time = 0;
   uint64_t last_delta = 0;
+  bool had_deadlock = false;
 
   SC_HAS_PROCESS(CoreRvvi_tb);
 
@@ -341,8 +342,8 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     if (current_time == last_time) {
         if (current_delta - last_delta > 10000) {
             fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
+            had_deadlock = true;
             sc_stop();
-            exit(1);
         }
     } else {
         last_time = current_time;
@@ -1740,6 +1741,11 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   }
   daemon.Stop();
 #endif
+
+  if (testbench.had_deadlock) {
+    fprintf(stderr, "[FATAL] Simulation failed due to delta cycle deadlock.\n");
+    return 1;
+  }
 
   if (io_halted.read() || testbench.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
