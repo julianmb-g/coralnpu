@@ -9,6 +9,7 @@
 #include <vector>
 #include <cstring>
 #include <elf.h>
+#include <string>
 #include "tests/verilator_sim/elf.h"
 
 // Mock Memory Interface
@@ -93,13 +94,13 @@ TEST(BarebonesMemoryTest, LoadElf) {
 #include "tests/verilator_sim/coralnpu/core_if.h"
 
 TEST(BarebonesMemoryTest, MemoryProfileEnforcementDefault) {
-  Core_if mem("mem", nullptr, "default");
+  Core_if mem("mem", /* bin= */ nullptr, /* profile= */ "default");
   uint8_t data[4] = {0x12, 0x34, 0x56, 0x78};
 
   // ITCM valid writes
   EXPECT_TRUE(mem.Write(0x0, 4, data));
   EXPECT_TRUE(mem.Write(0x1FFC, 4, data));
-  
+
   // ITCM out of bounds
   EXPECT_FALSE(mem.Write(0x2000, 4, data));
 
@@ -112,7 +113,7 @@ TEST(BarebonesMemoryTest, MemoryProfileEnforcementDefault) {
 }
 
 TEST(BarebonesMemoryTest, MemoryProfileEnforcementHighmem) {
-  Core_if mem("mem", nullptr, "highmem");
+  Core_if mem("mem", /* bin= */ nullptr, /* profile= */ "highmem");
   uint8_t data[4] = {0x12, 0x34, 0x56, 0x78};
 
   // ITCM / lower memory are out of bounds in highmem

@@ -21,6 +21,7 @@
 #include <iostream>
 #include <fstream>
 #include <limits>
+#include <string>
 #include <chrono>
 
 #include "absl/flags/flag.h"
@@ -582,7 +583,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   }
 };
 
-bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry_point) {
+bool LoadElfToMemory(const std::string& file_name, Core_if& memory_interface, uint32_t& entry_point) {
   int fd = open(file_name.c_str(), O_RDONLY);
   if (fd < 0) { perror("open"); return false; }
   struct stat sb;
@@ -596,10 +597,10 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry
   bool load_ok = true;
   if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
     entry_point = ::LoadElf(data8,
-              [&mif, &load_ok](void* dest, const void* src, size_t count) {
+              [&memory_interface, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
-                if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
-                  LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08lx - 0x%08lx]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + count, mif.GetProfileBounds(), mif.GetOverflowDelta(addr, count));
+                if (!memory_interface.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
+                  LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08lx - 0x%08lx]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + count, memory_interface.GetProfileBounds(), memory_interface.GetOverflowDelta(addr, count));
                   load_ok = false;
                 }
                 return dest;
@@ -619,22 +620,22 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
   VERILATOR_MODEL core(name);
 #if TRACE_ENABLED
   SpscRingBuffer<TracePacket, BUFFER_SIZE> buffer;
-  CoreRvvi_tb tb("CoreRvvi_tb", instruction_limit, false, &buffer);
+  CoreRvvi_tb testbench("CoreRvvi_tb", instruction_limit, /* random= */ false, &buffer);
 #else
-  CoreRvvi_tb tb("CoreRvvi_tb", instruction_limit, false, nullptr);
+  CoreRvvi_tb testbench("CoreRvvi_tb", instruction_limit, /* random= */ false, nullptr);
 #endif
-  Core_if mif("Core_if", nullptr, memory_profile);
+  Core_if memory_interface("Core_if", /* bin= */ nullptr, memory_profile);
 
   uint32_t entry_point = 0x00000000;
-  if (!LoadElfToMemory(bin, mif, entry_point)) {
+  if (!LoadElfToMemory(bin, memory_interface, entry_point)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
     exit(65);
   }
 
 #if TRACE_ENABLED
   std::ofstream trace_stream(rvvi_out);
-  TraceDaemon<KP_rvvVlen> daemon(&buffer, &trace_stream);
   MpactTraceFormatter formatter;
+  TraceDaemon<KP_rvvVlen> daemon(&buffer, &trace_stream);
   daemon.SetTraceFormatter(&formatter);
 
   daemon.Start();
@@ -1027,261 +1028,261 @@ sc_signal<bool> io_debug_rb_inst_7_valid;
 #undef DECLARE_CSR_IN
 
 
-  tb.io_halted(io_halted);
-  tb.io_fault(io_fault);
-  tb.io_ibus_valid(io_ibus_valid);
-  tb.io_debug_rb_inst_0_valid(io_debug_rb_inst_0_valid);
-  tb.io_debug_rb_inst_0_bits_pc(io_debug_rb_inst_0_bits_pc);
-  tb.io_debug_rb_inst_0_bits_inst(io_debug_rb_inst_0_bits_inst);
-  tb.io_debug_rb_inst_0_bits_idx(io_debug_rb_inst_0_bits_idx);
-  tb.io_debug_rb_inst_0_bits_data(io_debug_rb_inst_0_bits_data);
-  tb.io_debug_rb_inst_0_bits_trap(io_debug_rb_inst_0_bits_trap);
+  testbench.io_halted(io_halted);
+  testbench.io_fault(io_fault);
+  testbench.io_ibus_valid(io_ibus_valid);
+  testbench.io_debug_rb_inst_0_valid(io_debug_rb_inst_0_valid);
+  testbench.io_debug_rb_inst_0_bits_pc(io_debug_rb_inst_0_bits_pc);
+  testbench.io_debug_rb_inst_0_bits_inst(io_debug_rb_inst_0_bits_inst);
+  testbench.io_debug_rb_inst_0_bits_idx(io_debug_rb_inst_0_bits_idx);
+  testbench.io_debug_rb_inst_0_bits_data(io_debug_rb_inst_0_bits_data);
+  testbench.io_debug_rb_inst_0_bits_trap(io_debug_rb_inst_0_bits_trap);
 
-  tb.io_debug_rb_inst_0_bits_vecWrites_0_valid(io_debug_rb_inst_0_bits_vecWrites_0_valid);
-  tb.io_debug_rb_inst_0_bits_vecWrites_0_bits_data(io_debug_rb_inst_0_bits_vecWrites_0_bits_data);
-  tb.io_debug_rb_inst_0_bits_vecWrites_0_bits_idx(io_debug_rb_inst_0_bits_vecWrites_0_bits_idx);
-  tb.io_debug_rb_inst_0_bits_vecWrites_1_valid(io_debug_rb_inst_0_bits_vecWrites_1_valid);
-  tb.io_debug_rb_inst_0_bits_vecWrites_1_bits_data(io_debug_rb_inst_0_bits_vecWrites_1_bits_data);
-  tb.io_debug_rb_inst_0_bits_vecWrites_1_bits_idx(io_debug_rb_inst_0_bits_vecWrites_1_bits_idx);
-  tb.io_debug_rb_inst_0_bits_vecWrites_2_valid(io_debug_rb_inst_0_bits_vecWrites_2_valid);
-  tb.io_debug_rb_inst_0_bits_vecWrites_2_bits_data(io_debug_rb_inst_0_bits_vecWrites_2_bits_data);
-  tb.io_debug_rb_inst_0_bits_vecWrites_2_bits_idx(io_debug_rb_inst_0_bits_vecWrites_2_bits_idx);
-  tb.io_debug_rb_inst_0_bits_vecWrites_3_valid(io_debug_rb_inst_0_bits_vecWrites_3_valid);
-  tb.io_debug_rb_inst_0_bits_vecWrites_3_bits_data(io_debug_rb_inst_0_bits_vecWrites_3_bits_data);
-  tb.io_debug_rb_inst_0_bits_vecWrites_3_bits_idx(io_debug_rb_inst_0_bits_vecWrites_3_bits_idx);
-  tb.io_debug_rb_inst_0_bits_vecWrites_4_valid(io_debug_rb_inst_0_bits_vecWrites_4_valid);
-  tb.io_debug_rb_inst_0_bits_vecWrites_4_bits_data(io_debug_rb_inst_0_bits_vecWrites_4_bits_data);
-  tb.io_debug_rb_inst_0_bits_vecWrites_4_bits_idx(io_debug_rb_inst_0_bits_vecWrites_4_bits_idx);
-  tb.io_debug_rb_inst_0_bits_vecWrites_5_valid(io_debug_rb_inst_0_bits_vecWrites_5_valid);
-  tb.io_debug_rb_inst_0_bits_vecWrites_5_bits_data(io_debug_rb_inst_0_bits_vecWrites_5_bits_data);
-  tb.io_debug_rb_inst_0_bits_vecWrites_5_bits_idx(io_debug_rb_inst_0_bits_vecWrites_5_bits_idx);
-  tb.io_debug_rb_inst_0_bits_vecWrites_6_valid(io_debug_rb_inst_0_bits_vecWrites_6_valid);
-  tb.io_debug_rb_inst_0_bits_vecWrites_6_bits_data(io_debug_rb_inst_0_bits_vecWrites_6_bits_data);
-  tb.io_debug_rb_inst_0_bits_vecWrites_6_bits_idx(io_debug_rb_inst_0_bits_vecWrites_6_bits_idx);
-  tb.io_debug_rb_inst_0_bits_vecWrites_7_valid(io_debug_rb_inst_0_bits_vecWrites_7_valid);
-  tb.io_debug_rb_inst_0_bits_vecWrites_7_bits_data(io_debug_rb_inst_0_bits_vecWrites_7_bits_data);
-  tb.io_debug_rb_inst_0_bits_vecWrites_7_bits_idx(io_debug_rb_inst_0_bits_vecWrites_7_bits_idx);
-tb.io_debug_rb_inst_1_valid(io_debug_rb_inst_1_valid);
-  tb.io_debug_rb_inst_1_bits_pc(io_debug_rb_inst_1_bits_pc);
-  tb.io_debug_rb_inst_1_bits_inst(io_debug_rb_inst_1_bits_inst);
-  tb.io_debug_rb_inst_1_bits_idx(io_debug_rb_inst_1_bits_idx);
-  tb.io_debug_rb_inst_1_bits_data(io_debug_rb_inst_1_bits_data);
-  tb.io_debug_rb_inst_1_bits_trap(io_debug_rb_inst_1_bits_trap);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_0_valid(io_debug_rb_inst_0_bits_vecWrites_0_valid);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_0_bits_data(io_debug_rb_inst_0_bits_vecWrites_0_bits_data);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_0_bits_idx(io_debug_rb_inst_0_bits_vecWrites_0_bits_idx);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_1_valid(io_debug_rb_inst_0_bits_vecWrites_1_valid);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_1_bits_data(io_debug_rb_inst_0_bits_vecWrites_1_bits_data);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_1_bits_idx(io_debug_rb_inst_0_bits_vecWrites_1_bits_idx);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_2_valid(io_debug_rb_inst_0_bits_vecWrites_2_valid);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_2_bits_data(io_debug_rb_inst_0_bits_vecWrites_2_bits_data);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_2_bits_idx(io_debug_rb_inst_0_bits_vecWrites_2_bits_idx);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_3_valid(io_debug_rb_inst_0_bits_vecWrites_3_valid);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_3_bits_data(io_debug_rb_inst_0_bits_vecWrites_3_bits_data);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_3_bits_idx(io_debug_rb_inst_0_bits_vecWrites_3_bits_idx);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_4_valid(io_debug_rb_inst_0_bits_vecWrites_4_valid);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_4_bits_data(io_debug_rb_inst_0_bits_vecWrites_4_bits_data);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_4_bits_idx(io_debug_rb_inst_0_bits_vecWrites_4_bits_idx);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_5_valid(io_debug_rb_inst_0_bits_vecWrites_5_valid);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_5_bits_data(io_debug_rb_inst_0_bits_vecWrites_5_bits_data);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_5_bits_idx(io_debug_rb_inst_0_bits_vecWrites_5_bits_idx);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_6_valid(io_debug_rb_inst_0_bits_vecWrites_6_valid);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_6_bits_data(io_debug_rb_inst_0_bits_vecWrites_6_bits_data);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_6_bits_idx(io_debug_rb_inst_0_bits_vecWrites_6_bits_idx);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_7_valid(io_debug_rb_inst_0_bits_vecWrites_7_valid);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_7_bits_data(io_debug_rb_inst_0_bits_vecWrites_7_bits_data);
+  testbench.io_debug_rb_inst_0_bits_vecWrites_7_bits_idx(io_debug_rb_inst_0_bits_vecWrites_7_bits_idx);
+testbench.io_debug_rb_inst_1_valid(io_debug_rb_inst_1_valid);
+  testbench.io_debug_rb_inst_1_bits_pc(io_debug_rb_inst_1_bits_pc);
+  testbench.io_debug_rb_inst_1_bits_inst(io_debug_rb_inst_1_bits_inst);
+  testbench.io_debug_rb_inst_1_bits_idx(io_debug_rb_inst_1_bits_idx);
+  testbench.io_debug_rb_inst_1_bits_data(io_debug_rb_inst_1_bits_data);
+  testbench.io_debug_rb_inst_1_bits_trap(io_debug_rb_inst_1_bits_trap);
 
-  tb.io_debug_rb_inst_1_bits_vecWrites_0_valid(io_debug_rb_inst_1_bits_vecWrites_0_valid);
-  tb.io_debug_rb_inst_1_bits_vecWrites_0_bits_data(io_debug_rb_inst_1_bits_vecWrites_0_bits_data);
-  tb.io_debug_rb_inst_1_bits_vecWrites_0_bits_idx(io_debug_rb_inst_1_bits_vecWrites_0_bits_idx);
-  tb.io_debug_rb_inst_1_bits_vecWrites_1_valid(io_debug_rb_inst_1_bits_vecWrites_1_valid);
-  tb.io_debug_rb_inst_1_bits_vecWrites_1_bits_data(io_debug_rb_inst_1_bits_vecWrites_1_bits_data);
-  tb.io_debug_rb_inst_1_bits_vecWrites_1_bits_idx(io_debug_rb_inst_1_bits_vecWrites_1_bits_idx);
-  tb.io_debug_rb_inst_1_bits_vecWrites_2_valid(io_debug_rb_inst_1_bits_vecWrites_2_valid);
-  tb.io_debug_rb_inst_1_bits_vecWrites_2_bits_data(io_debug_rb_inst_1_bits_vecWrites_2_bits_data);
-  tb.io_debug_rb_inst_1_bits_vecWrites_2_bits_idx(io_debug_rb_inst_1_bits_vecWrites_2_bits_idx);
-  tb.io_debug_rb_inst_1_bits_vecWrites_3_valid(io_debug_rb_inst_1_bits_vecWrites_3_valid);
-  tb.io_debug_rb_inst_1_bits_vecWrites_3_bits_data(io_debug_rb_inst_1_bits_vecWrites_3_bits_data);
-  tb.io_debug_rb_inst_1_bits_vecWrites_3_bits_idx(io_debug_rb_inst_1_bits_vecWrites_3_bits_idx);
-  tb.io_debug_rb_inst_1_bits_vecWrites_4_valid(io_debug_rb_inst_1_bits_vecWrites_4_valid);
-  tb.io_debug_rb_inst_1_bits_vecWrites_4_bits_data(io_debug_rb_inst_1_bits_vecWrites_4_bits_data);
-  tb.io_debug_rb_inst_1_bits_vecWrites_4_bits_idx(io_debug_rb_inst_1_bits_vecWrites_4_bits_idx);
-  tb.io_debug_rb_inst_1_bits_vecWrites_5_valid(io_debug_rb_inst_1_bits_vecWrites_5_valid);
-  tb.io_debug_rb_inst_1_bits_vecWrites_5_bits_data(io_debug_rb_inst_1_bits_vecWrites_5_bits_data);
-  tb.io_debug_rb_inst_1_bits_vecWrites_5_bits_idx(io_debug_rb_inst_1_bits_vecWrites_5_bits_idx);
-  tb.io_debug_rb_inst_1_bits_vecWrites_6_valid(io_debug_rb_inst_1_bits_vecWrites_6_valid);
-  tb.io_debug_rb_inst_1_bits_vecWrites_6_bits_data(io_debug_rb_inst_1_bits_vecWrites_6_bits_data);
-  tb.io_debug_rb_inst_1_bits_vecWrites_6_bits_idx(io_debug_rb_inst_1_bits_vecWrites_6_bits_idx);
-  tb.io_debug_rb_inst_1_bits_vecWrites_7_valid(io_debug_rb_inst_1_bits_vecWrites_7_valid);
-  tb.io_debug_rb_inst_1_bits_vecWrites_7_bits_data(io_debug_rb_inst_1_bits_vecWrites_7_bits_data);
-  tb.io_debug_rb_inst_1_bits_vecWrites_7_bits_idx(io_debug_rb_inst_1_bits_vecWrites_7_bits_idx);
-tb.io_debug_rb_inst_2_valid(io_debug_rb_inst_2_valid);
-  tb.io_debug_rb_inst_2_bits_pc(io_debug_rb_inst_2_bits_pc);
-  tb.io_debug_rb_inst_2_bits_inst(io_debug_rb_inst_2_bits_inst);
-  tb.io_debug_rb_inst_2_bits_idx(io_debug_rb_inst_2_bits_idx);
-  tb.io_debug_rb_inst_2_bits_data(io_debug_rb_inst_2_bits_data);
-  tb.io_debug_rb_inst_2_bits_trap(io_debug_rb_inst_2_bits_trap);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_0_valid(io_debug_rb_inst_1_bits_vecWrites_0_valid);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_0_bits_data(io_debug_rb_inst_1_bits_vecWrites_0_bits_data);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_0_bits_idx(io_debug_rb_inst_1_bits_vecWrites_0_bits_idx);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_1_valid(io_debug_rb_inst_1_bits_vecWrites_1_valid);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_1_bits_data(io_debug_rb_inst_1_bits_vecWrites_1_bits_data);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_1_bits_idx(io_debug_rb_inst_1_bits_vecWrites_1_bits_idx);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_2_valid(io_debug_rb_inst_1_bits_vecWrites_2_valid);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_2_bits_data(io_debug_rb_inst_1_bits_vecWrites_2_bits_data);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_2_bits_idx(io_debug_rb_inst_1_bits_vecWrites_2_bits_idx);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_3_valid(io_debug_rb_inst_1_bits_vecWrites_3_valid);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_3_bits_data(io_debug_rb_inst_1_bits_vecWrites_3_bits_data);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_3_bits_idx(io_debug_rb_inst_1_bits_vecWrites_3_bits_idx);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_4_valid(io_debug_rb_inst_1_bits_vecWrites_4_valid);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_4_bits_data(io_debug_rb_inst_1_bits_vecWrites_4_bits_data);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_4_bits_idx(io_debug_rb_inst_1_bits_vecWrites_4_bits_idx);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_5_valid(io_debug_rb_inst_1_bits_vecWrites_5_valid);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_5_bits_data(io_debug_rb_inst_1_bits_vecWrites_5_bits_data);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_5_bits_idx(io_debug_rb_inst_1_bits_vecWrites_5_bits_idx);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_6_valid(io_debug_rb_inst_1_bits_vecWrites_6_valid);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_6_bits_data(io_debug_rb_inst_1_bits_vecWrites_6_bits_data);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_6_bits_idx(io_debug_rb_inst_1_bits_vecWrites_6_bits_idx);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_7_valid(io_debug_rb_inst_1_bits_vecWrites_7_valid);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_7_bits_data(io_debug_rb_inst_1_bits_vecWrites_7_bits_data);
+  testbench.io_debug_rb_inst_1_bits_vecWrites_7_bits_idx(io_debug_rb_inst_1_bits_vecWrites_7_bits_idx);
+testbench.io_debug_rb_inst_2_valid(io_debug_rb_inst_2_valid);
+  testbench.io_debug_rb_inst_2_bits_pc(io_debug_rb_inst_2_bits_pc);
+  testbench.io_debug_rb_inst_2_bits_inst(io_debug_rb_inst_2_bits_inst);
+  testbench.io_debug_rb_inst_2_bits_idx(io_debug_rb_inst_2_bits_idx);
+  testbench.io_debug_rb_inst_2_bits_data(io_debug_rb_inst_2_bits_data);
+  testbench.io_debug_rb_inst_2_bits_trap(io_debug_rb_inst_2_bits_trap);
 
-  tb.io_debug_rb_inst_2_bits_vecWrites_0_valid(io_debug_rb_inst_2_bits_vecWrites_0_valid);
-  tb.io_debug_rb_inst_2_bits_vecWrites_0_bits_data(io_debug_rb_inst_2_bits_vecWrites_0_bits_data);
-  tb.io_debug_rb_inst_2_bits_vecWrites_0_bits_idx(io_debug_rb_inst_2_bits_vecWrites_0_bits_idx);
-  tb.io_debug_rb_inst_2_bits_vecWrites_1_valid(io_debug_rb_inst_2_bits_vecWrites_1_valid);
-  tb.io_debug_rb_inst_2_bits_vecWrites_1_bits_data(io_debug_rb_inst_2_bits_vecWrites_1_bits_data);
-  tb.io_debug_rb_inst_2_bits_vecWrites_1_bits_idx(io_debug_rb_inst_2_bits_vecWrites_1_bits_idx);
-  tb.io_debug_rb_inst_2_bits_vecWrites_2_valid(io_debug_rb_inst_2_bits_vecWrites_2_valid);
-  tb.io_debug_rb_inst_2_bits_vecWrites_2_bits_data(io_debug_rb_inst_2_bits_vecWrites_2_bits_data);
-  tb.io_debug_rb_inst_2_bits_vecWrites_2_bits_idx(io_debug_rb_inst_2_bits_vecWrites_2_bits_idx);
-  tb.io_debug_rb_inst_2_bits_vecWrites_3_valid(io_debug_rb_inst_2_bits_vecWrites_3_valid);
-  tb.io_debug_rb_inst_2_bits_vecWrites_3_bits_data(io_debug_rb_inst_2_bits_vecWrites_3_bits_data);
-  tb.io_debug_rb_inst_2_bits_vecWrites_3_bits_idx(io_debug_rb_inst_2_bits_vecWrites_3_bits_idx);
-  tb.io_debug_rb_inst_2_bits_vecWrites_4_valid(io_debug_rb_inst_2_bits_vecWrites_4_valid);
-  tb.io_debug_rb_inst_2_bits_vecWrites_4_bits_data(io_debug_rb_inst_2_bits_vecWrites_4_bits_data);
-  tb.io_debug_rb_inst_2_bits_vecWrites_4_bits_idx(io_debug_rb_inst_2_bits_vecWrites_4_bits_idx);
-  tb.io_debug_rb_inst_2_bits_vecWrites_5_valid(io_debug_rb_inst_2_bits_vecWrites_5_valid);
-  tb.io_debug_rb_inst_2_bits_vecWrites_5_bits_data(io_debug_rb_inst_2_bits_vecWrites_5_bits_data);
-  tb.io_debug_rb_inst_2_bits_vecWrites_5_bits_idx(io_debug_rb_inst_2_bits_vecWrites_5_bits_idx);
-  tb.io_debug_rb_inst_2_bits_vecWrites_6_valid(io_debug_rb_inst_2_bits_vecWrites_6_valid);
-  tb.io_debug_rb_inst_2_bits_vecWrites_6_bits_data(io_debug_rb_inst_2_bits_vecWrites_6_bits_data);
-  tb.io_debug_rb_inst_2_bits_vecWrites_6_bits_idx(io_debug_rb_inst_2_bits_vecWrites_6_bits_idx);
-  tb.io_debug_rb_inst_2_bits_vecWrites_7_valid(io_debug_rb_inst_2_bits_vecWrites_7_valid);
-  tb.io_debug_rb_inst_2_bits_vecWrites_7_bits_data(io_debug_rb_inst_2_bits_vecWrites_7_bits_data);
-  tb.io_debug_rb_inst_2_bits_vecWrites_7_bits_idx(io_debug_rb_inst_2_bits_vecWrites_7_bits_idx);
-tb.io_debug_rb_inst_3_valid(io_debug_rb_inst_3_valid);
-  tb.io_debug_rb_inst_3_bits_pc(io_debug_rb_inst_3_bits_pc);
-  tb.io_debug_rb_inst_3_bits_inst(io_debug_rb_inst_3_bits_inst);
-  tb.io_debug_rb_inst_3_bits_idx(io_debug_rb_inst_3_bits_idx);
-  tb.io_debug_rb_inst_3_bits_data(io_debug_rb_inst_3_bits_data);
-  tb.io_debug_rb_inst_3_bits_trap(io_debug_rb_inst_3_bits_trap);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_0_valid(io_debug_rb_inst_2_bits_vecWrites_0_valid);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_0_bits_data(io_debug_rb_inst_2_bits_vecWrites_0_bits_data);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_0_bits_idx(io_debug_rb_inst_2_bits_vecWrites_0_bits_idx);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_1_valid(io_debug_rb_inst_2_bits_vecWrites_1_valid);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_1_bits_data(io_debug_rb_inst_2_bits_vecWrites_1_bits_data);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_1_bits_idx(io_debug_rb_inst_2_bits_vecWrites_1_bits_idx);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_2_valid(io_debug_rb_inst_2_bits_vecWrites_2_valid);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_2_bits_data(io_debug_rb_inst_2_bits_vecWrites_2_bits_data);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_2_bits_idx(io_debug_rb_inst_2_bits_vecWrites_2_bits_idx);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_3_valid(io_debug_rb_inst_2_bits_vecWrites_3_valid);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_3_bits_data(io_debug_rb_inst_2_bits_vecWrites_3_bits_data);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_3_bits_idx(io_debug_rb_inst_2_bits_vecWrites_3_bits_idx);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_4_valid(io_debug_rb_inst_2_bits_vecWrites_4_valid);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_4_bits_data(io_debug_rb_inst_2_bits_vecWrites_4_bits_data);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_4_bits_idx(io_debug_rb_inst_2_bits_vecWrites_4_bits_idx);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_5_valid(io_debug_rb_inst_2_bits_vecWrites_5_valid);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_5_bits_data(io_debug_rb_inst_2_bits_vecWrites_5_bits_data);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_5_bits_idx(io_debug_rb_inst_2_bits_vecWrites_5_bits_idx);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_6_valid(io_debug_rb_inst_2_bits_vecWrites_6_valid);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_6_bits_data(io_debug_rb_inst_2_bits_vecWrites_6_bits_data);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_6_bits_idx(io_debug_rb_inst_2_bits_vecWrites_6_bits_idx);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_7_valid(io_debug_rb_inst_2_bits_vecWrites_7_valid);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_7_bits_data(io_debug_rb_inst_2_bits_vecWrites_7_bits_data);
+  testbench.io_debug_rb_inst_2_bits_vecWrites_7_bits_idx(io_debug_rb_inst_2_bits_vecWrites_7_bits_idx);
+testbench.io_debug_rb_inst_3_valid(io_debug_rb_inst_3_valid);
+  testbench.io_debug_rb_inst_3_bits_pc(io_debug_rb_inst_3_bits_pc);
+  testbench.io_debug_rb_inst_3_bits_inst(io_debug_rb_inst_3_bits_inst);
+  testbench.io_debug_rb_inst_3_bits_idx(io_debug_rb_inst_3_bits_idx);
+  testbench.io_debug_rb_inst_3_bits_data(io_debug_rb_inst_3_bits_data);
+  testbench.io_debug_rb_inst_3_bits_trap(io_debug_rb_inst_3_bits_trap);
 
-  tb.io_debug_rb_inst_3_bits_vecWrites_0_valid(io_debug_rb_inst_3_bits_vecWrites_0_valid);
-  tb.io_debug_rb_inst_3_bits_vecWrites_0_bits_data(io_debug_rb_inst_3_bits_vecWrites_0_bits_data);
-  tb.io_debug_rb_inst_3_bits_vecWrites_0_bits_idx(io_debug_rb_inst_3_bits_vecWrites_0_bits_idx);
-  tb.io_debug_rb_inst_3_bits_vecWrites_1_valid(io_debug_rb_inst_3_bits_vecWrites_1_valid);
-  tb.io_debug_rb_inst_3_bits_vecWrites_1_bits_data(io_debug_rb_inst_3_bits_vecWrites_1_bits_data);
-  tb.io_debug_rb_inst_3_bits_vecWrites_1_bits_idx(io_debug_rb_inst_3_bits_vecWrites_1_bits_idx);
-  tb.io_debug_rb_inst_3_bits_vecWrites_2_valid(io_debug_rb_inst_3_bits_vecWrites_2_valid);
-  tb.io_debug_rb_inst_3_bits_vecWrites_2_bits_data(io_debug_rb_inst_3_bits_vecWrites_2_bits_data);
-  tb.io_debug_rb_inst_3_bits_vecWrites_2_bits_idx(io_debug_rb_inst_3_bits_vecWrites_2_bits_idx);
-  tb.io_debug_rb_inst_3_bits_vecWrites_3_valid(io_debug_rb_inst_3_bits_vecWrites_3_valid);
-  tb.io_debug_rb_inst_3_bits_vecWrites_3_bits_data(io_debug_rb_inst_3_bits_vecWrites_3_bits_data);
-  tb.io_debug_rb_inst_3_bits_vecWrites_3_bits_idx(io_debug_rb_inst_3_bits_vecWrites_3_bits_idx);
-  tb.io_debug_rb_inst_3_bits_vecWrites_4_valid(io_debug_rb_inst_3_bits_vecWrites_4_valid);
-  tb.io_debug_rb_inst_3_bits_vecWrites_4_bits_data(io_debug_rb_inst_3_bits_vecWrites_4_bits_data);
-  tb.io_debug_rb_inst_3_bits_vecWrites_4_bits_idx(io_debug_rb_inst_3_bits_vecWrites_4_bits_idx);
-  tb.io_debug_rb_inst_3_bits_vecWrites_5_valid(io_debug_rb_inst_3_bits_vecWrites_5_valid);
-  tb.io_debug_rb_inst_3_bits_vecWrites_5_bits_data(io_debug_rb_inst_3_bits_vecWrites_5_bits_data);
-  tb.io_debug_rb_inst_3_bits_vecWrites_5_bits_idx(io_debug_rb_inst_3_bits_vecWrites_5_bits_idx);
-  tb.io_debug_rb_inst_3_bits_vecWrites_6_valid(io_debug_rb_inst_3_bits_vecWrites_6_valid);
-  tb.io_debug_rb_inst_3_bits_vecWrites_6_bits_data(io_debug_rb_inst_3_bits_vecWrites_6_bits_data);
-  tb.io_debug_rb_inst_3_bits_vecWrites_6_bits_idx(io_debug_rb_inst_3_bits_vecWrites_6_bits_idx);
-  tb.io_debug_rb_inst_3_bits_vecWrites_7_valid(io_debug_rb_inst_3_bits_vecWrites_7_valid);
-  tb.io_debug_rb_inst_3_bits_vecWrites_7_bits_data(io_debug_rb_inst_3_bits_vecWrites_7_bits_data);
-  tb.io_debug_rb_inst_3_bits_vecWrites_7_bits_idx(io_debug_rb_inst_3_bits_vecWrites_7_bits_idx);
-tb.io_debug_rb_inst_4_valid(io_debug_rb_inst_4_valid);
-  tb.io_debug_rb_inst_4_bits_pc(io_debug_rb_inst_4_bits_pc);
-  tb.io_debug_rb_inst_4_bits_inst(io_debug_rb_inst_4_bits_inst);
-  tb.io_debug_rb_inst_4_bits_idx(io_debug_rb_inst_4_bits_idx);
-  tb.io_debug_rb_inst_4_bits_data(io_debug_rb_inst_4_bits_data);
-  tb.io_debug_rb_inst_4_bits_trap(io_debug_rb_inst_4_bits_trap);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_0_valid(io_debug_rb_inst_3_bits_vecWrites_0_valid);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_0_bits_data(io_debug_rb_inst_3_bits_vecWrites_0_bits_data);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_0_bits_idx(io_debug_rb_inst_3_bits_vecWrites_0_bits_idx);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_1_valid(io_debug_rb_inst_3_bits_vecWrites_1_valid);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_1_bits_data(io_debug_rb_inst_3_bits_vecWrites_1_bits_data);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_1_bits_idx(io_debug_rb_inst_3_bits_vecWrites_1_bits_idx);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_2_valid(io_debug_rb_inst_3_bits_vecWrites_2_valid);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_2_bits_data(io_debug_rb_inst_3_bits_vecWrites_2_bits_data);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_2_bits_idx(io_debug_rb_inst_3_bits_vecWrites_2_bits_idx);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_3_valid(io_debug_rb_inst_3_bits_vecWrites_3_valid);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_3_bits_data(io_debug_rb_inst_3_bits_vecWrites_3_bits_data);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_3_bits_idx(io_debug_rb_inst_3_bits_vecWrites_3_bits_idx);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_4_valid(io_debug_rb_inst_3_bits_vecWrites_4_valid);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_4_bits_data(io_debug_rb_inst_3_bits_vecWrites_4_bits_data);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_4_bits_idx(io_debug_rb_inst_3_bits_vecWrites_4_bits_idx);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_5_valid(io_debug_rb_inst_3_bits_vecWrites_5_valid);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_5_bits_data(io_debug_rb_inst_3_bits_vecWrites_5_bits_data);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_5_bits_idx(io_debug_rb_inst_3_bits_vecWrites_5_bits_idx);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_6_valid(io_debug_rb_inst_3_bits_vecWrites_6_valid);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_6_bits_data(io_debug_rb_inst_3_bits_vecWrites_6_bits_data);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_6_bits_idx(io_debug_rb_inst_3_bits_vecWrites_6_bits_idx);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_7_valid(io_debug_rb_inst_3_bits_vecWrites_7_valid);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_7_bits_data(io_debug_rb_inst_3_bits_vecWrites_7_bits_data);
+  testbench.io_debug_rb_inst_3_bits_vecWrites_7_bits_idx(io_debug_rb_inst_3_bits_vecWrites_7_bits_idx);
+testbench.io_debug_rb_inst_4_valid(io_debug_rb_inst_4_valid);
+  testbench.io_debug_rb_inst_4_bits_pc(io_debug_rb_inst_4_bits_pc);
+  testbench.io_debug_rb_inst_4_bits_inst(io_debug_rb_inst_4_bits_inst);
+  testbench.io_debug_rb_inst_4_bits_idx(io_debug_rb_inst_4_bits_idx);
+  testbench.io_debug_rb_inst_4_bits_data(io_debug_rb_inst_4_bits_data);
+  testbench.io_debug_rb_inst_4_bits_trap(io_debug_rb_inst_4_bits_trap);
 
-  tb.io_debug_rb_inst_4_bits_vecWrites_0_valid(io_debug_rb_inst_4_bits_vecWrites_0_valid);
-  tb.io_debug_rb_inst_4_bits_vecWrites_0_bits_data(io_debug_rb_inst_4_bits_vecWrites_0_bits_data);
-  tb.io_debug_rb_inst_4_bits_vecWrites_0_bits_idx(io_debug_rb_inst_4_bits_vecWrites_0_bits_idx);
-  tb.io_debug_rb_inst_4_bits_vecWrites_1_valid(io_debug_rb_inst_4_bits_vecWrites_1_valid);
-  tb.io_debug_rb_inst_4_bits_vecWrites_1_bits_data(io_debug_rb_inst_4_bits_vecWrites_1_bits_data);
-  tb.io_debug_rb_inst_4_bits_vecWrites_1_bits_idx(io_debug_rb_inst_4_bits_vecWrites_1_bits_idx);
-  tb.io_debug_rb_inst_4_bits_vecWrites_2_valid(io_debug_rb_inst_4_bits_vecWrites_2_valid);
-  tb.io_debug_rb_inst_4_bits_vecWrites_2_bits_data(io_debug_rb_inst_4_bits_vecWrites_2_bits_data);
-  tb.io_debug_rb_inst_4_bits_vecWrites_2_bits_idx(io_debug_rb_inst_4_bits_vecWrites_2_bits_idx);
-  tb.io_debug_rb_inst_4_bits_vecWrites_3_valid(io_debug_rb_inst_4_bits_vecWrites_3_valid);
-  tb.io_debug_rb_inst_4_bits_vecWrites_3_bits_data(io_debug_rb_inst_4_bits_vecWrites_3_bits_data);
-  tb.io_debug_rb_inst_4_bits_vecWrites_3_bits_idx(io_debug_rb_inst_4_bits_vecWrites_3_bits_idx);
-  tb.io_debug_rb_inst_4_bits_vecWrites_4_valid(io_debug_rb_inst_4_bits_vecWrites_4_valid);
-  tb.io_debug_rb_inst_4_bits_vecWrites_4_bits_data(io_debug_rb_inst_4_bits_vecWrites_4_bits_data);
-  tb.io_debug_rb_inst_4_bits_vecWrites_4_bits_idx(io_debug_rb_inst_4_bits_vecWrites_4_bits_idx);
-  tb.io_debug_rb_inst_4_bits_vecWrites_5_valid(io_debug_rb_inst_4_bits_vecWrites_5_valid);
-  tb.io_debug_rb_inst_4_bits_vecWrites_5_bits_data(io_debug_rb_inst_4_bits_vecWrites_5_bits_data);
-  tb.io_debug_rb_inst_4_bits_vecWrites_5_bits_idx(io_debug_rb_inst_4_bits_vecWrites_5_bits_idx);
-  tb.io_debug_rb_inst_4_bits_vecWrites_6_valid(io_debug_rb_inst_4_bits_vecWrites_6_valid);
-  tb.io_debug_rb_inst_4_bits_vecWrites_6_bits_data(io_debug_rb_inst_4_bits_vecWrites_6_bits_data);
-  tb.io_debug_rb_inst_4_bits_vecWrites_6_bits_idx(io_debug_rb_inst_4_bits_vecWrites_6_bits_idx);
-  tb.io_debug_rb_inst_4_bits_vecWrites_7_valid(io_debug_rb_inst_4_bits_vecWrites_7_valid);
-  tb.io_debug_rb_inst_4_bits_vecWrites_7_bits_data(io_debug_rb_inst_4_bits_vecWrites_7_bits_data);
-  tb.io_debug_rb_inst_4_bits_vecWrites_7_bits_idx(io_debug_rb_inst_4_bits_vecWrites_7_bits_idx);
-tb.io_debug_rb_inst_5_valid(io_debug_rb_inst_5_valid);
-  tb.io_debug_rb_inst_5_bits_pc(io_debug_rb_inst_5_bits_pc);
-  tb.io_debug_rb_inst_5_bits_inst(io_debug_rb_inst_5_bits_inst);
-  tb.io_debug_rb_inst_5_bits_idx(io_debug_rb_inst_5_bits_idx);
-  tb.io_debug_rb_inst_5_bits_data(io_debug_rb_inst_5_bits_data);
-  tb.io_debug_rb_inst_5_bits_trap(io_debug_rb_inst_5_bits_trap);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_0_valid(io_debug_rb_inst_4_bits_vecWrites_0_valid);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_0_bits_data(io_debug_rb_inst_4_bits_vecWrites_0_bits_data);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_0_bits_idx(io_debug_rb_inst_4_bits_vecWrites_0_bits_idx);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_1_valid(io_debug_rb_inst_4_bits_vecWrites_1_valid);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_1_bits_data(io_debug_rb_inst_4_bits_vecWrites_1_bits_data);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_1_bits_idx(io_debug_rb_inst_4_bits_vecWrites_1_bits_idx);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_2_valid(io_debug_rb_inst_4_bits_vecWrites_2_valid);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_2_bits_data(io_debug_rb_inst_4_bits_vecWrites_2_bits_data);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_2_bits_idx(io_debug_rb_inst_4_bits_vecWrites_2_bits_idx);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_3_valid(io_debug_rb_inst_4_bits_vecWrites_3_valid);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_3_bits_data(io_debug_rb_inst_4_bits_vecWrites_3_bits_data);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_3_bits_idx(io_debug_rb_inst_4_bits_vecWrites_3_bits_idx);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_4_valid(io_debug_rb_inst_4_bits_vecWrites_4_valid);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_4_bits_data(io_debug_rb_inst_4_bits_vecWrites_4_bits_data);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_4_bits_idx(io_debug_rb_inst_4_bits_vecWrites_4_bits_idx);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_5_valid(io_debug_rb_inst_4_bits_vecWrites_5_valid);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_5_bits_data(io_debug_rb_inst_4_bits_vecWrites_5_bits_data);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_5_bits_idx(io_debug_rb_inst_4_bits_vecWrites_5_bits_idx);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_6_valid(io_debug_rb_inst_4_bits_vecWrites_6_valid);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_6_bits_data(io_debug_rb_inst_4_bits_vecWrites_6_bits_data);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_6_bits_idx(io_debug_rb_inst_4_bits_vecWrites_6_bits_idx);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_7_valid(io_debug_rb_inst_4_bits_vecWrites_7_valid);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_7_bits_data(io_debug_rb_inst_4_bits_vecWrites_7_bits_data);
+  testbench.io_debug_rb_inst_4_bits_vecWrites_7_bits_idx(io_debug_rb_inst_4_bits_vecWrites_7_bits_idx);
+testbench.io_debug_rb_inst_5_valid(io_debug_rb_inst_5_valid);
+  testbench.io_debug_rb_inst_5_bits_pc(io_debug_rb_inst_5_bits_pc);
+  testbench.io_debug_rb_inst_5_bits_inst(io_debug_rb_inst_5_bits_inst);
+  testbench.io_debug_rb_inst_5_bits_idx(io_debug_rb_inst_5_bits_idx);
+  testbench.io_debug_rb_inst_5_bits_data(io_debug_rb_inst_5_bits_data);
+  testbench.io_debug_rb_inst_5_bits_trap(io_debug_rb_inst_5_bits_trap);
 
-  tb.io_debug_rb_inst_5_bits_vecWrites_0_valid(io_debug_rb_inst_5_bits_vecWrites_0_valid);
-  tb.io_debug_rb_inst_5_bits_vecWrites_0_bits_data(io_debug_rb_inst_5_bits_vecWrites_0_bits_data);
-  tb.io_debug_rb_inst_5_bits_vecWrites_0_bits_idx(io_debug_rb_inst_5_bits_vecWrites_0_bits_idx);
-  tb.io_debug_rb_inst_5_bits_vecWrites_1_valid(io_debug_rb_inst_5_bits_vecWrites_1_valid);
-  tb.io_debug_rb_inst_5_bits_vecWrites_1_bits_data(io_debug_rb_inst_5_bits_vecWrites_1_bits_data);
-  tb.io_debug_rb_inst_5_bits_vecWrites_1_bits_idx(io_debug_rb_inst_5_bits_vecWrites_1_bits_idx);
-  tb.io_debug_rb_inst_5_bits_vecWrites_2_valid(io_debug_rb_inst_5_bits_vecWrites_2_valid);
-  tb.io_debug_rb_inst_5_bits_vecWrites_2_bits_data(io_debug_rb_inst_5_bits_vecWrites_2_bits_data);
-  tb.io_debug_rb_inst_5_bits_vecWrites_2_bits_idx(io_debug_rb_inst_5_bits_vecWrites_2_bits_idx);
-  tb.io_debug_rb_inst_5_bits_vecWrites_3_valid(io_debug_rb_inst_5_bits_vecWrites_3_valid);
-  tb.io_debug_rb_inst_5_bits_vecWrites_3_bits_data(io_debug_rb_inst_5_bits_vecWrites_3_bits_data);
-  tb.io_debug_rb_inst_5_bits_vecWrites_3_bits_idx(io_debug_rb_inst_5_bits_vecWrites_3_bits_idx);
-  tb.io_debug_rb_inst_5_bits_vecWrites_4_valid(io_debug_rb_inst_5_bits_vecWrites_4_valid);
-  tb.io_debug_rb_inst_5_bits_vecWrites_4_bits_data(io_debug_rb_inst_5_bits_vecWrites_4_bits_data);
-  tb.io_debug_rb_inst_5_bits_vecWrites_4_bits_idx(io_debug_rb_inst_5_bits_vecWrites_4_bits_idx);
-  tb.io_debug_rb_inst_5_bits_vecWrites_5_valid(io_debug_rb_inst_5_bits_vecWrites_5_valid);
-  tb.io_debug_rb_inst_5_bits_vecWrites_5_bits_data(io_debug_rb_inst_5_bits_vecWrites_5_bits_data);
-  tb.io_debug_rb_inst_5_bits_vecWrites_5_bits_idx(io_debug_rb_inst_5_bits_vecWrites_5_bits_idx);
-  tb.io_debug_rb_inst_5_bits_vecWrites_6_valid(io_debug_rb_inst_5_bits_vecWrites_6_valid);
-  tb.io_debug_rb_inst_5_bits_vecWrites_6_bits_data(io_debug_rb_inst_5_bits_vecWrites_6_bits_data);
-  tb.io_debug_rb_inst_5_bits_vecWrites_6_bits_idx(io_debug_rb_inst_5_bits_vecWrites_6_bits_idx);
-  tb.io_debug_rb_inst_5_bits_vecWrites_7_valid(io_debug_rb_inst_5_bits_vecWrites_7_valid);
-  tb.io_debug_rb_inst_5_bits_vecWrites_7_bits_data(io_debug_rb_inst_5_bits_vecWrites_7_bits_data);
-  tb.io_debug_rb_inst_5_bits_vecWrites_7_bits_idx(io_debug_rb_inst_5_bits_vecWrites_7_bits_idx);
-tb.io_debug_rb_inst_6_valid(io_debug_rb_inst_6_valid);
-  tb.io_debug_rb_inst_6_bits_pc(io_debug_rb_inst_6_bits_pc);
-  tb.io_debug_rb_inst_6_bits_inst(io_debug_rb_inst_6_bits_inst);
-  tb.io_debug_rb_inst_6_bits_idx(io_debug_rb_inst_6_bits_idx);
-  tb.io_debug_rb_inst_6_bits_data(io_debug_rb_inst_6_bits_data);
-  tb.io_debug_rb_inst_6_bits_trap(io_debug_rb_inst_6_bits_trap);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_0_valid(io_debug_rb_inst_5_bits_vecWrites_0_valid);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_0_bits_data(io_debug_rb_inst_5_bits_vecWrites_0_bits_data);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_0_bits_idx(io_debug_rb_inst_5_bits_vecWrites_0_bits_idx);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_1_valid(io_debug_rb_inst_5_bits_vecWrites_1_valid);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_1_bits_data(io_debug_rb_inst_5_bits_vecWrites_1_bits_data);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_1_bits_idx(io_debug_rb_inst_5_bits_vecWrites_1_bits_idx);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_2_valid(io_debug_rb_inst_5_bits_vecWrites_2_valid);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_2_bits_data(io_debug_rb_inst_5_bits_vecWrites_2_bits_data);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_2_bits_idx(io_debug_rb_inst_5_bits_vecWrites_2_bits_idx);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_3_valid(io_debug_rb_inst_5_bits_vecWrites_3_valid);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_3_bits_data(io_debug_rb_inst_5_bits_vecWrites_3_bits_data);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_3_bits_idx(io_debug_rb_inst_5_bits_vecWrites_3_bits_idx);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_4_valid(io_debug_rb_inst_5_bits_vecWrites_4_valid);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_4_bits_data(io_debug_rb_inst_5_bits_vecWrites_4_bits_data);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_4_bits_idx(io_debug_rb_inst_5_bits_vecWrites_4_bits_idx);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_5_valid(io_debug_rb_inst_5_bits_vecWrites_5_valid);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_5_bits_data(io_debug_rb_inst_5_bits_vecWrites_5_bits_data);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_5_bits_idx(io_debug_rb_inst_5_bits_vecWrites_5_bits_idx);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_6_valid(io_debug_rb_inst_5_bits_vecWrites_6_valid);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_6_bits_data(io_debug_rb_inst_5_bits_vecWrites_6_bits_data);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_6_bits_idx(io_debug_rb_inst_5_bits_vecWrites_6_bits_idx);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_7_valid(io_debug_rb_inst_5_bits_vecWrites_7_valid);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_7_bits_data(io_debug_rb_inst_5_bits_vecWrites_7_bits_data);
+  testbench.io_debug_rb_inst_5_bits_vecWrites_7_bits_idx(io_debug_rb_inst_5_bits_vecWrites_7_bits_idx);
+testbench.io_debug_rb_inst_6_valid(io_debug_rb_inst_6_valid);
+  testbench.io_debug_rb_inst_6_bits_pc(io_debug_rb_inst_6_bits_pc);
+  testbench.io_debug_rb_inst_6_bits_inst(io_debug_rb_inst_6_bits_inst);
+  testbench.io_debug_rb_inst_6_bits_idx(io_debug_rb_inst_6_bits_idx);
+  testbench.io_debug_rb_inst_6_bits_data(io_debug_rb_inst_6_bits_data);
+  testbench.io_debug_rb_inst_6_bits_trap(io_debug_rb_inst_6_bits_trap);
 
-  tb.io_debug_rb_inst_6_bits_vecWrites_0_valid(io_debug_rb_inst_6_bits_vecWrites_0_valid);
-  tb.io_debug_rb_inst_6_bits_vecWrites_0_bits_data(io_debug_rb_inst_6_bits_vecWrites_0_bits_data);
-  tb.io_debug_rb_inst_6_bits_vecWrites_0_bits_idx(io_debug_rb_inst_6_bits_vecWrites_0_bits_idx);
-  tb.io_debug_rb_inst_6_bits_vecWrites_1_valid(io_debug_rb_inst_6_bits_vecWrites_1_valid);
-  tb.io_debug_rb_inst_6_bits_vecWrites_1_bits_data(io_debug_rb_inst_6_bits_vecWrites_1_bits_data);
-  tb.io_debug_rb_inst_6_bits_vecWrites_1_bits_idx(io_debug_rb_inst_6_bits_vecWrites_1_bits_idx);
-  tb.io_debug_rb_inst_6_bits_vecWrites_2_valid(io_debug_rb_inst_6_bits_vecWrites_2_valid);
-  tb.io_debug_rb_inst_6_bits_vecWrites_2_bits_data(io_debug_rb_inst_6_bits_vecWrites_2_bits_data);
-  tb.io_debug_rb_inst_6_bits_vecWrites_2_bits_idx(io_debug_rb_inst_6_bits_vecWrites_2_bits_idx);
-  tb.io_debug_rb_inst_6_bits_vecWrites_3_valid(io_debug_rb_inst_6_bits_vecWrites_3_valid);
-  tb.io_debug_rb_inst_6_bits_vecWrites_3_bits_data(io_debug_rb_inst_6_bits_vecWrites_3_bits_data);
-  tb.io_debug_rb_inst_6_bits_vecWrites_3_bits_idx(io_debug_rb_inst_6_bits_vecWrites_3_bits_idx);
-  tb.io_debug_rb_inst_6_bits_vecWrites_4_valid(io_debug_rb_inst_6_bits_vecWrites_4_valid);
-  tb.io_debug_rb_inst_6_bits_vecWrites_4_bits_data(io_debug_rb_inst_6_bits_vecWrites_4_bits_data);
-  tb.io_debug_rb_inst_6_bits_vecWrites_4_bits_idx(io_debug_rb_inst_6_bits_vecWrites_4_bits_idx);
-  tb.io_debug_rb_inst_6_bits_vecWrites_5_valid(io_debug_rb_inst_6_bits_vecWrites_5_valid);
-  tb.io_debug_rb_inst_6_bits_vecWrites_5_bits_data(io_debug_rb_inst_6_bits_vecWrites_5_bits_data);
-  tb.io_debug_rb_inst_6_bits_vecWrites_5_bits_idx(io_debug_rb_inst_6_bits_vecWrites_5_bits_idx);
-  tb.io_debug_rb_inst_6_bits_vecWrites_6_valid(io_debug_rb_inst_6_bits_vecWrites_6_valid);
-  tb.io_debug_rb_inst_6_bits_vecWrites_6_bits_data(io_debug_rb_inst_6_bits_vecWrites_6_bits_data);
-  tb.io_debug_rb_inst_6_bits_vecWrites_6_bits_idx(io_debug_rb_inst_6_bits_vecWrites_6_bits_idx);
-  tb.io_debug_rb_inst_6_bits_vecWrites_7_valid(io_debug_rb_inst_6_bits_vecWrites_7_valid);
-  tb.io_debug_rb_inst_6_bits_vecWrites_7_bits_data(io_debug_rb_inst_6_bits_vecWrites_7_bits_data);
-  tb.io_debug_rb_inst_6_bits_vecWrites_7_bits_idx(io_debug_rb_inst_6_bits_vecWrites_7_bits_idx);
-tb.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
-  tb.io_debug_rb_inst_7_bits_pc(io_debug_rb_inst_7_bits_pc);
-  tb.io_debug_rb_inst_7_bits_inst(io_debug_rb_inst_7_bits_inst);
-  tb.io_debug_rb_inst_7_bits_idx(io_debug_rb_inst_7_bits_idx);
-  tb.io_debug_rb_inst_7_bits_data(io_debug_rb_inst_7_bits_data);
-  tb.io_debug_rb_inst_7_bits_trap(io_debug_rb_inst_7_bits_trap);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_0_valid(io_debug_rb_inst_6_bits_vecWrites_0_valid);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_0_bits_data(io_debug_rb_inst_6_bits_vecWrites_0_bits_data);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_0_bits_idx(io_debug_rb_inst_6_bits_vecWrites_0_bits_idx);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_1_valid(io_debug_rb_inst_6_bits_vecWrites_1_valid);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_1_bits_data(io_debug_rb_inst_6_bits_vecWrites_1_bits_data);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_1_bits_idx(io_debug_rb_inst_6_bits_vecWrites_1_bits_idx);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_2_valid(io_debug_rb_inst_6_bits_vecWrites_2_valid);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_2_bits_data(io_debug_rb_inst_6_bits_vecWrites_2_bits_data);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_2_bits_idx(io_debug_rb_inst_6_bits_vecWrites_2_bits_idx);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_3_valid(io_debug_rb_inst_6_bits_vecWrites_3_valid);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_3_bits_data(io_debug_rb_inst_6_bits_vecWrites_3_bits_data);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_3_bits_idx(io_debug_rb_inst_6_bits_vecWrites_3_bits_idx);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_4_valid(io_debug_rb_inst_6_bits_vecWrites_4_valid);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_4_bits_data(io_debug_rb_inst_6_bits_vecWrites_4_bits_data);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_4_bits_idx(io_debug_rb_inst_6_bits_vecWrites_4_bits_idx);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_5_valid(io_debug_rb_inst_6_bits_vecWrites_5_valid);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_5_bits_data(io_debug_rb_inst_6_bits_vecWrites_5_bits_data);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_5_bits_idx(io_debug_rb_inst_6_bits_vecWrites_5_bits_idx);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_6_valid(io_debug_rb_inst_6_bits_vecWrites_6_valid);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_6_bits_data(io_debug_rb_inst_6_bits_vecWrites_6_bits_data);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_6_bits_idx(io_debug_rb_inst_6_bits_vecWrites_6_bits_idx);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_7_valid(io_debug_rb_inst_6_bits_vecWrites_7_valid);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_7_bits_data(io_debug_rb_inst_6_bits_vecWrites_7_bits_data);
+  testbench.io_debug_rb_inst_6_bits_vecWrites_7_bits_idx(io_debug_rb_inst_6_bits_vecWrites_7_bits_idx);
+testbench.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
+  testbench.io_debug_rb_inst_7_bits_pc(io_debug_rb_inst_7_bits_pc);
+  testbench.io_debug_rb_inst_7_bits_inst(io_debug_rb_inst_7_bits_inst);
+  testbench.io_debug_rb_inst_7_bits_idx(io_debug_rb_inst_7_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_data(io_debug_rb_inst_7_bits_data);
+  testbench.io_debug_rb_inst_7_bits_trap(io_debug_rb_inst_7_bits_trap);
 
-  tb.io_debug_rb_inst_7_bits_vecWrites_0_valid(io_debug_rb_inst_7_bits_vecWrites_0_valid);
-  tb.io_debug_rb_inst_7_bits_vecWrites_0_bits_data(io_debug_rb_inst_7_bits_vecWrites_0_bits_data);
-  tb.io_debug_rb_inst_7_bits_vecWrites_0_bits_idx(io_debug_rb_inst_7_bits_vecWrites_0_bits_idx);
-  tb.io_debug_rb_inst_7_bits_vecWrites_1_valid(io_debug_rb_inst_7_bits_vecWrites_1_valid);
-  tb.io_debug_rb_inst_7_bits_vecWrites_1_bits_data(io_debug_rb_inst_7_bits_vecWrites_1_bits_data);
-  tb.io_debug_rb_inst_7_bits_vecWrites_1_bits_idx(io_debug_rb_inst_7_bits_vecWrites_1_bits_idx);
-  tb.io_debug_rb_inst_7_bits_vecWrites_2_valid(io_debug_rb_inst_7_bits_vecWrites_2_valid);
-  tb.io_debug_rb_inst_7_bits_vecWrites_2_bits_data(io_debug_rb_inst_7_bits_vecWrites_2_bits_data);
-  tb.io_debug_rb_inst_7_bits_vecWrites_2_bits_idx(io_debug_rb_inst_7_bits_vecWrites_2_bits_idx);
-  tb.io_debug_rb_inst_7_bits_vecWrites_3_valid(io_debug_rb_inst_7_bits_vecWrites_3_valid);
-  tb.io_debug_rb_inst_7_bits_vecWrites_3_bits_data(io_debug_rb_inst_7_bits_vecWrites_3_bits_data);
-  tb.io_debug_rb_inst_7_bits_vecWrites_3_bits_idx(io_debug_rb_inst_7_bits_vecWrites_3_bits_idx);
-  tb.io_debug_rb_inst_7_bits_vecWrites_4_valid(io_debug_rb_inst_7_bits_vecWrites_4_valid);
-  tb.io_debug_rb_inst_7_bits_vecWrites_4_bits_data(io_debug_rb_inst_7_bits_vecWrites_4_bits_data);
-  tb.io_debug_rb_inst_7_bits_vecWrites_4_bits_idx(io_debug_rb_inst_7_bits_vecWrites_4_bits_idx);
-  tb.io_debug_rb_inst_7_bits_vecWrites_5_valid(io_debug_rb_inst_7_bits_vecWrites_5_valid);
-  tb.io_debug_rb_inst_7_bits_vecWrites_5_bits_data(io_debug_rb_inst_7_bits_vecWrites_5_bits_data);
-  tb.io_debug_rb_inst_7_bits_vecWrites_5_bits_idx(io_debug_rb_inst_7_bits_vecWrites_5_bits_idx);
-  tb.io_debug_rb_inst_7_bits_vecWrites_6_valid(io_debug_rb_inst_7_bits_vecWrites_6_valid);
-  tb.io_debug_rb_inst_7_bits_vecWrites_6_bits_data(io_debug_rb_inst_7_bits_vecWrites_6_bits_data);
-  tb.io_debug_rb_inst_7_bits_vecWrites_6_bits_idx(io_debug_rb_inst_7_bits_vecWrites_6_bits_idx);
-  tb.io_debug_rb_inst_7_bits_vecWrites_7_valid(io_debug_rb_inst_7_bits_vecWrites_7_valid);
-  tb.io_debug_rb_inst_7_bits_vecWrites_7_bits_data(io_debug_rb_inst_7_bits_vecWrites_7_bits_data);
-  tb.io_debug_rb_inst_7_bits_vecWrites_7_bits_idx(io_debug_rb_inst_7_bits_vecWrites_7_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_0_valid(io_debug_rb_inst_7_bits_vecWrites_0_valid);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_0_bits_data(io_debug_rb_inst_7_bits_vecWrites_0_bits_data);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_0_bits_idx(io_debug_rb_inst_7_bits_vecWrites_0_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_1_valid(io_debug_rb_inst_7_bits_vecWrites_1_valid);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_1_bits_data(io_debug_rb_inst_7_bits_vecWrites_1_bits_data);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_1_bits_idx(io_debug_rb_inst_7_bits_vecWrites_1_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_2_valid(io_debug_rb_inst_7_bits_vecWrites_2_valid);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_2_bits_data(io_debug_rb_inst_7_bits_vecWrites_2_bits_data);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_2_bits_idx(io_debug_rb_inst_7_bits_vecWrites_2_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_3_valid(io_debug_rb_inst_7_bits_vecWrites_3_valid);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_3_bits_data(io_debug_rb_inst_7_bits_vecWrites_3_bits_data);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_3_bits_idx(io_debug_rb_inst_7_bits_vecWrites_3_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_4_valid(io_debug_rb_inst_7_bits_vecWrites_4_valid);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_4_bits_data(io_debug_rb_inst_7_bits_vecWrites_4_bits_data);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_4_bits_idx(io_debug_rb_inst_7_bits_vecWrites_4_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_5_valid(io_debug_rb_inst_7_bits_vecWrites_5_valid);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_5_bits_data(io_debug_rb_inst_7_bits_vecWrites_5_bits_data);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_5_bits_idx(io_debug_rb_inst_7_bits_vecWrites_5_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_6_valid(io_debug_rb_inst_7_bits_vecWrites_6_valid);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_6_bits_data(io_debug_rb_inst_7_bits_vecWrites_6_bits_data);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_6_bits_idx(io_debug_rb_inst_7_bits_vecWrites_6_bits_idx);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_7_valid(io_debug_rb_inst_7_bits_vecWrites_7_valid);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_7_bits_data(io_debug_rb_inst_7_bits_vecWrites_7_bits_data);
+  testbench.io_debug_rb_inst_7_bits_vecWrites_7_bits_idx(io_debug_rb_inst_7_bits_vecWrites_7_bits_idx);
 
 
-  core.clock(tb.clock);
-  core.reset(tb.reset);
+  core.clock(testbench.clock);
+  core.reset(testbench.reset);
   core.io_halted(io_halted);
   core.io_fault(io_fault);
   core.io_wfi(io_wfi);
@@ -1696,35 +1697,35 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
 #undef INIT_CSR_IN
 
 
-  mif.clock(tb.clock);
-  mif.reset(tb.reset);
-  mif.io_ibus_valid(io_ibus_valid);
-  mif.io_ibus_ready(io_ibus_ready);
-  mif.io_ibus_addr(io_ibus_addr);
-  mif.io_ibus_rdata(io_ibus_rdata);
-  mif.io_dbus_valid(io_dbus_valid);
-  mif.io_dbus_ready(io_dbus_ready);
-  mif.io_dbus_write(io_dbus_write);
-  mif.io_dbus_addr(io_dbus_addr);
-  mif.io_dbus_adrx(io_dbus_adrx);
-  mif.io_dbus_size(io_dbus_size);
-  mif.io_dbus_wdata(io_dbus_wdata);
-  mif.io_dbus_wmask(io_dbus_wmask);
-  mif.io_dbus_rdata(io_dbus_rdata);
-  mif.io_ibus_fault_valid(io_ibus_fault_valid);
-  mif.io_ibus_fault_bits_write(io_ibus_fault_bits_write);
-  mif.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
-  mif.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
-  mif.io_ebus_fault_valid(io_ebus_fault_valid);
-  mif.io_ebus_fault_bits_write(io_ebus_fault_bits_write);
-  mif.io_ebus_fault_bits_addr(io_ebus_fault_bits_addr);
-  mif.io_ebus_fault_bits_epc(io_ebus_fault_bits_epc);
+  memory_interface.clock(testbench.clock);
+  memory_interface.reset(testbench.reset);
+  memory_interface.io_ibus_valid(io_ibus_valid);
+  memory_interface.io_ibus_ready(io_ibus_ready);
+  memory_interface.io_ibus_addr(io_ibus_addr);
+  memory_interface.io_ibus_rdata(io_ibus_rdata);
+  memory_interface.io_dbus_valid(io_dbus_valid);
+  memory_interface.io_dbus_ready(io_dbus_ready);
+  memory_interface.io_dbus_write(io_dbus_write);
+  memory_interface.io_dbus_addr(io_dbus_addr);
+  memory_interface.io_dbus_adrx(io_dbus_adrx);
+  memory_interface.io_dbus_size(io_dbus_size);
+  memory_interface.io_dbus_wdata(io_dbus_wdata);
+  memory_interface.io_dbus_wmask(io_dbus_wmask);
+  memory_interface.io_dbus_rdata(io_dbus_rdata);
+  memory_interface.io_ibus_fault_valid(io_ibus_fault_valid);
+  memory_interface.io_ibus_fault_bits_write(io_ibus_fault_bits_write);
+  memory_interface.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
+  memory_interface.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
+  memory_interface.io_ebus_fault_valid(io_ebus_fault_valid);
+  memory_interface.io_ebus_fault_bits_write(io_ebus_fault_bits_write);
+  memory_interface.io_ebus_fault_bits_addr(io_ebus_fault_bits_addr);
+  memory_interface.io_ebus_fault_bits_epc(io_ebus_fault_bits_epc);
 
   if (trace) {
-    tb.trace(&core);
+    testbench.trace(&core);
   }
 
-  tb.start();
+  testbench.start();
 
 #if TRACE_ENABLED
   // Wait for buffer to drain
@@ -1740,26 +1741,26 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   daemon.Stop();
 #endif
 
-  if (io_halted.read() || tb.ebreak_halt) {
+  if (io_halted.read() || testbench.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
   }
 
-  if (tb.cycle() >= static_cast<uint32_t>(instruction_limit)) {
-    fprintf(stderr, "Simulation TIMEOUT after %u cycles.\n", tb.cycle());
+  if (testbench.cycle() >= static_cast<uint32_t>(instruction_limit)) {
+    fprintf(stderr, "Simulation TIMEOUT after %u cycles.\n", testbench.cycle());
     return 124;
   }
 
-  if (tb.instruction_count >= tb.instruction_limit) {
-    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
+  if (testbench.instruction_count >= testbench.instruction_limit) {
+    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", testbench.instruction_count);
     return 124;
   }
 
-  if (mif.pending_exit_code() != 0) {
-    return mif.pending_exit_code();
+  if (memory_interface.pending_exit_code() != 0) {
+    return memory_interface.pending_exit_code();
   }
 
-  if (tb.had_io_fault) {
+  if (testbench.had_io_fault) {
     fprintf(stderr, "Simulation failed due to io_fault.\n");
     return 1;
   }

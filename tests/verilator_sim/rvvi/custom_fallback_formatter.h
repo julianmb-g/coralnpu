@@ -36,14 +36,14 @@ class CustomFallbackFormatter : public TraceFormatterInterface {
     uint32_t rs1 = (inst >> 15) & 0x1f;
     uint32_t rs2 = (inst >> 20) & 0x1f;
 
-    auto reg_name = [](uint32_t r) {
+    auto reg_name = [](uint32_t reg) {
       static const char* kRegNames[] = {
         "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
         "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
         "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
         "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
       };
-      return kRegNames[r & 31];
+      return kRegNames[reg & 31];
     };
 
     if (opcode == 0x13) { // OP-IMM

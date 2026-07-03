@@ -18,6 +18,7 @@
 #include "tests/verilator_sim/rvvi/trace_formatter_interface.h"
 #include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
 #include <iostream>
+#include <string>
 
 namespace mpact::sim::riscv::rvvi {
 

@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <limits>
+#include <string>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -136,7 +137,7 @@ struct Core_tb : Sysc_tb {
   }
 };
 
-bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry_point) {
+bool LoadElfToMemory(const std::string& file_name, Core_if& memory_interface, uint32_t& entry_point) {
   int fd = open(file_name.c_str(), O_RDONLY);
   if (fd < 0) {
     fprintf(stderr, "Failed to open ELF file: %s\n", file_name.c_str());
@@ -160,10 +161,10 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry
   bool load_ok = true;
   if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
     entry_point = ::LoadElf(data8,
-              [&mif, &load_ok](void* dest, const void* src, size_t count) {
+              [&memory_interface, &load_ok](void* dest, const void* src, size_t count) {
                 uint64_t addr = reinterpret_cast<uint64_t>(dest);
-                if (!mif.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
-                  LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08lx - 0x%08lx]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + count, mif.GetProfileBounds(), mif.GetOverflowDelta(addr, count));
+                if (!memory_interface.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
+                  LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08lx - 0x%08lx]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + count, memory_interface.GetProfileBounds(), memory_interface.GetOverflowDelta(addr, count));
                   load_ok = false;
                 }
                 return dest;
@@ -178,11 +179,11 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& mif, uint32_t& entry
 static int Core_run(const char* name, const char* bin, const int instruction_limit,
                      const bool trace, const std::string& memory_profile) {
   VERILATOR_MODEL core(name);
-  Core_tb tb("Core_tb", instruction_limit, /* random= */ false);
-  Core_if mif("Core_if", nullptr, memory_profile); // nullptr since we will load ELF
+  Core_tb testbench("Core_tb", instruction_limit, /* random= */ false);
+  Core_if memory_interface("Core_if", /* bin= */ nullptr, memory_profile); // nullptr since we will load ELF
 
   uint32_t entry_point = 0x00000000;
-  if (!LoadElfToMemory(bin, mif, entry_point)) {
+  if (!LoadElfToMemory(bin, memory_interface, entry_point)) {
     fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
     exit(65);
   }
@@ -392,20 +393,20 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   REPEAT_13(INIT_CSR_IN);
 #undef INIT_CSR_IN
 
-  tb.io_halted(io_halted);
-  tb.io_fault(io_fault);
-  tb.io_ibus_valid(io_ibus_valid);
+  testbench.io_halted(io_halted);
+  testbench.io_fault(io_fault);
+  testbench.io_ibus_valid(io_ibus_valid);
 
-#define BIND_RB_VALID(x) tb.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid);
+#define BIND_RB_VALID(x) testbench.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid);
   REPEAT_8(BIND_RB_VALID);
 #undef BIND_RB_VALID
 
-#define BIND_RB_INST(x) tb.io_debug_rb_inst_##x##_bits_inst(io_debug_rb_inst_##x##_bits_inst);
+#define BIND_RB_INST(x) testbench.io_debug_rb_inst_##x##_bits_inst(io_debug_rb_inst_##x##_bits_inst);
   REPEAT_8(BIND_RB_INST);
 #undef BIND_RB_INST
 
-  core.clock(tb.clock);
-  core.reset(tb.reset);
+  core.clock(testbench.clock);
+  core.reset(testbench.reset);
   core.io_halted(io_halted);
   core.io_fault(io_fault);
   core.io_wfi(io_wfi);
@@ -577,53 +578,53 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   REPEAT_4(BIND_DEBUG_DISPATCH);
 #undef BIND_DEBUG_DISPATCH
 
-  mif.clock(tb.clock);
-  mif.reset(tb.reset);
-  mif.io_ibus_valid(io_ibus_valid);
-  mif.io_ibus_ready(io_ibus_ready);
-  mif.io_ibus_addr(io_ibus_addr);
-  mif.io_ibus_rdata(io_ibus_rdata);
-  mif.io_dbus_valid(io_dbus_valid);
-  mif.io_dbus_ready(io_dbus_ready);
-  mif.io_dbus_write(io_dbus_write);
-  mif.io_dbus_addr(io_dbus_addr);
-  mif.io_dbus_adrx(io_dbus_adrx);
-  mif.io_dbus_size(io_dbus_size);
-  mif.io_dbus_wdata(io_dbus_wdata);
-  mif.io_dbus_wmask(io_dbus_wmask);
-  mif.io_dbus_rdata(io_dbus_rdata);
-  mif.io_ibus_fault_valid(io_ibus_fault_valid);
-  mif.io_ibus_fault_bits_write(io_ibus_fault_bits_write);
-  mif.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
-  mif.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
-  mif.io_ebus_fault_valid(io_ebus_fault_valid);
-  mif.io_ebus_fault_bits_write(io_ebus_fault_bits_write);
-  mif.io_ebus_fault_bits_addr(io_ebus_fault_bits_addr);
-  mif.io_ebus_fault_bits_epc(io_ebus_fault_bits_epc);
+  memory_interface.clock(testbench.clock);
+  memory_interface.reset(testbench.reset);
+  memory_interface.io_ibus_valid(io_ibus_valid);
+  memory_interface.io_ibus_ready(io_ibus_ready);
+  memory_interface.io_ibus_addr(io_ibus_addr);
+  memory_interface.io_ibus_rdata(io_ibus_rdata);
+  memory_interface.io_dbus_valid(io_dbus_valid);
+  memory_interface.io_dbus_ready(io_dbus_ready);
+  memory_interface.io_dbus_write(io_dbus_write);
+  memory_interface.io_dbus_addr(io_dbus_addr);
+  memory_interface.io_dbus_adrx(io_dbus_adrx);
+  memory_interface.io_dbus_size(io_dbus_size);
+  memory_interface.io_dbus_wdata(io_dbus_wdata);
+  memory_interface.io_dbus_wmask(io_dbus_wmask);
+  memory_interface.io_dbus_rdata(io_dbus_rdata);
+  memory_interface.io_ibus_fault_valid(io_ibus_fault_valid);
+  memory_interface.io_ibus_fault_bits_write(io_ibus_fault_bits_write);
+  memory_interface.io_ibus_fault_bits_addr(io_ibus_fault_bits_addr);
+  memory_interface.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
+  memory_interface.io_ebus_fault_valid(io_ebus_fault_valid);
+  memory_interface.io_ebus_fault_bits_write(io_ebus_fault_bits_write);
+  memory_interface.io_ebus_fault_bits_addr(io_ebus_fault_bits_addr);
+  memory_interface.io_ebus_fault_bits_epc(io_ebus_fault_bits_epc);
 
   if (trace) {
-    tb.trace(&core);
+    testbench.trace(&core);
   }
 
-  tb.start();
+  testbench.start();
 
-  if (io_halted.read() || tb.ebreak_halt) {
+  if (io_halted.read() || testbench.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
   }
 
-  if (tb.cycle() >= static_cast<uint32_t>(instruction_limit)) {
-    fprintf(stderr, "Simulation TIMEOUT after %u cycles.\n", tb.cycle());
+  if (testbench.cycle() >= static_cast<uint32_t>(instruction_limit)) {
+    fprintf(stderr, "Simulation TIMEOUT after %u cycles.\n", testbench.cycle());
     return 124;
   }
 
-  if (tb.instruction_count >= tb.instruction_limit) {
-    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", tb.instruction_count);
+  if (testbench.instruction_count >= testbench.instruction_limit) {
+    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", testbench.instruction_count);
     return 124;
   }
 
-  if (mif.pending_exit_code() != 0) {
-    return mif.pending_exit_code();
+  if (memory_interface.pending_exit_code() != 0) {
+    return memory_interface.pending_exit_code();
   }
 
   fprintf(stderr, "Simulation TIMEOUT after %d instructions.\n", instruction_limit);

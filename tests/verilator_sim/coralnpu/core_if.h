@@ -68,7 +68,7 @@ struct Core_if : Memory_if {
   sc_out<sc_bv<32>> io_ebus_fault_bits_addr;
   sc_out<sc_bv<32>> io_ebus_fault_bits_epc;
 
-  Core_if(sc_module_name n, const char* bin, const std::string& profile = "all") : Memory_if(n, bin, -1, profile) {
+  Core_if(sc_module_name n, const char* bin, const std::string& profile = "all") : Memory_if(n, bin, /* limit= */ -1, profile) {
     for (int i = 0; i < KP_lsuDataBits / 32; ++i) {
       runused_.set_word(i, 0);
     }

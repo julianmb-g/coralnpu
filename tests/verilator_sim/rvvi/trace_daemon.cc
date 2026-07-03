@@ -17,6 +17,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 
 namespace mpact::sim::riscv::rvvi {
 
@@ -227,48 +228,48 @@ void TraceDaemon<VLEN, MAX_UPDATES>::ProcessPacket(const TracePacket& packet) {
   }
 
   if (packet.type == 'R') {
-    RegisterUpdate* ru = nullptr;
+    RegisterUpdate* register_update = nullptr;
     for (size_t i = 0; i < num_accumulated_updates_; ++i) {
       if (accumulated_updates_[i].reg_type == packet.reg.reg_type && 
           accumulated_updates_[i].index == packet.reg.index) {
-        ru = &accumulated_updates_[i];
+        register_update = &accumulated_updates_[i];
         break;
       }
     }
 
-    if (!ru) {
+    if (!register_update) {
       if (num_accumulated_updates_ >= kMaxAccumulatedUpdates) {
         fprintf(stderr, "[FATAL] Trace reassembly error: num_accumulated_updates_ (%zu) exceeds kMaxAccumulatedUpdates (%d). Buffer overflow.\n",
                 num_accumulated_updates_, kMaxAccumulatedUpdates);
         std::exit(1);
       }
       if (packet.reg.total_size > sizeof(RegisterUpdate::data)) {
-        fprintf(stderr, "[FATAL] Trace reassembly error: packet.reg.total_size (%d) exceeds ru->data size (%zu).\n",
+        fprintf(stderr, "[FATAL] Trace reassembly error: packet.reg.total_size (%d) exceeds register_update->data size (%zu).\n",
                 packet.reg.total_size, sizeof(RegisterUpdate::data));
         std::exit(1);
       }
-      ru = &accumulated_updates_[num_accumulated_updates_++];
-      ru->reg_type = packet.reg.reg_type;
-      ru->index = packet.reg.index;
-      ru->total_size = packet.reg.total_size;
-      ru->received_chunks_mask = 0;
-      std::memset(ru->data, 0, sizeof(ru->data));
+      register_update = &accumulated_updates_[num_accumulated_updates_++];
+      register_update->reg_type = packet.reg.reg_type;
+      register_update->index = packet.reg.index;
+      register_update->total_size = packet.reg.total_size;
+      register_update->received_chunks_mask = 0;
+      std::memset(register_update->data, 0, sizeof(register_update->data));
     }
 
-    if (ru) {
+    if (register_update) {
       size_t size = packet.reg.size;
       size_t offset = packet.reg.offset;
-      if (offset + size <= sizeof(ru->data) && offset + size <= ru->total_size) {
+      if (offset + size <= sizeof(register_update->data) && offset + size <= register_update->total_size) {
         uint32_t chunk_idx = offset / 32;
-        if (ru->received_chunks_mask & (1ULL << chunk_idx)) {
+        if (register_update->received_chunks_mask & (1ULL << chunk_idx)) {
           fprintf(stderr, "[WARNING] Trace reassembly error: Duplicate chunk %d for %c%d at v_id %u\n",
-                  chunk_idx, ru->reg_type, ru->index, packet.v_id);
+                  chunk_idx, register_update->reg_type, register_update->index, packet.v_id);
         }
-        std::memcpy(ru->data + offset, packet.reg.value, size);
-        ru->received_chunks_mask |= (1ULL << chunk_idx);
+        std::memcpy(register_update->data + offset, packet.reg.value, size);
+        register_update->received_chunks_mask |= (1ULL << chunk_idx);
       } else {
         fprintf(stderr, "[FATAL] Trace reassembly error: Invalid offset %zu + size %zu for %c%d. Max offset: %zu, Total Size: %d. Packet discarded.\n",
-                offset, size, ru->reg_type, ru->index, sizeof(ru->data), ru->total_size);
+                offset, size, register_update->reg_type, register_update->index, sizeof(register_update->data), register_update->total_size);
         std::exit(1);
       }
     }

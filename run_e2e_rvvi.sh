@@ -85,17 +85,17 @@ if [ "$(grep -c "rvvi" trace.rvvi)" -lt 10 ]; then
 fi
 
 echo "Checking boundary vector registers v0-v4 and their sizes..."
-for r in v0 v1 v2 v3 v4; do
-  if ! grep -Eq ",${r}:[0-9a-fA-F]{32}" trace.rvvi; then
-    echo "Trace file trace.rvvi is missing boundary vector register update or has invalid size: ${r}"
+for reg_name in v0 v1 v2 v3 v4; do
+  if ! grep -Eq ",${reg_name}:[0-9a-fA-F]{32}" trace.rvvi; then
+    echo "Trace file trace.rvvi is missing boundary vector register update or has invalid size: ${reg_name}"
     exit 1
   fi
 done
 
 echo "Checking boundary FPR register f0 and f1..."
-for r in f0 f1; do
-  if ! grep -Eq ",${r}:[0-9a-fA-F]{8}" trace_float.rvvi; then
-    echo "Trace file trace_float.rvvi is missing boundary FPR register update or has invalid size: ${r}"
+for reg_name in f0 f1; do
+  if ! grep -Eq ",${reg_name}:[0-9a-fA-F]{8}" trace_float.rvvi; then
+    echo "Trace file trace_float.rvvi is missing boundary FPR register update or has invalid size: ${reg_name}"
     exit 1
   fi
 done

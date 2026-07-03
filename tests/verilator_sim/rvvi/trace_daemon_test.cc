@@ -268,7 +268,7 @@ TEST_F(TraceDaemonTest, ExceedsMaxChunkCount) {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     daemon.Stop();
     std::exit(0); // Should be unreachable
-  }, ::testing::ExitedWithCode(1), "exceeds ru->data size");
+  }, ::testing::ExitedWithCode(1), "exceeds register_update->data size");
 }
 
 TEST_F(TraceDaemonTest, IncompleteChunkSequenceDiscarded) {

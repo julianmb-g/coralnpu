@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     std::string arg = argv[i];
     if (arg == "--address") {
       if (i + 1 < argc) {
-        load_address = std::stoul(argv[i+1], nullptr, 16);
+        load_address = std::strtoul(argv[i+1], nullptr, 16);
         i += 1;
       } else {
         std::cerr << "--address requires <hex>" << std::endl;
@@ -25,8 +25,8 @@ int main(int argc, char* argv[]) {
       }
     } else if (arg == "--repeat") {
       if (i + 2 < argc) {
-        uint32_t count = std::stoul(argv[i+1]);
-        uint32_t inst = std::stoul(argv[i+2], nullptr, 16);
+        uint32_t count = std::strtoul(argv[i+1], nullptr, 10);
+        uint32_t inst = std::strtoul(argv[i+2], nullptr, 16);
         for (uint32_t c = 0; c < count; ++c) {
           payload.push_back(inst);
         }
@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
         return 1;
       }
     } else {
-      payload.push_back(std::stoul(arg, nullptr, 16));
+      payload.push_back(std::strtoul(arg.c_str(), nullptr, 16));
     }
   }
 
@@ -74,9 +74,9 @@ int main(int argc, char* argv[]) {
   phdr.p_flags = PF_R | PF_X;
   phdr.p_align = 4;
 
-  std::ofstream ofs(argv[1], std::ios::binary);
-  ofs.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr));
-  ofs.write(reinterpret_cast<const char*>(&phdr), sizeof(phdr));
-  ofs.write(reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(uint32_t));
+  std::ofstream output_file_stream(argv[1], std::ios::binary);
+  output_file_stream.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr));
+  output_file_stream.write(reinterpret_cast<const char*>(&phdr), sizeof(phdr));
+  output_file_stream.write(reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(uint32_t));
   return 0;
 }
