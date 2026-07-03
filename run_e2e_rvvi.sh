@@ -30,6 +30,17 @@ else
   bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out="$PWD/trace_float.rvvi" "$PWD/float_test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_float_sim.log" || exit 1
 fi
 
+echo "Checking RVVI trace output for scalar GPR writes (OP-IMM)..."
+if ! grep -Eq ",[0-9a-fA-F]{6}13," trace.rvvi; then
+  echo "Trace file missing OP-IMM instructions (opcode 13)"
+  exit 1
+fi
+
+if ! grep -Eq ",[0-9a-fA-F]{6}13,.*,x[1-9][0-9]*:" trace.rvvi; then
+  echo "Trace file missing GPR register updates for OP-IMM instructions"
+  exit 1
+fi
+
 echo "Checking RVVI trace output for vector instructions and vector registers..."
 if ! grep -Eq "[0-9a-fA-F]{6}57" trace.rvvi; then
   echo "Trace file missing vector instructions (opcode 57)"
