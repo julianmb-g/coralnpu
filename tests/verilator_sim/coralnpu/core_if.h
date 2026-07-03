@@ -26,19 +26,11 @@ static bool rand_bool() {
 }
 
 static bool rand_bool_ibus() {
-#if 0
   return rand_bool();
-#else
-  return true;
-#endif
 }
 
 static bool rand_bool_dbus() {
-#if 0
   return rand_bool();
-#else
-  return true;
-#endif
 }
 
 // ScalarCore Memory Interface.
