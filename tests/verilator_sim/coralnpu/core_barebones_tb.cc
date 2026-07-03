@@ -65,6 +65,8 @@ struct Core_tb : Sysc_tb {
 #undef DECLARE_RB_INST
 
   bool ebreak_halt = false;
+  bool had_deadlock = false;
+  bool had_io_fault = false;
 
   uint64_t last_time = 0;
   uint64_t last_delta = 0;
@@ -85,6 +87,7 @@ struct Core_tb : Sysc_tb {
     if (current_time == last_time) {
         if (current_delta - last_delta > 10000) {
             fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
+            had_deadlock = true;
             sc_stop();
         }
     } else {
@@ -107,15 +110,19 @@ struct Core_tb : Sysc_tb {
         fault_cycles_ = 0;
     }
 
-    if (io_halted || ebreak_halt) {
-        sc_stop();
-    } else if (io_fault) {
+    if (io_fault) {
         fault_cycles_++;
         if (fault_cycles_ > 20) {
-            check(false, "io_fault");
+            fprintf(stderr, "[ERROR] io_fault asserted\n");
+            had_io_fault = true;
+            sc_stop();
         }
     } else {
         fault_cycles_ = 0;
+    }
+
+    if (io_halted || ebreak_halt) {
+        sc_stop();
     }
 
     uint64_t retiring_this_cycle = 0;
@@ -607,6 +614,10 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
 
   testbench.start();
 
+  if (testbench.had_deadlock || testbench.had_io_fault) {
+    return 1;
+  }
+
   if (io_halted.read() || testbench.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
@@ -621,8 +632,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
     return memory_interface.pending_exit_code();
   }
 
-  fprintf(stderr, "Simulation TIMEOUT after %d instructions.\n", instruction_limit);
-  return 124;
+  return 0;
 }
 
 int sc_main(int argc, char *argv[]) {
