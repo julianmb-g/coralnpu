@@ -615,7 +615,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   testbench.start();
 
   if (testbench.had_deadlock || testbench.had_io_fault) {
-    return 124;
+    return 1;
   }
 
   if (io_halted.read() || testbench.ebreak_halt) {
