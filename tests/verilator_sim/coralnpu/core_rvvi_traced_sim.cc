@@ -1747,6 +1747,11 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
     return 1;
   }
 
+  if (testbench.had_io_fault) {
+    fprintf(stderr, "Simulation failed due to io_fault.\n");
+    return 1;
+  }
+
   if (io_halted.read() || testbench.ebreak_halt) {
     printf("Simulation HALTED gracefully.\n");
     return 0;
@@ -1759,11 +1764,6 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
 
   if (memory_interface.pending_exit_code() != 0) {
     return memory_interface.pending_exit_code();
-  }
-
-  if (testbench.had_io_fault) {
-    fprintf(stderr, "Simulation failed due to io_fault.\n");
-    return 1;
   }
 
   fprintf(stderr, "Simulation reached cycle limit safety net (hang) after %lu instructions.\n", testbench.instruction_count);
