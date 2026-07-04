@@ -76,7 +76,7 @@ struct Core_tb : Sysc_tb {
   SC_HAS_PROCESS(Core_tb);
 
   Core_tb(sc_module_name name, int instruction_limit, bool random) 
-    : Sysc_tb(name, std::numeric_limits<int>::max(), random), instruction_limit(instruction_limit) {
+    : Sysc_tb(name, instruction_limit * 10, random), instruction_limit(instruction_limit) {
     SC_METHOD(monitor_delta);
     sensitive << io_ibus_valid;
   }
