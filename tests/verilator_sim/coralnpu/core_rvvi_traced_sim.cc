@@ -1742,13 +1742,8 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   daemon.Stop();
 #endif
 
-  if (testbench.had_deadlock) {
-    fprintf(stderr, "[FATAL] Simulation failed due to delta cycle deadlock.\n");
-    return 1;
-  }
-
-  if (testbench.had_io_fault) {
-    fprintf(stderr, "Simulation failed due to io_fault.\n");
+  if (testbench.had_deadlock || testbench.had_io_fault) {
+    fprintf(stderr, "Simulation failed due to deadlock or io_fault.\n");
     return 1;
   }
 
@@ -1758,7 +1753,7 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
   }
 
   if (testbench.instruction_count >= testbench.instruction_limit) {
-    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", testbench.instruction_count);
+    fprintf(stderr, "Simulation TIMEOUT (Instruction count threshold reached: %lu).\n", testbench.instruction_count);
     return 124;
   }
 
@@ -1766,7 +1761,7 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
     return memory_interface.pending_exit_code();
   }
 
-  fprintf(stderr, "Simulation reached cycle limit safety net (hang) after %lu instructions.\n", testbench.instruction_count);
+  fprintf(stderr, "Simulation HANG detected (Cycle safety net triggered: %lu instructions).\n", testbench.instruction_count);
   return 124;
 }
 
