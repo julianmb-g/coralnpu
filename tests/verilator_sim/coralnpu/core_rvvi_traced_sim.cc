@@ -331,7 +331,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   uint64_t instruction_limit = 500000;
 
   CoreRvvi_tb(sc_module_name name, int instruction_limit, bool random, SpscRingBuffer<TracePacket, BUFFER_SIZE>* buf) 
-    : Sysc_tb(name, std::numeric_limits<int>::max(), random), buffer(buf), instruction_limit(instruction_limit) {
+    : Sysc_tb(name, instruction_limit * 10, random), buffer(buf), instruction_limit(instruction_limit) {
     SC_METHOD(monitor_delta);
     sensitive << io_ibus_valid;
   }
