@@ -16,10 +16,12 @@ rm -f /tmp/trace.rvvi
 mkfifo /tmp/trace.rvvi
 exec 3<> /tmp/trace.rvvi
 dd if=/dev/zero of=/tmp/trace.rvvi bs=1M count=1 oflag=nonblock 2>/dev/null || true
+set +e
 set -o pipefail
 time bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out="/tmp/trace.rvvi" "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log
 EXIT_CODE=$?
 set +o pipefail
+set -e
 
 rm -f /tmp/trace.rvvi
 
