@@ -43,3 +43,14 @@ If you encounter an error like `ccache: error: Failed to create temporary file .
 ```bash
 bazel --action_env=CCACHE_DISABLE=1 test --config=vcs //...
 ```
+
+### Verilator Simulation Targets
+
+The Barebones and RVVI Verilator simulators support a configurable instruction timeout via the `--instructions` flag.
+
+**Default:** 500,000 instructions
+
+To override this limit, pass the flag to the `bazel run` command:
+```bash
+bazel run //tests/verilator_sim/coralnpu:core_barebones_tb -- --instructions=1000000
+```
