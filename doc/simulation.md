@@ -54,3 +54,9 @@ To override this limit, pass the flag to the `bazel run` command:
 ```bash
 bazel run //tests/verilator_sim/coralnpu:core_barebones_tb -- --instructions=1000000
 ```
+
+#### Execution Control and Deadlock Monitoring
+
+*   **Instruction Timeout:** The primary simulation timeout is based on the number of retired instructions (configured via `--instructions`). If this limit is reached, the simulator exits with code `124` (TIMEOUT).
+*   **Scaled Cycle Limit (Safety Net):** To prevent unbounded hangs (e.g., when the core is stuck in an infinite loop without retiring instructions), a safety net cycle limit is automatically calculated as `instruction_limit * 10`. If the simulation reaches this cycle limit before hitting the instruction limit, it terminates and reports a HANG (exit code `124`).
+*   **Delta Cycle Deadlock Monitor:** The simulator monitors SystemC delta cycles. If excessive delta cycles occur without simulation time advancing, it detects a zero-latency deadlock, logs a fatal error, and cleanly exits with code `1`.

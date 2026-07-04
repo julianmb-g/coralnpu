@@ -615,7 +615,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   testbench.start();
 
   if (testbench.had_deadlock || testbench.had_io_fault) {
-    return 1;
+    return 124;
   }
 
   if (io_halted.read() || testbench.ebreak_halt) {
@@ -632,6 +632,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
     return memory_interface.pending_exit_code();
   }
 
+  fprintf(stderr, "Simulation HANG detected (Cycle safety net triggered: %lu instructions).\\n", testbench.instruction_count);
   return 124;
 }
 

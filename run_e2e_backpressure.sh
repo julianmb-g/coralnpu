@@ -4,33 +4,17 @@ set -e
 # Cleanup trap
 trap 'rm -f ./rvvi.elf' EXIT
 
-if [ -z "${USE_PODMAN}" ]; then
-  USE_PODMAN=0
-  if ! command -v bazel &> /dev/null && command -v podman &> /dev/null; then
-    echo "Bazel not found natively. Falling back to Podman..."
-    USE_PODMAN=1
-  fi
-fi
-
 echo "Generating ELF at 0x00000000 via Bazel..."
-if [ "$USE_PODMAN" -eq 1 ]; then
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "bazel run //tests/verilator_sim:gen_elf -- \$PWD/rvvi.elf --repeat 100 0x00100093 0x08000073"
-else
-  bazel run //tests/verilator_sim:gen_elf -- "$PWD/rvvi.elf" --repeat 100 0x00100093 0x08000073
-fi
+bazel run //tests/verilator_sim:gen_elf -- "$PWD/rvvi.elf" --repeat 100 0x00100093 0x08000073
 
 # Run simulator via Bazel with DelayFormatter, explicit output path, and Bazel cache mapping
 mkdir -p ./tmp_log
-if [ "$USE_PODMAN" -eq 1 ]; then
-  echo "Running RVVI Backpressure simulator via Bazel in Podman..."
-  # Run without artificial delay
-  time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "set -o pipefail; bazel run --copt=-DBUFFER_SIZE=2 //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out=\$PWD/trace.rvvi \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)"
-else
-  echo "Running RVVI Backpressure simulator via Bazel natively..."
-  set -o pipefail
-  # Run without artificial delay
-  time bazel run --copt=-DBUFFER_SIZE=2 //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out="$PWD/trace.rvvi" "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)
-fi
+
+echo "Running RVVI Backpressure simulator via Bazel natively..."
+set -o pipefail
+# Run without artificial delay
+time bazel run --copt=-DBUFFER_SIZE=2 //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out="$PWD/trace.rvvi" "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/backpressure_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)
+set +o pipefail
 
 echo "Checking trace output..."
 # Verify 100 addi and 1 mpause are present

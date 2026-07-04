@@ -4,31 +4,18 @@ set -e
 # Cleanup trap
 trap 'rm -f ./test.elf ./float_test.elf' EXIT
 
-if [ -z "${USE_PODMAN}" ]; then
-  USE_PODMAN=0
-  if ! command -v bazel &> /dev/null && command -v podman &> /dev/null; then
-    echo "Bazel not found natively. Falling back to Podman..."
-    USE_PODMAN=1
-  fi
-fi
-
 mkdir -p ./tmp_log
 
-if [ "$USE_PODMAN" -eq 1 ]; then
-  echo "Building binary and running simulator in Podman..."
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel localhost/coralnpu bash -c "set -o pipefail; bazel build //examples:coralnpu_v2_rvv_add_intrinsic && cp bazel-bin/examples/coralnpu_v2_rvv_add_intrinsic.elf /tmp/test.elf && bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=50000 --rvvi_out=\$PWD/trace.rvvi /tmp/test.elf 2>&1 | tee \$PWD/tmp_log/rvvi_sim.log || exit 1"
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel localhost/coralnpu bash -c "set -o pipefail; bazel build //examples:coralnpu_v2_hello_world_add_floats && cp bazel-bin/examples/coralnpu_v2_hello_world_add_floats.elf /tmp/float_test.elf && bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=50000 --rvvi_out=\$PWD/trace_float.rvvi /tmp/float_test.elf 2>&1 | tee \$PWD/tmp_log/rvvi_float_sim.log || exit 1"
-else
-  echo "Building binary and running simulator natively..."
-  set -o pipefail
-  bazel build //examples:coralnpu_v2_rvv_add_intrinsic
-  cp bazel-bin/examples/coralnpu_v2_rvv_add_intrinsic.elf ./test.elf
-  bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out="$PWD/trace.rvvi" "$PWD/test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_sim.log" || exit 1
+echo "Building binary and running simulator natively..."
+set -o pipefail
+bazel build //examples:coralnpu_v2_rvv_add_intrinsic
+cp bazel-bin/examples/coralnpu_v2_rvv_add_intrinsic.elf ./test.elf
+bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out="$PWD/trace.rvvi" "$PWD/test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_sim.log" || exit 1
 
-  bazel build //examples:coralnpu_v2_hello_world_add_floats
-  cp bazel-bin/examples/coralnpu_v2_hello_world_add_floats.elf ./float_test.elf
-  bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out="$PWD/trace_float.rvvi" "$PWD/float_test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_float_sim.log" || exit 1
-fi
+bazel build //examples:coralnpu_v2_hello_world_add_floats
+cp bazel-bin/examples/coralnpu_v2_hello_world_add_floats.elf ./float_test.elf
+bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out="$PWD/trace_float.rvvi" "$PWD/float_test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_float_sim.log" || exit 1
+set +o pipefail
 
 echo "Checking RVVI trace output for scalar GPR writes (OP-IMM)..."
 if ! grep -Eq ",[0-9a-fA-F]{6}13," trace.rvvi; then

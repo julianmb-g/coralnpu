@@ -4,41 +4,23 @@ set -e
 # Cleanup trap
 trap 'rm -f ./rvvi.elf' EXIT
 
-if [ -z "${USE_PODMAN}" ]; then
-  USE_PODMAN=0
-  if ! command -v bazel &> /dev/null && command -v podman &> /dev/null; then
-    echo "Bazel not found natively. Falling back to Podman..."
-    USE_PODMAN=1
-  fi
-fi
-
 echo "Generating ELF at 0x00000000 via Bazel..."
-if [ "$USE_PODMAN" -eq 1 ]; then
-  podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "bazel run //tests/verilator_sim:gen_elf -- \$PWD/rvvi.elf --repeat 5 0x00100093 0x08000073"
-else
-  bazel run //tests/verilator_sim:gen_elf -- "$PWD/rvvi.elf" --repeat 5 0x00100093 0x08000073
-fi
+bazel run //tests/verilator_sim:gen_elf -- "$PWD/rvvi.elf" --repeat 5 0x00100093 0x08000073
 
 # Run simulator via Bazel, using a named pipe to deterministically block the background daemon to trigger flush timeout (5s)
 mkdir -p ./tmp_log
 
-echo "Running RVVI Flush Timeout simulator via Bazel..."
+echo "Running RVVI Flush Timeout simulator via Bazel natively..."
 
-set +e
-if [ "$USE_PODMAN" -eq 1 ]; then
-  time podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -v $HOME/.cache/bazel:/home/builder/.cache/bazel -w $PWD localhost/coralnpu bash -c "rm -f /tmp/trace.rvvi; mkfifo /tmp/trace.rvvi; exec 3<> /tmp/trace.rvvi; dd if=/dev/zero of=/tmp/trace.rvvi bs=1M count=1 oflag=nonblock 2>/dev/null || true; set -o pipefail; bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out=/tmp/trace.rvvi \$PWD/rvvi.elf 2>&1 | tee /tmp/sim.log"
-  EXIT_CODE=$?
-else
-  rm -f /tmp/trace.rvvi
-  mkfifo /tmp/trace.rvvi
-  exec 3<> /tmp/trace.rvvi
-  dd if=/dev/zero of=/tmp/trace.rvvi bs=1M count=1 oflag=nonblock 2>/dev/null || true
-  set -o pipefail
-  time bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out="/tmp/trace.rvvi" "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log
-  EXIT_CODE=$?
-  set +o pipefail
-fi
-set -e
+rm -f /tmp/trace.rvvi
+mkfifo /tmp/trace.rvvi
+exec 3<> /tmp/trace.rvvi
+dd if=/dev/zero of=/tmp/trace.rvvi bs=1M count=1 oflag=nonblock 2>/dev/null || true
+set -o pipefail
+time bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --memory_profile=default --rvvi_out="/tmp/trace.rvvi" "$PWD/rvvi.elf" 2>&1 | tee /tmp/sim.log
+EXIT_CODE=$?
+set +o pipefail
+
 rm -f /tmp/trace.rvvi
 
 if [ "$EXIT_CODE" -eq 124 ]; then
