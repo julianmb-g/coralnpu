@@ -10,11 +10,11 @@ echo "Building binary and running simulator natively..."
 set -o pipefail
 bazel build //examples:coralnpu_v2_rvv_add_intrinsic
 cp bazel-bin/examples/coralnpu_v2_rvv_add_intrinsic.elf ./test.elf
-bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out="$PWD/trace.rvvi" "$PWD/test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_sim.log" || exit 1
+bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=50000 --rvvi_out="$PWD/trace.rvvi" "$PWD/test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_sim.log" || exit 1
 
 bazel build //examples:coralnpu_v2_hello_world_add_floats
 cp bazel-bin/examples/coralnpu_v2_hello_world_add_floats.elf ./float_test.elf
-bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=5000 --rvvi_out="$PWD/trace_float.rvvi" "$PWD/float_test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_float_sim.log" || exit 1
+bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=50000 --rvvi_out="$PWD/trace_float.rvvi" "$PWD/float_test.elf" 2>&1 | tee "$PWD/tmp_log/rvvi_float_sim.log" || exit 1
 set +o pipefail
 
 echo "Checking RVVI trace output for scalar GPR writes (OP-IMM)..."
