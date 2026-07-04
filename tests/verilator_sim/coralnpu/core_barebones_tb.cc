@@ -632,7 +632,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
     return memory_interface.pending_exit_code();
   }
 
-  return 0;
+  return 124;
 }
 
 int sc_main(int argc, char *argv[]) {
