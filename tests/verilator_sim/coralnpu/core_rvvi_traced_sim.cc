@@ -1766,7 +1766,7 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
     return 1;
   }
 
-  fprintf(stderr, "Simulation TIMEOUT after %d instructions.\n", instruction_limit);
+  fprintf(stderr, "Simulation reached cycle limit safety net (hang) after %lu instructions.\n", testbench.instruction_count);
   return 124;
 }
 
