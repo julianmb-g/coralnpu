@@ -2,17 +2,12 @@
 set -e
 
 # Cleanup trap
-trap 'rm -f ./io_fault.elf ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log; git checkout -- tests/verilator_sim/coralnpu/core_barebones_tb.cc tests/verilator_sim/coralnpu/core_rvvi_traced_sim.cc' EXIT
+trap 'rm -f ./io_fault.elf ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log' EXIT
 
 mkdir -p ./tmp_log
 
-echo "Generating dummy ELF..."
-bazel run //tests/verilator_sim:gen_elf -- "$PWD/io_fault.elf" 0x00000013
-
-echo "Injecting io_fault into testbench for E2E validation..."
-# We inject a fake io_fault after 100 cycles to verify the exit code logic
-sed -i 's/if (io_fault)/if (cycle() > 100) { fprintf(stderr, "io_fault asserted\\n"); had_io_fault = true; sc_stop(); } if (io_fault)/' tests/verilator_sim/coralnpu/core_barebones_tb.cc
-sed -i 's/if (io_fault)/if (cycle() > 100) { fprintf(stderr, "io_fault asserted\\n"); had_io_fault = true; sc_stop(); } if (io_fault)/' tests/verilator_sim/coralnpu/core_rvvi_traced_sim.cc
+echo "Generating E2E ELF with invalid memory access (lw x0, -1(x0))..."
+bazel run //tests/verilator_sim:gen_elf -- "$PWD/io_fault.elf" 0xFFF02003
 
 echo "Running Barebones simulator (expecting io_fault exit code 1)..."
 set +e

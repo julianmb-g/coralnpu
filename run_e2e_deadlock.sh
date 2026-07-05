@@ -2,17 +2,12 @@
 set -e
 
 # Cleanup trap
-trap 'rm -f ./deadlock.elf ./tmp_log/deadlock_barebones.log ./tmp_log/deadlock_rvvi.log; git checkout -- tests/verilator_sim/coralnpu/core_barebones_tb.cc tests/verilator_sim/coralnpu/core_rvvi_traced_sim.cc' EXIT
+trap 'rm -f ./deadlock.elf ./tmp_log/deadlock_barebones.log ./tmp_log/deadlock_rvvi.log' EXIT
 
 mkdir -p ./tmp_log
 
-echo "Generating dummy ELF..."
-bazel run //tests/verilator_sim:gen_elf -- "$PWD/deadlock.elf" 0x00000013
-
-echo "Injecting had_deadlock into testbench for E2E validation..."
-# We inject a fake deadlock after 100 cycles to verify the exit code logic
-sed -i 's/if (io_fault)/if (cycle() > 100) { had_deadlock = true; sc_stop(); } if (io_fault)/' tests/verilator_sim/coralnpu/core_barebones_tb.cc
-sed -i 's/if (io_fault)/if (cycle() > 100) { had_deadlock = true; sc_stop(); } if (io_fault)/' tests/verilator_sim/coralnpu/core_rvvi_traced_sim.cc
+echo "Generating E2E ELF..."
+bazel run //tests/verilator_sim:gen_elf -- "$PWD/deadlock.elf" 0x00000000
 
 echo "Running Barebones simulator (expecting deadlock exit code 1)..."
 set +e
