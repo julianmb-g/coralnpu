@@ -73,12 +73,15 @@ struct Core_tb : Sysc_tb {
   uint64_t instruction_count = 0;
   uint64_t instruction_limit = 500000;
 
+  sc_event next_delta_evt;
+
   SC_HAS_PROCESS(Core_tb);
 
   Core_tb(sc_module_name name, int instruction_limit, bool random) 
     : Sysc_tb(name, instruction_limit * 10, random), instruction_limit(instruction_limit) {
     SC_METHOD(monitor_delta);
-    sensitive << io_ibus_valid;
+    sensitive << next_delta_evt;
+    next_delta_evt.notify(SC_ZERO_TIME);
   }
 
   void monitor_delta() {
@@ -89,11 +92,13 @@ struct Core_tb : Sysc_tb {
             fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
             had_deadlock = true;
             sc_stop();
+            return;
         }
     } else {
         last_time = current_time;
         last_delta = current_delta;
     }
+    next_delta_evt.notify(SC_ZERO_TIME);
   }
 
   int fault_cycles_ = 0;
