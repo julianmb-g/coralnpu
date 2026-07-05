@@ -632,7 +632,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
     return memory_interface.pending_exit_code();
   }
 
-  fprintf(stderr, "Simulation HANG detected (Cycle safety net triggered: %lu instructions).\\n", testbench.instruction_count);
+  fprintf(stderr, "Simulation HANG detected (Cycle safety net triggered: %lu instructions).\n", testbench.instruction_count);
   return 124;
 }
 
