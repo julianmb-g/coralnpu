@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
+#include "absl/log/log.h"
+#include "absl/strings/str_format.h"
 #include <algorithm>
 #include <cstring>
 #include <cstdio>
@@ -113,12 +115,12 @@ void TraceDaemon<VLEN, MAX_UPDATES>::FlushPendingInstruction() {
     const auto& update = accumulated_updates_[i];
     uint32_t num_chunks = (update.total_size + 31) / 32;
     if (num_chunks >= sizeof(update.received_chunks_mask) * 8) {
-      fprintf(stderr, "[FATAL] Trace reassembly error: num_chunks (%u) exceeds mask capacity.\n", num_chunks);
+      LOG(ERROR) << absl::StrFormat("[FATAL] Trace reassembly error: num_chunks (%u) exceeds mask capacity.", num_chunks);
       std::exit(1);
     }
     uint64_t expected_mask = (1ULL << num_chunks) - 1;
     if (update.received_chunks_mask != expected_mask) {
-      fprintf(stderr, "[FATAL] Trace reassembly error: Incomplete chunks for %c%d. Mask: 0x%lx, Expected: 0x%lx\n",
+      LOG(ERROR) << absl::StrFormat("[FATAL] Trace reassembly error: Incomplete chunks for %c%d. Mask: 0x%lx, Expected: 0x%lx",
               update.reg_type, update.index, update.received_chunks_mask, expected_mask);
       std::exit(1);
     }
@@ -155,12 +157,12 @@ void TraceDaemon<VLEN, MAX_UPDATES>::FlushPendingInstruction() {
     const auto& update = accumulated_updates_[i];
     uint32_t num_chunks = (update.total_size + 31) / 32;
     if (num_chunks >= sizeof(update.received_chunks_mask) * 8) {
-      fprintf(stderr, "[FATAL] Trace reassembly error: num_chunks (%u) exceeds mask capacity.\n", num_chunks);
+      LOG(ERROR) << absl::StrFormat("[FATAL] Trace reassembly error: num_chunks (%u) exceeds mask capacity.", num_chunks);
       std::exit(1);
     }
     uint64_t expected_mask = (1ULL << num_chunks) - 1;
     if (update.received_chunks_mask != expected_mask) {
-        fprintf(stderr, "[FATAL] Incomplete vector chunks detected for register %c%d. Mask: 0x%016lx. Expected: 0x%016lx\n", update.reg_type, update.index, update.received_chunks_mask, expected_mask);
+        LOG(ERROR) << absl::StrFormat("[FATAL] Incomplete vector chunks detected for register %c%d. Mask: 0x%016lx. Expected: 0x%016lx", update.reg_type, update.index, update.received_chunks_mask, expected_mask);
         std::exit(1);
     }
 

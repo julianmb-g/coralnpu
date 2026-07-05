@@ -23,6 +23,14 @@
 #define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
 #include PARAMS_HEADER
 
+#undef STRINGIZE
+#undef STR
+#undef MODEL_HEADER_SUFFIX
+#undef MODEL_HEADER
+#undef PARAMS_HEADER_PREFIX
+#undef PARAMS_HEADER_SUFFIX
+#undef PARAMS_HEADER
+
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -89,7 +97,7 @@ struct Core_tb : Sysc_tb {
     uint64_t current_delta = sc_delta_count();
     if (current_time == last_time) {
         if (current_delta - last_delta > 10000) {
-            fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
+            LOG(ERROR) << absl::StrFormat("[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu", current_time, current_delta);
             had_deadlock = true;
             sc_stop();
             return;
@@ -118,7 +126,7 @@ struct Core_tb : Sysc_tb {
     if (io_fault) {
         fault_cycles_++;
         if (fault_cycles_ > 20) {
-            fprintf(stderr, "[ERROR] io_fault asserted\n");
+            LOG(ERROR) << "[ERROR] io_fault asserted";
             had_io_fault = true;
             sc_stop();
         }
@@ -151,7 +159,7 @@ struct Core_tb : Sysc_tb {
 bool LoadElfToMemory(const std::string& file_name, Core_if& memory_interface, uint32_t& entry_point) {
   int fd = open(file_name.c_str(), O_RDONLY);
   if (fd < 0) {
-    fprintf(stderr, "Failed to open ELF file: %s\n", file_name.c_str());
+    LOG(ERROR) << "Failed to open ELF file: " << file_name;
     return false;
   }
   struct stat sb;
@@ -195,7 +203,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
 
   uint32_t entry_point = 0x00000000;
   if (!LoadElfToMemory(bin, memory_interface, entry_point)) {
-    fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
+    LOG(ERROR) << "Error backdoor loading ELF: " << bin;
     exit(65);
   }
 
@@ -624,12 +632,12 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   }
 
   if (io_halted.read() || testbench.ebreak_halt) {
-    printf("Simulation HALTED gracefully.\n");
+    LOG(INFO) << "Simulation HALTED gracefully.";
     return 0;
   }
 
   if (testbench.instruction_count >= testbench.instruction_limit) {
-    fprintf(stderr, "Simulation TIMEOUT after %lu instructions.\n", testbench.instruction_count);
+    LOG(ERROR) << absl::StrFormat("Simulation TIMEOUT after %lu instructions.", testbench.instruction_count);
     return 124;
   }
 
@@ -637,7 +645,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
     return memory_interface.pending_exit_code();
   }
 
-  fprintf(stderr, "Simulation HANG detected (Cycle safety net triggered: %lu instructions).\n", testbench.instruction_count);
+  LOG(ERROR) << absl::StrFormat("Simulation HANG detected (Cycle safety net triggered: %lu instructions).", testbench.instruction_count);
   return 124;
 }
 
@@ -647,7 +655,7 @@ int sc_main(int argc, char *argv[]) {
   argc = out_args.size();
   argv = &out_args[0];
   if (argc != 2) {
-    fprintf(stderr, "Need one binary/ELF input file\n");
+    LOG(ERROR) << "Need one binary/ELF input file";
     return 1;
   }
   const char* path = argv[1];

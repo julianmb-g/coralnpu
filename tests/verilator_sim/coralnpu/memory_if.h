@@ -77,6 +77,12 @@ struct Memory_if : Sysc_module {
 
   // ... (rest of constructor logic, replacing calls to IsValidAddress)
 
+  // Memory_if constructor.
+  // Note: File I/O in constructors is generally a style violation because it can fail silently
+  // or abort the program. In our barebones simulation targets, we explicitly pass `bin = nullptr`
+  // and load ELFs backdoor using `LoadElfToMemory`, making this constructor completely infallible at runtime.
+  // We keep the file loading path here for backward compatibility with older SystemC testbenches,
+  // but updated the error logging to use standard Abseil loggers.
   Memory_if(sc_module_name n, const char* bin, int limit = -1, const std::string& profile = "all") :
       Sysc_module(n), profile_(profile) {
     FILE *f = (bin != nullptr && bin[0] != '\0') ? fopen(bin, "rb") : nullptr;
@@ -91,7 +97,7 @@ struct Memory_if : Sysc_module {
       fclose(f);
 
       if (limit > 0 && fsize > limit) {
-        printf("***ERROR Memory_if limit exceeded [%ld > %d]\n", fsize, limit);
+        LOG(ERROR) << absl::StrFormat("***ERROR Memory_if limit exceeded [%ld > %d]", fsize, limit);
         exit(-1);
       }
 

@@ -10,6 +10,14 @@
 #define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
 #include PARAMS_HEADER
 
+#undef STRINGIZE
+#undef STR
+#undef MODEL_HEADER_SUFFIX
+#undef MODEL_HEADER
+#undef PARAMS_HEADER_PREFIX
+#undef PARAMS_HEADER_SUFFIX
+#undef PARAMS_HEADER
+
 #define TRACE_ENABLED 1
 
 
@@ -344,7 +352,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     uint64_t current_delta = sc_delta_count();
     if (current_time == last_time) {
         if (current_delta - last_delta > 10000) {
-            fprintf(stderr, "[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu\n", current_time, current_delta);
+            LOG(ERROR) << absl::StrFormat("[FATAL] Delta cycle deadlock detected! Time: %lu, Delta: %lu", current_time, current_delta);
             had_deadlock = true;
             sc_stop();
             return;
@@ -377,7 +385,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
             std::this_thread::yield(); \
             auto now = std::chrono::steady_clock::now(); \
             if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
-              fprintf(stderr, "[FATAL] Queue backpressure timeout (T-packet)! Watchdog triggered.\n"); \
+              LOG(ERROR) << "[FATAL] Queue backpressure timeout (T-packet)! Watchdog triggered."; \
               exit(124); \
             } \
           } \
@@ -396,7 +404,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
           std::this_thread::yield(); \
           auto now = std::chrono::steady_clock::now(); \
           if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
-            fprintf(stderr, "[FATAL] Queue backpressure timeout (I-packet)! Watchdog triggered.\n"); \
+            LOG(ERROR) << "[FATAL] Queue backpressure timeout (I-packet)! Watchdog triggered."; \
             exit(124); \
           } \
         } \
@@ -518,7 +526,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
                   std::this_thread::yield(); \
                   auto now = std::chrono::steady_clock::now(); \
                   if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
-                    fprintf(stderr, "[FATAL] Queue backpressure timeout (R-packet)! Watchdog triggered.\n"); \
+                    LOG(ERROR) << "[FATAL] Queue backpressure timeout (R-packet)! Watchdog triggered."; \
                     exit(124); \
                   } \
                 } \
@@ -567,7 +575,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
           std::this_thread::yield();
           auto now = std::chrono::steady_clock::now();
           if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) {
-            fprintf(stderr, "[FATAL] Queue backpressure timeout (E-packet)! Watchdog triggered.\n");
+            LOG(ERROR) << "[FATAL] Queue backpressure timeout (E-packet)! Watchdog triggered.";
             exit(124);
           }
         }
@@ -576,7 +584,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     }
 
     if (io_fault) {
-      fprintf(stderr, "[ERROR] io_fault asserted\n");
+      LOG(ERROR) << "[ERROR] io_fault asserted";
       had_io_fault = true;
       sc_stop();
     }
@@ -591,12 +599,23 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 
 bool LoadElfToMemory(const std::string& file_name, Core_if& memory_interface, uint32_t& entry_point) {
   int fd = open(file_name.c_str(), O_RDONLY);
-  if (fd < 0) { perror("open"); return false; }
+  if (fd < 0) {
+    LOG(ERROR) << "Failed to open ELF file: " << file_name;
+    return false;
+  }
   struct stat sb;
-  if (fstat(fd, &sb) != 0) { perror("fstat"); close(fd); return false; }
+  if (fstat(fd, &sb) != 0) {
+    LOG(ERROR) << "fstat failed on: " << file_name;
+    close(fd);
+    return false;
+  }
   auto file_size = sb.st_size;
   auto file_data = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-  if (file_data == MAP_FAILED) { perror("mmap"); close(fd); return false; }
+  if (file_data == MAP_FAILED) {
+    LOG(ERROR) << "mmap failed on: " << file_name;
+    close(fd);
+    return false;
+  }
   close(fd);
   uint32_t elf_magic = 0x464c457f;
   uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
@@ -614,7 +633,7 @@ bool LoadElfToMemory(const std::string& file_name, Core_if& memory_interface, ui
     munmap(file_data, file_size);
     return load_ok;
   } else {
-    fprintf(stderr, "Invalid ELF magic\n");
+    LOG(ERROR) << "Invalid ELF magic";
   }
   munmap(file_data, file_size);
   return false;
@@ -634,7 +653,7 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
 
   uint32_t entry_point = 0x00000000;
   if (!LoadElfToMemory(bin, memory_interface, entry_point)) {
-    fprintf(stderr, "Error backdoor loading ELF: %s\n", bin);
+    LOG(ERROR) << "Error backdoor loading ELF: " << bin;
     exit(65);
   }
 
@@ -1740,7 +1759,7 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
     std::this_thread::yield();
     auto flush_now = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::seconds>(flush_now - flush_start).count() > 5) {
-      fprintf(stderr, "[FATAL] Queue flush timeout (5s) exceeded! Trace daemon may be hung. Exiting with code 124.\n");
+      LOG(ERROR) << "[FATAL] Queue flush timeout (5s) exceeded! Trace daemon may be hung. Exiting with code 124.";
       _exit(124);
     }
   }
@@ -1748,17 +1767,17 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
 #endif
 
   if (testbench.had_deadlock || testbench.had_io_fault) {
-    fprintf(stderr, "Simulation failed due to deadlock or io_fault.\n");
+    LOG(ERROR) << "Simulation failed due to deadlock or io_fault.";
     return 1;
   }
 
   if (io_halted.read() || testbench.ebreak_halt) {
-    printf("Simulation HALTED gracefully.\n");
+    LOG(INFO) << "Simulation HALTED gracefully.";
     return 0;
   }
 
   if (testbench.instruction_count >= testbench.instruction_limit) {
-    fprintf(stderr, "Simulation TIMEOUT (Instruction count threshold reached: %lu).\n", testbench.instruction_count);
+    LOG(ERROR) << absl::StrFormat("Simulation TIMEOUT (Instruction count threshold reached: %lu).", testbench.instruction_count);
     return 124;
   }
 
@@ -1766,7 +1785,7 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
     return memory_interface.pending_exit_code();
   }
 
-  fprintf(stderr, "Simulation HANG detected (Cycle safety net triggered: %lu instructions).\n", testbench.instruction_count);
+  LOG(ERROR) << absl::StrFormat("Simulation HANG detected (Cycle safety net triggered: %lu instructions).", testbench.instruction_count);
   return 124;
 }
 
@@ -1776,7 +1795,7 @@ int sc_main(int argc, char *argv[]) {
   argc = out_args.size();
   argv = &out_args[0];
   if (argc != 2) {
-    fprintf(stderr, "Need one binary/ELF input file\n");
+    LOG(ERROR) << "Need one binary/ELF input file";
     return 1;
   }
   const char* path = argv[1];
