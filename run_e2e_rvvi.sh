@@ -4,7 +4,7 @@ set -e
 # Cleanup trap
 trap 'rm -f ./test.elf ./float_test.elf' EXIT
 
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 
 echo "Building binary and running simulator natively..."
 set -o pipefail

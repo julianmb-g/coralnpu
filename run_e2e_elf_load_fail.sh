@@ -7,7 +7,7 @@ trap 'rm -f ./dummy_fail.elf ./dummy_fail_tight.elf ./dummy_fail_tight_dtcm.elf'
 echo "Generating out-of-bounds ELF (extreme violation) via Bazel..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/dummy_fail.elf" --address 0x00800000 0x08000073
 
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 echo "Running simulator via Bazel natively..."
 set -o pipefail
 bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/dummy_fail.elf" 2>&1 | tee ./tmp_log/elf_load_fail.log && { echo "Expected failure, but succeeded"; exit 1; } || EXIT_CODE=$?

@@ -10,7 +10,7 @@ bazel build //examples:coralnpu_v2_rvv_add_intrinsic
 cp bazel-bin/examples/coralnpu_v2_rvv_add_intrinsic.elf ./dummy.elf
 
 # Run simulator via Bazel
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 echo "Running simulator via Bazel natively..."
 set -o pipefail
 bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/dummy.elf" 2>&1 | tee /tmp/sim.log || (cp /tmp/sim.log ./tmp_log/baseline_sim.log; find bazel-bin -name '*.log' -exec cp {} ./tmp_log/ \; 2>/dev/null; exit 1)

@@ -4,7 +4,7 @@ set -e
 # Cleanup trap
 trap 'rm -f ./io_fault.elf ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log' EXIT
 
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 
 echo "Generating E2E ELF with invalid memory access (lw x0, -1(x0))..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/io_fault.elf" 0xFFF02003

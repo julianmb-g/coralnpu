@@ -10,7 +10,7 @@ bazel run //tests/verilator_sim:gen_elf -- "$PWD/hang.elf" 0x10500073
 
 # Run barebones simulator with huge limit
 echo "Running Barebones simulator with huge limit..."
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 set +e
 set -o pipefail
 bazel run //tests/verilator_sim:core_barebones_sim -- --instructions=5000 "$PWD/hang.elf" 2>&1 | tee "$PWD/tmp_log/hang_barebones.log"

@@ -9,7 +9,7 @@ bazel run //tests/verilator_sim:gen_elf -- "$PWD/timeout.elf" 0x0000006f
 
 # Run Barebones simulator and expect timeout
 echo "Running Barebones simulator via Bazel (expecting timeout)..."
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 set +e
 set -o pipefail
 bazel run //tests/verilator_sim:core_barebones_sim -- --instructions=5000 "$PWD/timeout.elf" 2>&1 | tee "$PWD/tmp_log/timeout_barebones_sim.log"

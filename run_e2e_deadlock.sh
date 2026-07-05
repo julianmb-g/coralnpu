@@ -4,7 +4,7 @@ set -e
 # Cleanup trap
 trap 'rm -f ./deadlock.elf ./tmp_log/deadlock_barebones.log ./tmp_log/deadlock_rvvi.log' EXIT
 
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 
 echo "Generating E2E ELF..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/deadlock.elf" 0x00000000

@@ -10,7 +10,7 @@ bazel run //tests/verilator_sim:gen_elf -- "$PWD/real.elf" 0x08000073
 
 # Run the simulator
 echo "Running simulator with real ELF via Bazel..."
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 set -o pipefail
 bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/real.elf" 2>&1 | tee "$PWD/tmp_log/real_address_sim.log" || exit 1
 set +o pipefail

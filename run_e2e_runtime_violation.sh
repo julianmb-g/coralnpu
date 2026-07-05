@@ -4,7 +4,7 @@ set -e
 # Cleanup trap
 trap 'rm -f ./runtime_fail_read.elf ./runtime_fail_write.elf ./runtime_fail_fetch.elf ./runtime_fail_read_rvvi.elf ./trace_runtime_fail.rvvi' EXIT
 
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 
 # Scenario 1: Data Read Violation
 echo "Generating ELF with invalid data read via Bazel..."

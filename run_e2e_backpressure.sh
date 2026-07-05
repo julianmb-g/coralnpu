@@ -8,7 +8,7 @@ echo "Generating ELF at 0x00000000 via Bazel..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/rvvi.elf" --repeat 100 0x00100093 0x08000073
 
 # Run simulator via Bazel with DelayFormatter, explicit output path, and Bazel cache mapping
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 
 echo "Running RVVI Backpressure simulator via Bazel natively..."
 set -o pipefail

@@ -8,7 +8,7 @@ echo "Generating ELF at 0x00000000 via Bazel..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/rvvi.elf" --repeat 5 0x00100093 0x08000073
 
 # Run simulator via Bazel, using a named pipe to deterministically block the background daemon to trigger flush timeout (5s)
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 
 echo "Running RVVI Flush Timeout simulator via Bazel natively..."
 

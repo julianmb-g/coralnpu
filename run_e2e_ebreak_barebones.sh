@@ -10,7 +10,7 @@ bazel run //tests/verilator_sim:gen_elf -- "$PWD/ebreak.elf" 0x00100073
 
 # Run barebones simulator
 echo "Running Barebones simulator..."
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 set +e
 set -o pipefail
 bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/ebreak.elf" 2>&1 | tee "$PWD/tmp_log/ebreak_barebones.log"

@@ -10,7 +10,7 @@ bazel run //tests/verilator_sim:gen_elf -- "$PWD/ebreak.elf" 0x00100073
 
 # Run simulator via Bazel
 echo "Running RVVI simulator via Bazel..."
-mkdir -p ./tmp_log
+./utils/ensure_writable.sh ./tmp_log
 set +e
 set -o pipefail
 bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --rvvi_out="$PWD/trace.rvvi" "$PWD/ebreak.elf" 2>&1 | tee "$PWD/tmp_log/ebreak_sim.log"
