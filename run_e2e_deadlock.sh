@@ -9,6 +9,9 @@ mkdir -p ./tmp_log
 echo "Generating E2E ELF..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/deadlock.elf" 0x00000000
 
+echo "Building Barebones simulator..."
+bazel build //tests/verilator_sim:core_barebones_sim
+
 echo "Running Barebones simulator (expecting deadlock exit code 1)..."
 set +e
 set -o pipefail
@@ -25,6 +28,9 @@ if [ $EXIT_CODE_BB -ne 1 ]; then
   echo "Barebones simulator did not exit with code 1 (Exit Code: $EXIT_CODE_BB)"
   exit 1
 fi
+
+echo "Building RVVI Traced simulator..."
+bazel build //tests/verilator_sim:core_rvvi_traced_sim
 
 echo "Running RVVI Traced simulator (expecting deadlock exit code 1)..."
 set +e
