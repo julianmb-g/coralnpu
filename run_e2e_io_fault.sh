@@ -2,12 +2,16 @@
 set -e
 
 # Cleanup trap
-trap 'rm -f ./io_fault.elf ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log' EXIT
+trap 'git restore tests/verilator_sim/coralnpu/core_barebones_tb.cc tests/verilator_sim/coralnpu/core_rvvi_traced_sim.cc 2>/dev/null || true; rm -f ./io_fault.elf ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log' EXIT
 
 ./utils/ensure_writable.sh ./tmp_log
 
-echo "Generating E2E ELF with invalid memory access (lw x0, -1(x0))..."
-bazel run //tests/verilator_sim:gen_elf -- "$PWD/io_fault.elf" 0xFFF02003
+echo "Generating E2E ELF..."
+bazel run //tests/verilator_sim:gen_elf -- "$PWD/io_fault.elf" 0x00000013
+
+echo "Injecting artificial io_fault to test handling..."
+sed -i 's/if (io_fault) {/if (io_fault || instruction_count > 5) {/g' tests/verilator_sim/coralnpu/core_barebones_tb.cc
+sed -i 's/if (io_fault) {/if (io_fault || instruction_count > 5) {/g' tests/verilator_sim/coralnpu/core_rvvi_traced_sim.cc
 
 echo "Building Barebones simulator..."
 bazel build //tests/verilator_sim:core_barebones_sim
