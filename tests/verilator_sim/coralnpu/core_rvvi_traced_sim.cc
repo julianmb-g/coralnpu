@@ -343,8 +343,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   CoreRvvi_tb(sc_module_name name, int instruction_limit, bool random, SpscRingBuffer<TracePacket, BUFFER_SIZE>* buf) 
     : Sysc_tb(name, instruction_limit * 10, random), buffer(buf), instruction_limit(instruction_limit) {
     SC_METHOD(monitor_delta);
-    sensitive << next_delta_evt;
-    next_delta_evt.notify(SC_ZERO_TIME);
+    sensitive << clock << next_delta_evt;
   }
 
   void monitor_delta() {
@@ -361,7 +360,10 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         last_time = current_time;
         last_delta = current_delta;
     }
-    next_delta_evt.notify(SC_ZERO_TIME);
+
+    if (sc_pending_activity_at_current_time()) {
+        next_delta_evt.notify(SC_ZERO_TIME);
+    }
   }
 
   void posedge() {

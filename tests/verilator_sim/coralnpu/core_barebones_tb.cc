@@ -88,8 +88,7 @@ struct Core_tb : Sysc_tb {
   Core_tb(sc_module_name name, int instruction_limit, bool random) 
     : Sysc_tb(name, instruction_limit * 10, random), instruction_limit(instruction_limit) {
     SC_METHOD(monitor_delta);
-    sensitive << next_delta_evt;
-    next_delta_evt.notify(SC_ZERO_TIME);
+    sensitive << clock << next_delta_evt;
   }
 
   void monitor_delta() {
@@ -106,7 +105,10 @@ struct Core_tb : Sysc_tb {
         last_time = current_time;
         last_delta = current_delta;
     }
-    next_delta_evt.notify(SC_ZERO_TIME);
+    
+    if (sc_pending_activity_at_current_time()) {
+        next_delta_evt.notify(SC_ZERO_TIME);
+    }
   }
 
   int fault_cycles_ = 0;
