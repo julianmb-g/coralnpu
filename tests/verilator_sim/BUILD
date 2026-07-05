@@ -487,6 +487,8 @@ cc_library(
     deps = [
         ":spsc_ring_buffer",
         ":trace_packet",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/strings:str_format",
     ],
     visibility = ["//visibility:public"],
 )
