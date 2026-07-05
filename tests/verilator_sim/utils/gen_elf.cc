@@ -75,8 +75,18 @@ int main(int argc, char* argv[]) {
   phdr.p_align = 4;
 
   std::ofstream output_file_stream(argv[1], std::ios::binary);
+  if (!output_file_stream.is_open()) {
+    std::cerr << "Failed to open output file: " << argv[1] << std::endl;
+    return 1;
+  }
   output_file_stream.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr));
   output_file_stream.write(reinterpret_cast<const char*>(&phdr), sizeof(phdr));
   output_file_stream.write(reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(uint32_t));
+  
+  output_file_stream.close();
+  if (!output_file_stream) {
+    std::cerr << "Failed to write or close output file: " << argv[1] << std::endl;
+    return 1;
+  }
   return 0;
 }
