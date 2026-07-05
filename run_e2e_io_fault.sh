@@ -9,6 +9,9 @@ mkdir -p ./tmp_log
 echo "Generating E2E ELF with invalid memory access (lw x0, -1(x0))..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/io_fault.elf" 0xFFF02003
 
+echo "Building Barebones simulator..."
+bazel build //tests/verilator_sim:core_barebones_sim
+
 echo "Running Barebones simulator (expecting io_fault exit code 1)..."
 set +e
 set -o pipefail
@@ -30,6 +33,9 @@ if ! grep -q "io_fault asserted" "$PWD/tmp_log/io_fault_barebones.log"; then
   echo "Barebones log missing 'io_fault asserted'"
   exit 1
 fi
+
+echo "Building RVVI Traced simulator..."
+bazel build //tests/verilator_sim:core_rvvi_traced_sim
 
 echo "Running RVVI Traced simulator (expecting io_fault exit code 1)..."
 set +e
