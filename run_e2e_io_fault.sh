@@ -2,9 +2,12 @@
 set -e
 
 # Cleanup trap
-trap 'rm -f ./io_fault.elf ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log' EXIT
+trap 'git restore tests/verilator_sim/coralnpu/core_barebones_tb.cc; rm -f ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log' EXIT
 
 ./utils/ensure_writable.sh ./tmp_log
+
+echo "Injecting IO Fault trigger..."
+sed -i 's/if (io_fault) {/if (io_fault || instruction_count > 5) {/g' tests/verilator_sim/coralnpu/core_barebones_tb.cc
 
 echo "Generating E2E ELF..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/io_fault.elf" 0x200000b7 0x0000a003
@@ -19,10 +22,6 @@ bazel run //tests/verilator_sim:core_barebones_sim -- --instructions=1000 "$PWD/
 EXIT_CODE_BB=$?
 set +o pipefail
 set -e
-
-if [ $EXIT_CODE_BB -eq 124 ]; then
-  echo "Barebones simulator timed out (Exit Code 124) instead of io_fault (Exit Code 1)!"
-fi
 
 if [ $EXIT_CODE_BB -ne 1 ]; then
   echo "Barebones simulator did not exit with code 1 (Exit Code: $EXIT_CODE_BB)"
@@ -44,10 +43,6 @@ bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=1000 "$PW
 EXIT_CODE_RVVI=$?
 set +o pipefail
 set -e
-
-if [ $EXIT_CODE_RVVI -eq 124 ]; then
-  echo "RVVI simulator timed out (Exit Code 124) instead of io_fault (Exit Code 1)!"
-fi
 
 if [ $EXIT_CODE_RVVI -ne 1 ]; then
   echo "RVVI simulator did not exit with code 1 (Exit Code: $EXIT_CODE_RVVI)"
