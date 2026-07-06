@@ -6,7 +6,7 @@
 The host environment (including buildrabbit RPC) lacks necessary Bazel configurations for native execution. Therefore, ALL automated AI agents MUST execute `bazel` commands and E2E scripts (`run_e2e_*.sh`) hermetically inside Podman. 
 
 Use the following command structure:
-`podman run --userns=keep-id:uid=1000,gid=1000 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu-validation <command>`
+`podman run --userns=keep-id:uid=1000,gid=1000 --pids-limit=-1 -it --rm -v $PWD:$PWD -w $PWD localhost/coralnpu-validation <command>`
 
 You are strictly forbidden from adding Podman-specific wrappers into the scripts or BUILD files themselves, as this breaks the native workflow for end-users.
 
