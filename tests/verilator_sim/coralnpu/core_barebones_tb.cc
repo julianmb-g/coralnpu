@@ -57,6 +57,7 @@ ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
 ABSL_FLAG(bool, simulate_deadlock, false, "Simulate a delta cycle deadlock to test the monitor");
+ABSL_FLAG(bool, simulate_io_fault, false, "Simulate an IO fault to test handling");
 
 struct Core_tb : Sysc_tb {
   using Sysc_tb::cycle;
@@ -128,7 +129,9 @@ struct Core_tb : Sysc_tb {
         fault_cycles_ = 0;
     }
 
-    if (io_fault) {
+    bool sim_io_fault = absl::GetFlag(FLAGS_simulate_io_fault) && instruction_count > 5;
+
+    if (io_fault || sim_io_fault) {
         fault_cycles_++;
         if (fault_cycles_ > 20) {
             LOG(ERROR) << "[ERROR] io_fault asserted";
