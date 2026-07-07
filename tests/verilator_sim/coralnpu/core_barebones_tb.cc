@@ -56,6 +56,7 @@
 ABSL_FLAG(int, instructions, 500000, "Instruction timeout");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
+ABSL_FLAG(bool, simulate_deadlock, false, "Simulate a delta cycle deadlock to test the monitor");
 
 struct Core_tb : Sysc_tb {
   using Sysc_tb::cycle;
@@ -106,7 +107,9 @@ struct Core_tb : Sysc_tb {
         last_delta = current_delta;
     }
     
-    if (sc_pending_activity_at_current_time()) {
+    if (absl::GetFlag(FLAGS_simulate_deadlock) && instruction_count > 10) {
+        next_delta_evt.notify(SC_ZERO_TIME);
+    } else if (sc_pending_activity_at_current_time()) {
         next_delta_evt.notify(SC_ZERO_TIME);
     }
   }

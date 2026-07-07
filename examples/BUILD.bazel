@@ -27,3 +27,9 @@ coralnpu_v2_binary(
     stack_size_bytes = 4096,
 )
 
+coralnpu_v2_binary(
+    name = "coralnpu_v2_deadlock_trigger",
+    srcs = ["deadlock_trigger.S"],
+    linkopts = ["-nostartfiles", "-nostdlib"],
+)
+

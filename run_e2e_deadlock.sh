@@ -7,8 +7,8 @@ trap 'rm -f ./tmp_log/deadlock_barebones.log ./tmp_log/deadlock_rvvi.log "$PWD/d
 ./utils/ensure_writable.sh ./tmp_log
 
 echo "Building mandated binary via Bazel..."
-bazel build //examples:coralnpu_v2_rvv_add_intrinsic
-cp bazel-bin/examples/coralnpu_v2_rvv_add_intrinsic.elf ./deadlock_dummy.elf
+bazel build //examples:coralnpu_v2_deadlock_trigger
+cp bazel-bin/examples/coralnpu_v2_deadlock_trigger.elf ./deadlock_dummy.elf
 
 echo "Building Barebones simulator..."
 bazel build //tests/verilator_sim:core_barebones_sim
@@ -16,13 +16,13 @@ bazel build //tests/verilator_sim:core_barebones_sim
 echo "Running Barebones simulator (expecting deadlock exit code 1)..."
 set +e
 set -o pipefail
-bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/deadlock_dummy.elf" 2>&1 | tee "$PWD/tmp_log/deadlock_barebones.log"
+bazel run //tests/verilator_sim:core_barebones_sim -- "$PWD/deadlock_dummy.elf" --simulate_deadlock --instructions 100 2>&1 | tee "$PWD/tmp_log/deadlock_barebones.log"
 EXIT_CODE_BB=$?
 set +o pipefail
 set -e
 
-if [ $EXIT_CODE_BB -ne 0 ]; then
-  echo "Barebones simulator did not exit with code 0 (Exit Code: $EXIT_CODE_BB)"
+if [ $EXIT_CODE_BB -ne 1 ]; then
+  echo "Barebones simulator did not exit with deadlock code 1 (Exit Code: $EXIT_CODE_BB)"
   exit 1
 fi
 
@@ -32,13 +32,13 @@ bazel build //tests/verilator_sim:core_rvvi_traced_sim
 echo "Running RVVI Traced simulator (expecting deadlock exit code 1)..."
 set +e
 set -o pipefail
-bazel run //tests/verilator_sim:core_rvvi_traced_sim -- "$PWD/deadlock_dummy.elf" 2>&1 | tee "$PWD/tmp_log/deadlock_rvvi.log"
+bazel run //tests/verilator_sim:core_rvvi_traced_sim -- "$PWD/deadlock_dummy.elf" --simulate_deadlock --instructions 100 2>&1 | tee "$PWD/tmp_log/deadlock_rvvi.log"
 EXIT_CODE_RVVI=$?
 set +o pipefail
 set -e
 
-if [ $EXIT_CODE_RVVI -ne 0 ]; then
-  echo "RVVI simulator did not exit with code 0 (Exit Code: $EXIT_CODE_RVVI)"
+if [ $EXIT_CODE_RVVI -ne 1 ]; then
+  echo "RVVI simulator did not exit with deadlock code 1 (Exit Code: $EXIT_CODE_RVVI)"
   exit 1
 fi
 
