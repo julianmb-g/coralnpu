@@ -2,13 +2,9 @@
 set -e
 
 # Cleanup trap
-trap 'git restore tests/verilator_sim/coralnpu/core_barebones_tb.cc tests/verilator_sim/coralnpu/core_rvvi_traced_sim.cc; rm -f ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log "$PWD/io_fault.elf"' EXIT
+trap 'rm -f ./tmp_log/io_fault_barebones.log ./tmp_log/io_fault_rvvi.log "$PWD/io_fault.elf"' EXIT
 
 ./utils/ensure_writable.sh ./tmp_log
-
-echo "Injecting IO Fault trigger..."
-sed -i 's/if (io_fault) {/if (io_fault || instruction_count > 5) {/g' tests/verilator_sim/coralnpu/core_barebones_tb.cc
-sed -i 's/if (io_fault) {/if (io_fault || instruction_count > 5) {/g' tests/verilator_sim/coralnpu/core_rvvi_traced_sim.cc
 
 echo "Generating E2E ELF..."
 bazel run //tests/verilator_sim:gen_elf -- "$PWD/io_fault.elf" 0x200000b7 0x0000a003
@@ -19,7 +15,7 @@ bazel build //tests/verilator_sim:core_barebones_sim
 echo "Running Barebones simulator (expecting io_fault exit code 1)..."
 set +e
 set -o pipefail
-bazel run //tests/verilator_sim:core_barebones_sim -- --instructions=1000 "$PWD/io_fault.elf" 2>&1 | tee "$PWD/tmp_log/io_fault_barebones.log"
+bazel run //tests/verilator_sim:core_barebones_sim -- --simulate_io_fault --instructions=1000 "$PWD/io_fault.elf" 2>&1 | tee "$PWD/tmp_log/io_fault_barebones.log"
 EXIT_CODE_BB=$?
 set +o pipefail
 set -e
@@ -40,7 +36,7 @@ bazel build //tests/verilator_sim:core_rvvi_traced_sim
 echo "Running RVVI Traced simulator (expecting io_fault exit code 1)..."
 set +e
 set -o pipefail
-bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --instructions=1000 "$PWD/io_fault.elf" 2>&1 | tee "$PWD/tmp_log/io_fault_rvvi.log"
+bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --simulate_io_fault --instructions=1000 "$PWD/io_fault.elf" 2>&1 | tee "$PWD/tmp_log/io_fault_rvvi.log"
 EXIT_CODE_RVVI=$?
 set +o pipefail
 set -e
