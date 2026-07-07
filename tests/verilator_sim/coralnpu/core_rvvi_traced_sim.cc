@@ -66,6 +66,7 @@ ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 ABSL_FLAG(std::string, rvvi_out, "trace.rvvi", "RVVI trace output file");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
 ABSL_FLAG(bool, simulate_deadlock, false, "Simulate a delta cycle deadlock to test the monitor");
+ABSL_FLAG(bool, simulate_io_fault, false, "Simulate an IO fault to test handling");
 
 struct CoreRvvi_tb : Sysc_tb {
   using Sysc_tb::cycle;
@@ -571,7 +572,9 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         sc_stop();
     }
 
-    if ((io_halted.read() || io_fault.read() || ebreak_halt || instruction_count >= instruction_limit) && !e_sent) {
+    bool sim_io_fault = absl::GetFlag(FLAGS_simulate_io_fault) && instruction_count > 5;
+
+    if ((io_halted.read() || io_fault.read() || sim_io_fault || ebreak_halt || instruction_count >= instruction_limit) && !e_sent) {
       TracePacket epacket = {};
       epacket.type = 'E';
       {
@@ -588,7 +591,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       e_sent = true;
     }
 
-    if (io_fault) {
+    if (io_fault || sim_io_fault) {
       LOG(ERROR) << "[ERROR] io_fault asserted";
       had_io_fault = true;
       sc_stop();
