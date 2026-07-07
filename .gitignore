@@ -30,5 +30,5 @@ fpga/bitstreams
 # Untracked build artifacts
 e2e_output.log
 unit_output.log
-utils/backfill_changelog.py
+
 
