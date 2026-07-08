@@ -26,6 +26,11 @@ if [ $EXIT_CODE_BB -ne 1 ]; then
   exit 1
 fi
 
+if ! grep -q "Delta cycle deadlock detected" "$PWD/tmp_log/deadlock_barebones.log"; then
+  echo "Barebones log missing 'Delta cycle deadlock detected'"
+  exit 1
+fi
+
 echo "Building RVVI Traced simulator..."
 bazel build //tests/verilator_sim:core_rvvi_traced_sim
 
@@ -39,6 +44,11 @@ set -e
 
 if [ $EXIT_CODE_RVVI -ne 1 ]; then
   echo "RVVI simulator did not exit with deadlock code 1 (Exit Code: $EXIT_CODE_RVVI)"
+  exit 1
+fi
+
+if ! grep -q "Delta cycle deadlock detected" "$PWD/tmp_log/deadlock_rvvi.log"; then
+  echo "RVVI log missing 'Delta cycle deadlock detected'"
   exit 1
 fi
 
