@@ -1,3 +1,3 @@
 .global _start
 _start:
-    jal zero, 0x0
+    .word 0xFFFFFFFF
