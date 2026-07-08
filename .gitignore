@@ -4,3 +4,4 @@ bazel-testlogs
 .bazelrc.user
 bazel-*
 tmp_log/
+*.rvvi
