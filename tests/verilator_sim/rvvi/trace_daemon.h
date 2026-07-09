@@ -42,9 +42,6 @@ class TraceDaemon {
   void Stop();
 
   bool is_running() const { return running_; }
-  void Pause();
-  void Resume();
-  bool is_paused() const { return paused_; }
 
   void SetSymbolResolver(std::function<std::string(uint64_t)> resolver);
   void SetTraceFormatter(TraceFormatterInterface* formatter);
@@ -65,7 +62,6 @@ class TraceDaemon {
   std::ostream* output_stream_;
   std::thread daemon_thread_;
   std::atomic<bool> running_;
-  std::atomic<bool> paused_;
   
   std::function<std::string(uint64_t)> symbol_resolver_;
   

@@ -310,45 +310,4 @@ TEST_F(TraceDaemonTest, IncompleteChunkSequenceDiscarded) {
   }, ::testing::ExitedWithCode(1), "Trace reassembly error: Incomplete chunks");
 }
 
-TEST_F(TraceDaemonTest, PauseAndResume) {
-  TraceDaemon daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
-  
-  EXPECT_FALSE(daemon.is_paused());
-  daemon.Pause();
-  EXPECT_TRUE(daemon.is_paused());
-
-  daemon.Start();
-
-  // Push an instruction packet. Since daemon is paused, it should NOT process it immediately.
-  TracePacket packet = {};
-  packet.type = 'I';
-  packet.v_id = 1;
-  packet.inst.pc = 0x80000000;
-  packet.inst.instruction = 0x00000013; // nop
-  
-  EXPECT_TRUE(buffer_.Push(packet));
-
-  // Wait a brief moment to ensure consumer thread hasn't popped/processed it
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  
-  // The buffer should still have the packet
-  EXPECT_FALSE(buffer_.IsEmpty());
-  EXPECT_TRUE(output_stream_.str().empty());
-
-  // Resume daemon
-  daemon.Resume();
-  EXPECT_FALSE(daemon.is_paused());
-
-  // Wait for processing
-  while (!buffer_.IsEmpty()) {
-    std::this_thread::yield();
-  }
-  
-  daemon.Stop();
-  
-  std::string output = output_stream_.str();
-  EXPECT_NE(output.find("rvvi,0,0000000080000000,00000013"), std::string::npos);
-}
-
 } // namespace mpact::sim::riscv::rvvi
