@@ -31,7 +31,7 @@ class TraceDaemonTest : public ::testing::Test {
 };
 
 TEST_F(TraceDaemonTest, StartAndStopDaemon) {
-  TraceDaemon daemon(&buffer_, &output_stream_);
+  TraceDaemon<> daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);
   EXPECT_FALSE(daemon.is_running());
   daemon.Start();
@@ -41,7 +41,7 @@ TEST_F(TraceDaemonTest, StartAndStopDaemon) {
 }
 
 TEST_F(TraceDaemonTest, ProcessInstructionPacket) {
-  TraceDaemon daemon(&buffer_, &output_stream_);
+  TraceDaemon<> daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
@@ -65,7 +65,7 @@ TEST_F(TraceDaemonTest, ProcessInstructionPacket) {
 }
 
 TEST_F(TraceDaemonTest, ProcessRegisterPacket) {
-  TraceDaemon daemon(&buffer_, &output_stream_);
+  TraceDaemon<> daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
@@ -102,7 +102,7 @@ TEST_F(TraceDaemonTest, ProcessRegisterPacket) {
 }
 
 TEST_F(TraceDaemonTest, InterleavedPacketStreams) {
-  TraceDaemon daemon(&buffer_, &output_stream_);
+  TraceDaemon<> daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
@@ -138,7 +138,7 @@ TEST_F(TraceDaemonTest, InterleavedPacketStreams) {
 TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
   // This test verifies that pushing an 'E' packet causes the daemon to stop
   // and destruct cleanly without leaving threads unjoined (QA-004).
-  TraceDaemon daemon(&buffer_, &output_stream_);
+  TraceDaemon<> daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
@@ -154,16 +154,13 @@ TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
   
   // Give the daemon thread time to process the 'E' packet and set running_ = false.
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  
-  // If the bug exists, daemon destructor might crash due to unjoined thread
-  // because running_ was set to false by ProcessPacket, making Stop() return early.
 }
 
 TEST_F(TraceDaemonTest, DuplicateChunkWarning) {
   // Capture stderr to verify the warning message.
   testing::internal::CaptureStderr();
 
-  TraceDaemon daemon(&buffer_, &output_stream_);
+  TraceDaemon<> daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
@@ -188,7 +185,7 @@ TEST_F(TraceDaemonTest, DuplicateChunkWarning) {
 }
 
 TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
-  TraceDaemon daemon(&buffer_, &output_stream_);
+  TraceDaemon<> daemon(&buffer_, &output_stream_);
   daemon.SetTraceFormatter(&formatter_);
   daemon.Start();
 
@@ -198,7 +195,7 @@ TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
   r_packet.reg.reg_type = 'V'; // Vector
   r_packet.reg.index = 1;
   r_packet.reg.offset = 0;
-  r_packet.reg.total_size = 128; // Fits in 256-byte buffer
+  r_packet.reg.total_size = 128; // Fits in VLEN/8 = 256 bytes
   r_packet.reg.size = 32;
   for (int i = 0; i < 4; ++i) r_packet.reg.value[i] = 0x1111111111111111;
   
@@ -228,7 +225,7 @@ TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
 
 TEST_F(TraceDaemonTest, ExceedsMaxAccumulatedUpdates) {
   EXPECT_DEATH({
-    TraceDaemon daemon(&buffer_, &output_stream_);
+    TraceDaemon<> daemon(&buffer_, &output_stream_);
     daemon.SetTraceFormatter(&formatter_);
     daemon.Start();
     for (int i = 0; i < 100; ++i) {
@@ -250,7 +247,7 @@ TEST_F(TraceDaemonTest, ExceedsMaxAccumulatedUpdates) {
 
 TEST_F(TraceDaemonTest, ExceedsMaxChunkCount) {
   EXPECT_EXIT({
-    TraceDaemon daemon(&buffer_, &output_stream_);
+    TraceDaemon<256> daemon(&buffer_, &output_stream_); // VLEN=256 bits -> 32 bytes
     daemon.SetTraceFormatter(&formatter_);
     daemon.Start();
     TracePacket r_packet = {};
@@ -258,7 +255,7 @@ TEST_F(TraceDaemonTest, ExceedsMaxChunkCount) {
     r_packet.v_id = 1;
     r_packet.reg.reg_type = 'X';
     r_packet.reg.index = 1;
-    r_packet.reg.total_size = 2048; // num_chunks = 64
+    r_packet.reg.total_size = 64; // num_chunks = 2, exceeds 32 bytes.
     r_packet.reg.size = 32;
     r_packet.reg.offset = 0;
     while (!buffer_.Push(r_packet)) std::this_thread::yield();
@@ -273,7 +270,7 @@ TEST_F(TraceDaemonTest, ExceedsMaxChunkCount) {
 
 TEST_F(TraceDaemonTest, IncompleteChunkSequenceDiscarded) {
   EXPECT_EXIT({
-    TraceDaemon daemon(&buffer_, &output_stream_);
+    TraceDaemon<> daemon(&buffer_, &output_stream_);
     daemon.SetTraceFormatter(&formatter_);
     daemon.Start();
 

@@ -54,8 +54,10 @@ class TraceDaemon {
     uint8_t reg_type;
     uint16_t index;
     uint16_t total_size;
-    uint8_t data[256]; // Hardcoded to 256 bytes to prevent dynamic allocation and satisfy the minimum support requirement.
+    uint8_t data[VLEN / 8]; // Parameterized to VLEN to restore configuration fidelity.
     uint64_t received_chunks_mask; // Bitmask of received 32-byte chunks
+
+    static_assert(VLEN >= 128, "VLEN must be at least 128 bits.");
   };
 
   SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer_;
