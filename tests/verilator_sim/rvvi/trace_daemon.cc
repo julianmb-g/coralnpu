@@ -47,7 +47,11 @@ namespace mpact::sim::riscv::rvvi {
 
 template<size_t VLEN, size_t MAX_UPDATES>
 TraceDaemon<VLEN, MAX_UPDATES>::TraceDaemon(SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer, std::ostream* output_stream)
-    : buffer_(buffer), output_stream_(output_stream), running_(false) {}
+    : buffer_(buffer), output_stream_(output_stream), running_(false) {
+  if (const char* delay = std::getenv("SIM_DELAY_MS")) {
+    sim_delay_ms_ = std::stoi(delay);
+  }
+}
 
 template<size_t VLEN, size_t MAX_UPDATES>
 TraceDaemon<VLEN, MAX_UPDATES>::~TraceDaemon() {
@@ -95,8 +99,8 @@ void TraceDaemon<VLEN, MAX_UPDATES>::DaemonLoop() {
     TracePacket packet;
     if (buffer_->Pop(packet)) {
       ProcessPacket(packet);
-      if (const char* delay = std::getenv("SIM_DELAY_MS")) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(delay)));
+      if (sim_delay_ms_ > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(sim_delay_ms_));
       }
     } else {
       std::this_thread::yield();

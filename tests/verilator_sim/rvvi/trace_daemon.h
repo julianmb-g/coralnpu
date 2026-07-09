@@ -76,6 +76,8 @@ class TraceDaemon {
   bool has_pending_inst_ = false;
   bool has_any_pending_ = false;
 
+  int sim_delay_ms_ = 0;
+
   void FlushPendingInstruction();
 };
 
