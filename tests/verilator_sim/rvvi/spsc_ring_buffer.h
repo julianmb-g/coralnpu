@@ -57,8 +57,9 @@ class SpscRingBuffer {
 
  private:
   std::array<T, Size> buffer_;
-  std::atomic<size_t> head_;
-  std::atomic<size_t> tail_;
+  alignas(64) std::atomic<size_t> head_;
+  alignas(64) std::atomic<size_t> tail_;
+  char padding_[64 - sizeof(std::atomic<size_t>)]; // Ensure tail_ is padded at the end.
 };
 
 } // namespace mpact::sim::riscv::rvvi
