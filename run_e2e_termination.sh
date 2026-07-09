@@ -16,8 +16,9 @@ bazel run //tests/verilator_sim:core_rvvi_traced_sim -- --rvvi_out="$PWD/trace.r
 set +o pipefail
 
 echo "Checking RVVI trace output for graceful termination..."
-if ! grep -q "08000073" trace.rvvi; then
-  echo "Trace file missing expected mpause instruction (08000073)"
+last_inst=$(grep -v '^[[:space:]]*$' trace.rvvi | tail -n 1)
+if ! echo "$last_inst" | grep -q "08000073"; then
+  echo "Trace file does not end with mpause instruction (08000073)"
   exit 1
 fi
 
