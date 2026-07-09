@@ -67,6 +67,7 @@ ABSL_FLAG(std::string, rvvi_out, "trace.rvvi", "RVVI trace output file");
 ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 'highmem')");
 ABSL_FLAG(bool, simulate_deadlock, false, "Simulate a delta cycle deadlock to test the monitor");
 ABSL_FLAG(bool, simulate_io_fault, false, "Simulate an IO fault to test handling");
+ABSL_FLAG(bool, test_backpressure, false, "Enable deterministic backpressure test mode");
 
 struct CoreRvvi_tb : Sysc_tb {
   using Sysc_tb::cycle;
@@ -341,6 +342,27 @@ sc_in<bool> io_debug_rb_inst_7_valid;
   uint32_t internal_v_id = 0;
   uint64_t instruction_count = 0;
   uint64_t instruction_limit = 500000;
+  TraceDaemon<KP_rvvVlen>* daemon = nullptr;
+
+  void push_packet(const TracePacket& packet, const char* label) {
+    auto start = std::chrono::steady_clock::now();
+    bool first_try = true;
+    while (!buffer->Push(packet)) {
+      if (first_try) {
+        first_try = false;
+        if (daemon != nullptr && daemon->is_paused()) {
+          daemon->Resume();
+          LOG(INFO) << "[INFO] Backpressure triggered and detected deterministically! Resumed trace daemon.";
+        }
+      }
+      std::this_thread::yield();
+      auto now = std::chrono::steady_clock::now();
+      if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) {
+        LOG(ERROR) << "[FATAL] Queue backpressure timeout (" << label << ")! Watchdog triggered.";
+        exit(124);
+      }
+    }
+  }
 
   CoreRvvi_tb(sc_module_name name, int instruction_limit, bool random, SpscRingBuffer<TracePacket, BUFFER_SIZE>* buf) 
     : Sysc_tb(name, instruction_limit * 10, random), buffer(buf), instruction_limit(instruction_limit) {
@@ -385,17 +407,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
         tpacket.v_id = internal_v_id++; \
         tpacket.inst.pc = io_debug_rb_inst_##x##_bits_pc.read().to_uint64(); \
         tpacket.inst.instruction = inst; \
-        { \
-          auto start = std::chrono::steady_clock::now(); \
-          while (!buffer->Push(tpacket)) { \
-            std::this_thread::yield(); \
-            auto now = std::chrono::steady_clock::now(); \
-            if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
-              LOG(ERROR) << "[FATAL] Queue backpressure timeout (T-packet)! Watchdog triggered."; \
-              exit(124); \
-            } \
-          } \
-        } \
+        push_packet(tpacket, "T-packet"); \
       } else { \
         uint32_t v_id = internal_v_id++; \
       TracePacket ipacket = {}; \
@@ -403,18 +415,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
       ipacket.v_id = v_id; \
       ipacket.inst.pc = io_debug_rb_inst_##x##_bits_pc.read().to_uint64(); \
       ipacket.inst.instruction = inst; \
-      \
-      { \
-        auto start = std::chrono::steady_clock::now(); \
-        while (!buffer->Push(ipacket)) { \
-          std::this_thread::yield(); \
-          auto now = std::chrono::steady_clock::now(); \
-          if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
-            LOG(ERROR) << "[FATAL] Queue backpressure timeout (I-packet)! Watchdog triggered."; \
-            exit(124); \
-          } \
-        } \
-      } \
+      push_packet(ipacket, "I-packet"); \
       \
       uint32_t opcode = inst & 0x7f; \
       bool writes_rd = (opcode == 0x13) || (opcode == 0x33) || (opcode == 0x37) || \
@@ -526,17 +527,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
                 if (sp == 0) rpacket.reg.value[0] = io_debug_rb_inst_##x##_bits_data.read().to_uint64(); \
               } \
               \
-              { \
-                auto start = std::chrono::steady_clock::now(); \
-                while (!buffer->Push(rpacket)) { \
-                  std::this_thread::yield(); \
-                  auto now = std::chrono::steady_clock::now(); \
-                  if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) { \
-                    LOG(ERROR) << "[FATAL] Queue backpressure timeout (R-packet)! Watchdog triggered."; \
-                    exit(124); \
-                  } \
-                } \
-              } \
+              push_packet(rpacket, "R-packet"); \
             } \
           } \
         } \
@@ -577,17 +568,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
     if ((io_halted.read() || io_fault.read() || sim_io_fault || ebreak_halt || instruction_count >= instruction_limit) && !e_sent) {
       TracePacket epacket = {};
       epacket.type = 'E';
-      {
-        auto start = std::chrono::steady_clock::now();
-        while (!buffer->Push(epacket)) {
-          std::this_thread::yield();
-          auto now = std::chrono::steady_clock::now();
-          if (std::chrono::duration_cast<std::chrono::seconds>(now - start).count() > 5) {
-            LOG(ERROR) << "[FATAL] Queue backpressure timeout (E-packet)! Watchdog triggered.";
-            exit(124);
-          }
-        }
-      }
+      push_packet(epacket, "E-packet");
       e_sent = true;
     }
 
@@ -670,6 +651,11 @@ static int CoreRvvi_run(const char* name, const char* bin, const int instruction
   MpactTraceFormatter formatter;
   TraceDaemon<KP_rvvVlen> daemon(&buffer, &trace_stream);
   daemon.SetTraceFormatter(&formatter);
+
+  if (absl::GetFlag(FLAGS_test_backpressure)) {
+    daemon.Pause();
+    testbench.daemon = &daemon;
+  }
 
   daemon.Start();
 

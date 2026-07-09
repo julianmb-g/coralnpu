@@ -46,7 +46,7 @@ namespace mpact::sim::riscv::rvvi {
 
 template<size_t VLEN, size_t MAX_UPDATES>
 TraceDaemon<VLEN, MAX_UPDATES>::TraceDaemon(SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer, std::ostream* output_stream)
-    : buffer_(buffer), output_stream_(output_stream), running_(false) {}
+    : buffer_(buffer), output_stream_(output_stream), running_(false), paused_(false) {}
 
 template<size_t VLEN, size_t MAX_UPDATES>
 TraceDaemon<VLEN, MAX_UPDATES>::~TraceDaemon() {
@@ -79,6 +79,16 @@ void TraceDaemon<VLEN, MAX_UPDATES>::Stop() {
 }
 
 template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::Pause() {
+  paused_ = true;
+}
+
+template<size_t VLEN, size_t MAX_UPDATES>
+void TraceDaemon<VLEN, MAX_UPDATES>::Resume() {
+  paused_ = false;
+}
+
+template<size_t VLEN, size_t MAX_UPDATES>
 void TraceDaemon<VLEN, MAX_UPDATES>::SetSymbolResolver(std::function<std::string(uint64_t)> resolver) {
   symbol_resolver_ = resolver;
 }
@@ -91,12 +101,13 @@ void TraceDaemon<VLEN, MAX_UPDATES>::SetTraceFormatter(TraceFormatterInterface* 
 template<size_t VLEN, size_t MAX_UPDATES>
 void TraceDaemon<VLEN, MAX_UPDATES>::DaemonLoop() {
   while (running_.load() || !buffer_->IsEmpty()) {
+    if (paused_.load()) {
+      std::this_thread::yield();
+      continue;
+    }
     TracePacket packet;
     if (buffer_->Pop(packet)) {
       ProcessPacket(packet);
-      if (const char* delay = std::getenv("SIM_DELAY_MS")) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(delay)));
-      }
     } else {
       std::this_thread::yield();
     }
