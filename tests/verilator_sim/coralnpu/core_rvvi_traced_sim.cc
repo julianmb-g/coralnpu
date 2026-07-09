@@ -376,7 +376,7 @@ sc_in<bool> io_debug_rb_inst_7_valid;
 #define PROCESS_LANE(x) \
     if (io_debug_rb_inst_##x##_valid.read()) { \
       uint32_t inst = io_debug_rb_inst_##x##_bits_inst.read().to_uint(); \
-      if (inst == 0x00100073) { \
+      if (inst == 0x00100073 || inst == 0x08000073) { \
         ebreak_halt = true; \
       } \
       if (io_debug_rb_inst_##x##_bits_trap.read()) { \

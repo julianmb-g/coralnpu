@@ -120,7 +120,7 @@ struct Core_tb : Sysc_tb {
   void posedge() {
     bool ebreak_detected = false;
 #define CHECK_EBREAK(x) \
-    if (io_debug_rb_inst_##x##_valid.read() && io_debug_rb_inst_##x##_bits_inst.read().to_uint() == 0x00100073) ebreak_detected = true;
+    if (io_debug_rb_inst_##x##_valid.read() && (io_debug_rb_inst_##x##_bits_inst.read().to_uint() == 0x00100073 || io_debug_rb_inst_##x##_bits_inst.read().to_uint() == 0x08000073)) ebreak_detected = true;
     REPEAT_8(CHECK_EBREAK);
 #undef CHECK_EBREAK
 
