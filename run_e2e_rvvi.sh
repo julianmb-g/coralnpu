@@ -73,7 +73,7 @@ fi
 
 echo "Checking boundary vector registers v0-v4 and their sizes..."
 for reg_name in v0 v1 v2 v3 v4; do
-  if ! grep -Eq ",${reg_name}:[0-9a-fA-F]{32}" trace.rvvi; then
+  if ! grep -Eq ",${reg_name}:[0-9a-fA-F]{32}(,|$)" trace.rvvi; then
     echo "Trace file trace.rvvi is missing boundary vector register update or has invalid size: ${reg_name}"
     exit 1
   fi
