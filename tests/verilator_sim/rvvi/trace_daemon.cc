@@ -94,6 +94,9 @@ void TraceDaemon<VLEN, MAX_UPDATES>::DaemonLoop() {
     TracePacket packet;
     if (buffer_->Pop(packet)) {
       ProcessPacket(packet);
+      if (const char* delay = std::getenv("SIM_DELAY_MS")) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(delay)));
+      }
     } else {
       std::this_thread::yield();
     }
