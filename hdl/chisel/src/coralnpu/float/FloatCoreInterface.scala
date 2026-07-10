@@ -103,7 +103,7 @@ object FloatInstruction {
 
     // Guard load/store by the `width` field (encoded in `rm`).
     // Other values are reserved for D, Q, and V extensions.
-    val load_store_rm_valid = (rm === "b001".U) || (rm === "b010".U)
+    val load_store_rm_valid = (rm === "b01".U) || (rm === "b10".U)
     val opcode = MuxLookup(in_opcode, MakeInvalid(FloatOpcode()))(Seq(
         "b00001".U -> Mux(load_store_rm_valid, MakeValid(FloatOpcode.LOADFP), MakeInvalid(FloatOpcode())),
         "b01001".U -> Mux(load_store_rm_valid, MakeValid(FloatOpcode.STOREFP), MakeInvalid(FloatOpcode())),
@@ -114,8 +114,8 @@ object FloatInstruction {
         "b10011".U -> MakeValid(FloatOpcode.NMADD),
     ))
 
-    val fcvt_s_bf16 = (funct5 === "b01000".U) && (rs2 === "b00110".U) && (fmt === 0.U)
-    val fcvt_bf16_s = (funct5 === "b01000".U) && (rs2 === "b01000".U) && (fmt === 2.U)
+    val fcvt_s_bf16 = (funct5 === "b01000".U) && (rs2 === "b01000".U) && (fmt === 2.U)
+    val fcvt_bf16_s = (funct5 === "b01000".U) && (rs2 === "b01001".U) && (fmt === 2.U)
     val is_zfbfmin = (fcvt_s_bf16 || fcvt_bf16_s) && p.enableZfbfmin.B
 
     // TODO(atv): Hook scalar_rd and scalar_rs1 into scalar scoreboard

@@ -56,7 +56,7 @@ class Core(p: Parameters, moduleName: String) extends Module with RequireAsyncRe
     val iflush = new IFlushIO(p)
     val dflush = new DFlushIO(p)
 
-    val debug = Option.when(p.shouldExposeDebugPorts)(new DebugIO(p))
+    val debug = new DebugIO(p)
   })
 
   val score = SCore(p)
@@ -81,8 +81,7 @@ class Core(p: Parameters, moduleName: String) extends Module with RequireAsyncRe
 
   io.iflush <> score.io.iflush
   io.dflush <> score.io.dflush
-  require(io.debug.isDefined == score.io.debug.isDefined, "Debug port presence mismatch between Core and SCore")
-  io.debug.zip(score.io.debug).foreach { case (ioDebug, scoreDebug) => ioDebug <> scoreDebug }
+  io.debug  <> score.io.debug
 
   // ---------------------------------------------------------------------------
   // Local Data Bus Port
@@ -113,8 +112,6 @@ object EmitCore extends App {
       p.enableVectorBf16 = arg.split("=")(1).toBoolean
     } else if (arg.startsWith("--enableVerification")) {
       p.enableVerification = arg.split("=")(1).toBoolean
-    } else if (arg.startsWith("--exposeDebugPorts")) {
-      p.rawExposeDebugPorts = arg.split("=")(1).toBoolean
     } else if (arg.startsWith("--lsuDataBits")) {
       p.lsuDataBits = arg.split("=")(1).toInt
     // itcmSizeKBytes, and dtcmSizeKBytes replace highmem flag

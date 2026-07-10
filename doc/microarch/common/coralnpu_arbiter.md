@@ -1,0 +1,67 @@
+# Simulation-Safe Round-Robin Arbiter (CoralNPUArbiter)
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Developers
+
+## Overview (ADR-082)
+
+The CoralNPU IP block implements a custom Round-Robin Arbiter (`InitedLockingRRArbiter` and its wrapper `CoralNPURRArbiter`) defined in `CoralNPUArbiter.scala`.
+
+This module is a modified version of the standard Chisel `LockingRRArbiter` and `RRArbiter`. It features an explicit initialization of the `lastGrant` register.
+
+## Interfaces
+
+### Port Definitions
+
+| Signal Name | Direction | Type                   | Description                                                        |
+| :---------- | :-------- | :--------------------- | :----------------------------------------------------------------- |
+| `io.in`     | Input     | `Vec(n, Decoupled(T))` | Array of `n` independent Decoupled input streams to be arbitrated. |
+| `io.out`    | Output    | `Decoupled(T)`         | The arbitrated Decoupled output stream.                            |
+| `io.chosen` | Output    | `UInt(log2Ceil(n).W)`  | The index of the input stream currently granted access.            |
+
+> [!NOTE]
+> `T` is the data type of the arbitrated signals, and `n` is the number of input ports.
+
+## State Initialization
+
+`InitedLockingRRArbiter` explicitly initializes the state:
+`lazy val lastGrant = RegInit(0.U(log2Ceil(n).W))`
+
+## Module Instantiations
+
+The `CoralNPURRArbiter` is used in critical paths across the IP block where round-robin fairness is required:
+
+1. **AxiSlave Read/Write Arbitration (`AxiSlave.scala`)**: Arbitrates access between the incoming AXI4 read address channel (`axi.read.addr`) and write address channel (`axi.write.addr`).
+2. **Debug Module Request Arbitration (`CoreAxi.scala`)**: Arbitrates debug access requests between the external debug port (`io.dm.req`) and internal CSR debug requests (`csr.io.debug.req`).
+3. **Master Read Address Arbitration (`CoreAxi.scala`)**: Arbitrates the outbound AXI4 master read address channel (`axi_master.read.addr`) between the execution bus (`ebus2axi`) and instruction fetch bus (`ibus2axi`).
+
+## Verification
+
+This hardware block is validated using standalone tests.
+
+- [CoralNPUArbiter Chisel Testbench](hdl/chisel/src/common/CoralNPUArbiterTest.scala)
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/common/CoralNPUArbiter.scala:L15-52`, `hdl/chisel/src/coralnpu/CoreAxi.scala:L71-73,L248-251`, `hdl/chisel/src/coralnpu/AxiSlave.scala:L52-56` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

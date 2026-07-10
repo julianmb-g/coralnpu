@@ -1,0 +1,71 @@
+# Scalar FPU Execution Pipeline
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> **Intended Audience:** Hardware Developers
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+The scalar Floating-Point Unit (FPU) in the CoralNPU architecture is built around a pipelined Fused Multiply-Add (FMA) core. It translates standard floating-point operations into FMA equivalents and processes them through a multi-stage, decoupled pipeline.
+
+## FPU Command Translation (`FpuCmd`)
+
+The FPU receives `FpuCmd` bundles containing an operation type (`FpuOptype`) and up to three operands (`ina`, `inb`, `inc`). These commands are combinationally translated into standard `FmaCmd` (`ina * inb + inc`) formats.
+
+| Operation Type | `FmaCmd.ina` | `FmaCmd.inb` | `FmaCmd.inc` | Equivalent Math    |
+| -------------- | ------------ | ------------ | ------------ | ------------------ |
+| `FpuAdd`       | `ina`        | `1.0`        | `inc`        | `ina * 1.0 + inc`  |
+| `FpuSub`       | `ina`        | `1.0`        | `-inc`       | `ina * 1.0 - inc`  |
+| `FpuMul`       | `ina`        | `inb`        | `0.0`        | `ina * inb + 0.0`  |
+| `FpuFma`       | `ina`        | `inb`        | `inc`        | `ina * inb + inc`  |
+| `FpuFms`       | `ina`        | `inb`        | `-inc`       | `ina * inb - inc`  |
+| `FpuFnma`      | `-ina`       | `inb`        | `inc`        | `-ina * inb + inc` |
+| `FpuFnms`      | `-ina`       | `inb`        | `-inc`       | `-ina * inb - inc` |
+
+_Note: For addition and subtraction, `inb` is tied to the FP32 representation of `1.0` (`127.U(8.W)` exponent, `0` mantissa)._
+
+## Pipeline Stages
+
+The FPU executes operations across a three-stage pipeline, utilizing the underlying `common.Fma` hardware block. The stages are separated by decoupled queues (FIFOs) with a depth of 1 and `flow=true` to handle backpressure gracefully.
+
+- **Stage 1 (`FmaStage1`)**: The translated `FmaCmd` enters the first stage of the FMA arithmetic directly from the input translation logic.
+- **Stage 2 (`FmaStage2`)**: State from Stage 1 is buffered through a queue into the second FMA processing stage.
+- **Stage 3 (`FmaStage3`)**: State from Stage 2 is buffered through another queue into the final FMA processing stage. The result is then decoupled and driven to the output port.
+
+## Scalar FPU Division & Square Root (ADR-146)
+
+The scalar FPU includes hardware support for scalar floating-point division (`fdiv.s`) and square root (`fsqrt.s`) operations. While the basic `FpuCmd` wrapper handles FMA operations, these complex operations are mapped through `hdl/chisel/src/coralnpu/float/FloatCore.scala`. The instruction decoding logic maps the `funct5` fields `0b00011` to `FpNewOperation.DIV` and `0b01011` to `FpNewOperation.SQRT`. The `FloatCore` implementation dynamically generates the SystemVerilog instantiation (`GenerateCoreShimSource`) and conditionally injects the required physical datapath sources (`fpnew_divsqrt_th_32.sv` and `fpnew_divsqrt_multi.sv`) based on the configured NPU parameters. The internal multi-cycle routing is handled entirely within the third-party `fpnew` IP.
+
+## Verification
+
+The scalar Floating-Point Unit (FPU) pipeline and its decoupled stages are validated through both standalone block-level simulation and top-level integration tests.
+
+- [Scalar FPU Chisel Testbench](../../../hdl/chisel/src/coralnpu/scalar/FpuTest.scala)
+- [CoralNPU Top-Level Testbench](../../../tests/uvm/tb/coralnpu_tb_top.sv)
+- [Core Mini AXI Verilator Testbench](../../../tests/verilator_sim/coralnpu/core_mini_axi_tb.cc)
+
+<!-- mdformat off -->
+
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+<!-- prettier-ignore-end -->
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-08 - **Upstream Commit:** 6f544682251b13f75ae58a14acd7d8b71f4291cc - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Fpu.scala:L32`, `hdl/chisel/src/coralnpu/scalar/Fpu.scala:L41`, `hdl/chisel/src/coralnpu/scalar/Fpu.scala:L69` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

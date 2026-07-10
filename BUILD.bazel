@@ -1,1 +1,2 @@
 # Empty BUILD file for the workspace root.
+exports_files(glob(["run_e2e_*.sh"]))

@@ -18,7 +18,6 @@ import os
 import sys
 import time
 import logging
-import subprocess
 
 # To support 'import coralnpu_hw.coralnpu_test_utils' without Bazel:
 _script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -52,7 +51,6 @@ class BinaryRunner:
         csr_base_addr=0x30000,
         verify=False,
         exit_after_start=False,
-        reset=False,
     ):
         """
         Initializes the BinaryRunner.
@@ -70,7 +68,6 @@ class BinaryRunner:
         self.entry_point = None
         self.verify = verify
         self.exit_after_start = exit_after_start
-        self.reset = reset
         self.status_msg_addr = None
         self.status_msg_size = 0
         self._parse_elf()
@@ -99,22 +96,9 @@ class BinaryRunner:
 
     def run_binary(self):
         """Executes the binary load and run flow."""
-        is_responsive = False
-        if not self.reset:
-            try:
-                logger.info("Checking if FPGA bus is responsive...")
-                # ITCM (0x0) is always mapped and safe to read.
-                self.spi_master.read_word(0x0)
-                is_responsive = True
-                logger.info("FPGA bus is responsive.")
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                logger.warning("FPGA bus is unresponsive. Attempting automatic recovery reset...")
-
-        if self.reset or not is_responsive:
-            logger.info("Performing hardware reset (toggle PROG_B)...")
-            self.spi_master.device_reset()
-            # Wait a bit for DDR calibration to complete
-            time.sleep(0.1)
+        # Note: self.spi_master.device_reset() (ADBUS7 toggle) currently breaks DDR
+        # initialization on this bitstream. We rely on bitstream reload for a clean state.
+        # self.spi_master.device_reset()
 
         if self.exit_after_start:
             logger.info(f"Loading ELF file: {self.elf_path}")
@@ -175,11 +159,6 @@ def main():
         action="store_true",
         help="Enable verbose logging.",
     )
-    parser.add_argument(
-        "--reset",
-        action="store_true",
-        help="Perform hardware reset (toggle PROG_B) before loading (will wipe DDR).",
-    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -199,7 +178,6 @@ def main():
             csr_base_addr,
             verify=args.verify,
             exit_after_start=args.exit_after_start,
-            reset=args.reset,
         )
         runner.run_binary()
     except (ValueError, RuntimeError, FileNotFoundError) as e:

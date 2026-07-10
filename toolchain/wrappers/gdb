@@ -15,6 +15,7 @@
 
 PROG=$(basename "$0")
 DRIVER_DIR=$(dirname "$0")
+PREFIX="riscv32-unknown-elf"
 
 # Locate the riscv toolchain repo. When invoked from a bazel test's runfiles
 # tree, the toolchain lives at runfiles/+hw_deps+toolchain_coralnpu_v2/. When
@@ -29,14 +30,9 @@ _find_toolchain_bin() {
         if [[ -z "${match}" ]]; then
             match=$(ls -d "${d}/"*toolchain_coralnpu_v2 2>/dev/null | head -1)
         fi
-        if [[ -n "${match}" ]]; then
-            if [[ -x "${match}/bin/riscv64-unknown-elf-gdb" ]]; then
-                echo "${match}/bin/riscv64-unknown-elf-gdb"
-                return
-            elif [[ -x "${match}/bin/riscv32-unknown-elf-gdb" ]]; then
-                echo "${match}/bin/riscv32-unknown-elf-gdb"
-                return
-            fi
+        if [[ -n "${match}" && -x "${match}/bin/${PREFIX}-gdb" ]]; then
+            echo "${match}/bin/${PREFIX}-gdb"
+            return
         fi
         d=$(dirname "$d")
     done
@@ -44,7 +40,7 @@ _find_toolchain_bin() {
 
 GDB=$(_find_toolchain_bin "${DRIVER_DIR}")
 if [[ -z "${GDB}" ]]; then
-    echo "$0: cannot locate riscv64-unknown-elf-gdb or riscv32-unknown-elf-gdb under any external/*toolchain_coralnpu_v2" 1>&2
+    echo "$0: cannot locate ${PREFIX}-gdb under any external/*toolchain_coralnpu_v2" 1>&2
     exit 1
 fi
 

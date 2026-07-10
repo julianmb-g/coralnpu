@@ -1,10 +1,14 @@
 # Writing a CoralNPU Program
 
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** SW/Compiler Developers
+
 This tutorial introduces the basics of writing a CoralNPU program. You will:
 
-1) Learn the basic structure of a CoralNPU program.
-2) Write and compile a basic program.
-3) Test your program with a cocotb test bench.
+1. Learn the basic structure of a CoralNPU program.
+2. Write and compile a basic program.
+3. Test your program with a cocotb test bench.
 
 ## Prerequistes
 
@@ -29,19 +33,19 @@ int main(int argc, char** argv) {
 
 The typical structure of a CoralNPU program includes:
 
-1) Input buffers, to store the inputs to the computation you want to perform.
+1. Input buffers, to store the inputs to the computation you want to perform.
    For this tutorial, we will assume the host core will write data to CoralNPU's
    DTCM before the program executes.
-2) Output buffers, for CoralNPU to store the result of computation. Similar to
+2. Output buffers, for CoralNPU to store the result of computation. Similar to
    the input buffers, we'll assume that CoralNPU will write to a location in it's
    DTCM to be read by the host processor after it completes.
-3) The actual computation to be performed.
+3. The actual computation to be performed.
 
 ### Defining Input and Output Buffers
 
 For this tutorial we'll accept two input buffers and emit one output buffer,
 each consisting of 8 uint32_t. We define them outside of `main`.
-__attribute__((section(".data"))) defines buffer is stored in data section.
+`__attribute__((section(".data")))` defines buffer is stored in data section.
 
 ```c++
 uint32_t input1_buffer[8] __attribute__((section(".data")));
@@ -125,7 +129,6 @@ async def core_mini_axi_tutorial(dut):
 Before we start the program, let's also write inputs into DTCM. We can
 determine the location of a buffer using `lookup_symbol` and write to DTCM with
 `write`:
-
 
 ```diff
 @cocotb.test()
@@ -235,3 +238,11 @@ Congratulations on running your first program!
 
 Follow up tutorials will cover accelerating CoralNPU with RISC-V Vector
 intrinsics.
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `tests/cocotb/tutorial/tutorial.py` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

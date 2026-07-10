@@ -1,0 +1,35 @@
+# Vector Dispatch RAW Hazard Tracking
+
+> **Intended Audience:** Hardware Developers
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+The Vector Dispatch unit implements Read-After-Write (RAW) hazard detection to maintain data coherency for vector instructions in the CoralNPU. This is implemented physically within `rvv_backend_dispatch_raw_uop_rob.sv`.
+
+## RAW Hazard Conditions
+
+The hazard detection logic evaluates an incoming successor micro-op against all predecessor micro-ops currently residing in the Reorder Buffer (ROB). A RAW hazard is explicitly detected for a given vector operand (`vs1`, `vs2`, `vd` acting as `vs3`, or `v0` mask) when the following three conditions are met simultaneously:
+
+1.  **Index Match**: The source index of the successor micro-op matches the write destination index (`w_index`) of a predecessor micro-op.
+2.  **Successor Validity**: The successor micro-op requires the vector register (indicated by `vs1_valid`, `vs2_valid`, `vs3_valid`, or `~vm` for unmasked `v0` operations).
+3.  **Predecessor Status**: The predecessor micro-op is valid and explicitly targets the Vector Register File (`w_type == VRF`).
+
+## Dispatch Stalling (Wait Generation)
+
+If a RAW hazard is detected, the dispatch stage will stall the successor micro-op by generating a wait signal (e.g., `vs1_wait`). This wait signal is exclusively asserted when the predecessor micro-op has not yet produced valid write data (`~w_valid`). The incoming micro-op remains stalled in dispatch until all data dependencies within the ROB are resolved.
+
+## Interface Mapping
+
+| Interface     | Type   | Description                                                                              |
+| ------------- | ------ | ---------------------------------------------------------------------------------------- |
+| `suc_uop`     | Input  | Attributes of the incoming successor micro-op (`SUC_UOP_RAW_t`).                         |
+| `pre_uop`     | Input  | Array of `ROB_DEPTH` valid predecessor micro-ops currently in the ROB (`PRE_UOP_RAW_t`). |
+| `raw_uop_rob` | Output | Hazard detection results, including individual hit matrices and aggregated wait flags.   |
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_dispatch_raw_uop_rob.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

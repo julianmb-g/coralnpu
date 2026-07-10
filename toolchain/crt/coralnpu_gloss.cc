@@ -19,8 +19,6 @@
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
-#include <cstddef>
-using std::size_t;
 #include <malloc.h>
 
 void* __dso_handle = reinterpret_cast<void*>(&__dso_handle);

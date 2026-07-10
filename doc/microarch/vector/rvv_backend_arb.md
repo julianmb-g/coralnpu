@@ -1,0 +1,52 @@
+# Vector Backend ROB Writeback Arbiter
+
+> **Intended Audience:** Hardware Developers
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+The Vector Backend Reorder Buffer (ROB) Writeback Arbiter (`rvv_backend_arb`) routes execution results from the Processing Units (PUs) to the ROB write ports. Because the number of PUs (8 or 10) exceeds the available ROB write ports (4), the arbiter employs a cascaded hybrid static-priority and round-robin arbitration scheme to prevent starvation while prioritizing high-throughput units.
+
+## Arbitration Architecture
+
+The arbitration logic uses a two-tiered approach:
+
+1.  **Static Priority**: Dedicated ROB ports are assigned to specific high-priority PUs. If a high-priority PU has a valid request (`req`), it is immediately granted the port.
+2.  **Round-Robin Arbitration**: If a statically mapped PU does not assert a request, the unused ROB port is dynamically allocated to a pool of lower-priority PUs using a round-robin scheme (`arb_round_robin`).
+
+The `arb_round_robin` module implements a fast, combinational priority resolution using a stateful priority register (`prio`). The grant logic (`grant_tmp = {req,req} & ~({req,req} - prio)`) ensures fair distribution among competing lower-priority units.
+
+## Port Mapping and Priorities
+
+The arbiter supports two configurations based on the `ZVE32F_ON` parameter, mapping 8 or 10 PUs to 4 ROB ports (`NUM_SMPORT = 4`).
+
+### 10 PU Configuration (`ZVE32F_ON` Enabled)
+
+| ROB Port   | Static Priority (High) | Round-Robin Pool (Low Priority)                      |
+| :--------- | :--------------------- | :--------------------------------------------------- |
+| **Port 0** | PU `0`                 | PU `4`, PU `8` (FMAMAC 0)                            |
+| **Port 1** | PU `1`                 | PU `5`, PU `9` (FMAMAC 1)                            |
+| **Port 2** | PU `6`                 | PU `2` (ALU 0), PU `3` (ALU 1) (if Port 2 available) |
+| **Port 3** | PU `7`                 | PU `2` (ALU 0), PU `3` (ALU 1) (if Port 3 available) |
+
+_Note: For Ports 2 and 3, if both PU `6` and `7` are idle, PU `2` and `3` are statically mapped without needing round-robin arbitration._
+
+### 8 PU Configuration (`ZVE32F_ON` Disabled)
+
+| ROB Port   | Static Priority (High) | Round-Robin Pool (Low Priority)                      |
+| :--------- | :--------------------- | :--------------------------------------------------- |
+| **Port 0** | PU `0`                 | PU `4`, PU `5` (MAC) (if Port 0 available)           |
+| **Port 1** | PU `1`                 | PU `4`, PU `5` (MAC) (if Port 1 available)           |
+| **Port 2** | PU `6`                 | PU `2` (ALU 0), PU `3` (ALU 1) (if Port 2 available) |
+| **Port 3** | PU `7`                 | PU `2` (ALU 0), PU `3` (ALU 1) (if Port 3 available) |
+
+<!-- mdformat off -->
+
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+<!-- prettier-ignore-end -->
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_arb.sv`, `hdl/verilog/rvv/common/arb_round_robin.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

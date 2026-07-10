@@ -138,14 +138,6 @@ package coralnpu_test_pkg;
     endtask
   endclass
 
-  class irq_delay_helper extends uvm_object;
-    rand int delay;
-    `uvm_object_utils(irq_delay_helper)
-    function new(string name = "irq_delay_helper");
-      super.new(name);
-    endfunction
-  endclass
-
   //--------------------------------------------------------------------------
   // Class: coralnpu_base_test
   //--------------------------------------------------------------------------
@@ -286,15 +278,12 @@ package coralnpu_test_pkg;
         end
         begin
           forever begin
-            irq_delay_helper delay_rand = irq_delay_helper::type_id::create("delay_rand");
             int delay;
 
             wait (irq_vif.wfi == 1'b1);
-            if (!delay_rand.randomize()) begin
+            if (!std::randomize(delay) with {delay inside {[0:1000]};}) begin
               `uvm_error(get_type_name(), "Randomization of IRQ delay failed")
             end
-            delay = delay_rand.delay % 1001;
-            if (delay < 0) delay = -delay;
             #(delay * 1ns);
             pulse_irq_seq = coralnpu_pulse_irq_seq::type_id::create("pulse_irq_seq");
             pulse_irq_seq.start(env.m_irq_agent.sequencer);
@@ -500,14 +489,11 @@ package coralnpu_test_pkg;
               end
               begin
                 forever begin
-                  irq_delay_helper delay_rand = irq_delay_helper::type_id::create("delay_rand");
                   int delay;
                   wait (irq_vif.wfi == 1'b1);
-                  if (!delay_rand.randomize()) begin
+                  if (!std::randomize(delay) with {delay inside {[0:1000]};}) begin
                     `uvm_error(get_type_name(), "Randomization of IRQ delay failed")
                   end
-                  delay = delay_rand.delay % 1001;
-                  if (delay < 0) delay = -delay;
                   #(delay * 1ns);
                   pulse_irq_seq = coralnpu_pulse_irq_seq::type_id::create("pulse_irq_seq");
                   pulse_irq_seq.start(env.m_irq_agent.sequencer);

@@ -42,8 +42,8 @@ cc_library(
     hdrs = ["depthwise_conv.h"],
     target_compatible_with = ["//platforms/cpu:coralnpu_v2"],
     deps = [
-        ":accumulator_util",
         ":memory_util",
+        ":accumulator_util",
         "//sw/opt:rvv_opt",
         "@tflite_micro//tensorflow/lite/micro:op_resolvers",
     ],
