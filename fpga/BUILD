@@ -13,8 +13,8 @@
 # limitations under the License.
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_list_flag")
-load("@coralnpu_host_cpus//:defs.bzl", "MAKE_JOBS", "VERILATOR_THREADS")
 load("@coralnpu_hw//third_party/python:requirements.bzl", "requirement")
+load("@coralnpu_host_cpus//:defs.bzl", "MAKE_JOBS", "VERILATOR_THREADS")
 load("@internal_check//:status.bzl", internal_exists = "FOLDER_EXISTS")
 load("@lowrisc_opentitan_gh//rules:fusesoc.bzl", "fusesoc_build")
 load("//rules:coralnpu_v2.bzl", "coralnpu_v2_binary")
@@ -581,10 +581,7 @@ _NEXUS_NAME_MAP = {
     }
     for m in _MEM_CONFIGS
     for b in _BOOT_MODES
-    for build_type in [
-        "bitstream",
-        "synth_only",
-    ]
+    for build_type in ["bitstream", "synth_only"]
 }
 
 template_rule(
@@ -660,10 +657,9 @@ genrule(
 
 py_test(
     name = "rom_boot_sim_test",
-    timeout = "long",
     srcs = [
-        "sw/rom_boot/make_flash_image.py",
         "sw/rom_boot/rom_boot_sim_test.py",
+        "sw/rom_boot/make_flash_image.py",
     ],
     args = [
         "--sim_binary",
@@ -675,14 +671,15 @@ py_test(
         "--sim_timeout",
         "600",
     ],
-    data = [
-        ":copy_chip_verilator_rom_binary",
-        ":flash_boot.bin",
-        ":rom_test.elf",
-        ":rom_test_vmem",
-    ],
     main = "sw/rom_boot/rom_boot_sim_test.py",
     tags = ["exclusive"],
+    timeout = "long",
+    data = [
+        ":copy_chip_verilator_rom_binary",
+        ":rom_test.elf",
+        ":rom_test_vmem",
+        ":flash_boot.bin",
+    ],
     deps = [
         "//utils/coralnpu_soc_loader:spi_driver",
         "@bazel_tools//tools/python/runfiles",
@@ -699,10 +696,9 @@ genrule(
 
 py_test(
     name = "rom_boot_highmem_sim_test",
-    timeout = "long",
     srcs = [
-        "sw/rom_boot/make_flash_image.py",
         "sw/rom_boot/rom_boot_sim_test.py",
+        "sw/rom_boot/make_flash_image.py",
     ],
     args = [
         "--sim_binary",
@@ -714,14 +710,15 @@ py_test(
         "--sim_timeout",
         "600",
     ],
-    data = [
-        ":copy_chip_verilator_highmem_rom_binary",
-        ":flash_boot_highmem.bin",
-        ":rom_test_highmem.elf",
-        ":rom_test_highmem_vmem",
-    ],
     main = "sw/rom_boot/rom_boot_sim_test.py",
     tags = ["exclusive"],
+    timeout = "long",
+    data = [
+        ":copy_chip_verilator_highmem_rom_binary",
+        ":rom_test_highmem.elf",
+        ":rom_test_highmem_vmem",
+        ":flash_boot_highmem.bin",
+    ],
     deps = [
         "//utils/coralnpu_soc_loader:spi_driver",
         "@bazel_tools//tools/python/runfiles",

@@ -1,0 +1,47 @@
+# Hardware Generation Parameters
+
+<!--
+ Copyright 2024 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Developers, System Integrators
+
+## Overview
+
+The CoralNPU is highly parameterizable at Chisel elaboration time. The `Parameters` class defines the structural sizes, feature flags, and interface widths of the generated RTL.
+
+## Key Core Parameters
+
+| Parameter            | Type      | Default | Description                                                                |
+| :------------------- | :-------- | :------ | :------------------------------------------------------------------------- |
+| `enableRvv`          | `Boolean` | `false` | Enables the Vector Core (RVV 1.0) backend.                                 |
+| `enableFloat`        | `Boolean` | `false` | Enables the Scalar Floating-Point Unit (FPU).                              |
+| `enableFetchL0`      | `Boolean` | `true`  | Enables the L0 Fetch Cache (`UncachedFetch`).                              |
+| `enableVerification` | `Boolean` | `false` | Enables extra logic and the `RetirementBuffer` for testbench verification. |
+| `rvvVlen`            | `Int`     | `128`   | Vector length in bits (`VLEN`).                                            |
+| `fetchDataBits`      | `Int`     | `256`   | Width of the scalar core fetch bus.                                        |
+| `lsuDataBits`        | `Int`     | `256`   | Width of the Load-Store Unit data bus.                                     |
+| `itcmSizeKBytes`     | `Int`     | `8`     | Size of the Instruction TCM in KB.                                         |
+| `dtcmSizeKBytes`     | `Int`     | `32`    | Size of the Data TCM in KB.                                                |
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-10 - **Upstream Commit:** 2be7892532110edbcd0ca4e7ff56e4360a428df7 - **Primary Source(s):** `hdl/chisel/src/coralnpu/Parameters.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

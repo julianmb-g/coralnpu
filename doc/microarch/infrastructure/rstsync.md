@@ -1,0 +1,56 @@
+# Reset Synchronization (RstSync)
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Integrators / Core Developers
+
+The `RstSync` module synchronizes an external asynchronous reset signal into an internal synchronous de-assertion reset. To prevent race conditions, the output clock is actively disabled while the reset is asserted, ensuring a stable clock upon reset de-assertion.
+
+## Interfaces
+
+| Port Name | Direction | Type         | Description                                                                  |
+| --------- | --------- | ------------ | ---------------------------------------------------------------------------- |
+| `clk_i`   | Input     | `Clock`      | The input clock source.                                                      |
+| `rstn_i`  | Input     | `AsyncReset` | The active-low asynchronous external reset.                                  |
+| `clk_en`  | Input     | `Bool`       | Functional clock gate enable, assumed synchronous to `clk_o` or `clk_i`.     |
+| `te`      | Input     | `Bool`       | Test enable for clock gating.                                                |
+| `clk_o`   | Output    | `Clock`      | The output gated clock. Enabled when `clk_en` is high and out of reset.      |
+| `rstn_o`  | Output    | `AsyncReset` | Synchronized output reset, active-low. Driven high after `RST_DELAY` stages. |
+
+## Reset Sequencing
+
+The module relies on an internal shift register (`rst_delay_reg`) initialized to `'0` upon the asynchronous assertion of `rstn_i`. As the clock toggles, `1'b1` is shifted in.
+
+1. **Reset De-assertion (`rstn_o`)**: The synchronized reset `rstn_o` is driven high after a fixed `RST_DELAY` (default: 2 clock cycles).
+2. **Clock Enable (`clk_o`)**: The internal clock enable (`clk_en_int`) allows `clk_o` to toggle only after `RST_DELAY + CLK_DELAY` cycles (default: 4 total clock cycles). This provides a deterministic window between reset de-assertion and clock propagation.
+
+## Parameters
+
+| Parameter   | Type  | Default | Description                                                              |
+| ----------- | ----- | ------- | ------------------------------------------------------------------------ |
+| `RST_DELAY` | Local | `2`     | The number of cycles to delay the synchronized de-assertion of `rstn_o`. |
+| `CLK_DELAY` | Local | `2`     | The number of additional cycles to delay the enabling of `clk_o`.        |
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** 25f92494031ffc2e5eec7a8e9e51bbbca354586a - **Primary Source(s):** `hdl/verilog/RstSync.sv`, `hdl/chisel/src/coralnpu/RstSync.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

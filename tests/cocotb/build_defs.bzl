@@ -23,7 +23,6 @@ VERILATOR_BUILD_ARGS = [
     "-Wno-LATCH",
     "-Wno-SIDEEFFECT",
     "-Wno-MULTIDRIVEN",
-    "-Wno-SPLITVAR",
     "-Wno-UNOPTFLAT",
     "-Wno-BLKANDNBLK",
     "-Wno-CASEX",
@@ -40,12 +39,15 @@ VERILATOR_BUILD_ARGS = [
     "-LDFLAGS \"-rdynamic\"",
 ]
 
-# Note: SRAM backdoor compilation arguments (-CFLAGS, -I../hdl/verilog, and sram_backdoor.cc)
-# are dynamically injected in cocotb_test_suite (rules/coco_tb.bzl) for targets
-# whose hdl_toplevel is listed in rules/sram_backdoor.bzl.
 VCS_BUILD_ARGS = [
     "-timescale=1ns/1ps",
     "-kdb",
+    "+vcs+fsdbon",
+    "-debug_access+all",
+    "-cm",
+    "line+cond+tgl+branch+assert",
+    "-cm_hier",
+    "../tests/cocotb/coverage_exclude.cfg",
     # Required for zero-delay gate-level simulation. Without these, timing violations produce 'X'
     # which causes cocotb to crash with "ValueError: Cannot convert Logic('X') to bool".
     "+notimingcheck",
@@ -53,16 +55,19 @@ VCS_BUILD_ARGS = [
     "-hsopt=ignoreasiccap",  # Added to speed up simulation.
     "-LDFLAGS",
     "-rdynamic",
-    "+vcs+lic+wait",
-    "-O3",
-    "-Xkeyopt=rtopt",
-    "+vpi+1",
+    "-CFLAGS",
+    "-I../hdl/verilog",
+    "../hdl/verilog/sram_backdoor.cc",
     # TODO(davidgao): enable this when ready
     # "-xprop=../tests/cocotb/xprop.cfg",
 ]
 
 VCS_TEST_ARGS = [
-    "+vcs+lic+wait",
+    "+vcs+fsdbon",
+    "+fsdb+mda",
+    "+fsdb+struct",
+    "-cm",
+    "line+cond+tgl+branch+assert",
 ]
 
 VCS_DEFINES = {
@@ -74,14 +79,10 @@ VCS_DEFINES = {
     "TSMC_NO_TESTPINS_DEFAULT_VALUE_CHECK": "",
 }
 
-VCS_NETLIST_BUILD_ARGS = list(VCS_BUILD_ARGS) + [
-    "+vcs+fsdbon",
-]
-
-VCS_NETLIST_TEST_ARGS = list(VCS_TEST_ARGS) + [
-    "+vcs+fsdbon",
-    "+fsdb+mda",
-    "+fsdb+struct",
+VCS_NETLIST_BUILD_ARGS = [
+    arg
+    for arg in VCS_BUILD_ARGS
+    if arg not in ["-I../hdl/verilog", "../hdl/verilog/sram_backdoor.cc"]
 ]
 
 VCS_NETLIST_DEFINES = {
@@ -125,24 +126,24 @@ def rvv_core_mini_axi_netlist_test_suite(
             "waves": False,
             "seed": "42",
             "tags": ["vcs", "manual"],
-            "test_module": ["@coralnpu_hw//tests/cocotb:core_mini_axi_sim.py"],
+            "test_module": ["//tests/cocotb:core_mini_axi_sim.py"],
             "deps": [
-                "@coralnpu_hw//coralnpu_test_utils:core_mini_axi_sim_interface",
-                "@coralnpu_hw//coralnpu_test_utils:sim_test_fixture",
+                "//coralnpu_test_utils:core_mini_axi_sim_interface",
+                "//coralnpu_test_utils:sim_test_fixture",
                 requirement("tqdm"),
                 "@bazel_tools//tools/python/runfiles",
             ],
-            "data": ["@coralnpu_hw//tests/cocotb:cocotb_test_binary_targets"],
+            "data": ["//tests/cocotb:cocotb_test_binary_targets"],
             "size": "enormous",
         },
         vcs_netlist_build_args = VCS_NETLIST_BUILD_ARGS + vcs_build_args_extra,
         vcs_netlist_data = [
-            "@coralnpu_hw//tests/cocotb:cocotb_test_binary_targets",
-            "@coralnpu_hw//tests/cocotb:xprop.cfg",
+            "//tests/cocotb:cocotb_test_binary_targets",
+            "//tests/cocotb:coverage_exclude.cfg",
+            "//tests/cocotb:xprop.cfg",
         ] + vcs_data_extra,
         vcs_netlist_defines = vcs_netlist_defines,
-        vcs_netlist_split_build_test = True,
-        vcs_netlist_test_args = VCS_NETLIST_TEST_ARGS,
+        vcs_netlist_test_args = VCS_TEST_ARGS,
         vcs_netlist_verilog_sources = vcs_verilog_sources,
         **kwargs
     )

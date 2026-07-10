@@ -1,0 +1,81 @@
+# SoC Crossbar (CoralNPUXbar)
+
+<!--
+ Copyright 2024 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> **Intended Audience:** Hardware/SoC Integrators
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+The `CoralNPUXbar` is the central interconnect of the CoralNPU IP, responsible for routing transactions between internal hosts (such as the NPU core) and internal/external devices (SRAM, CSRs, and the SoC bus). It is a parameterizable, data-driven crossbar generator that standardizes internal communication and enforces architectural boundaries.
+
+## Architectural Function
+
+The crossbar serves as the primary integration point for the CoralNPU IP within a larger SoC. It provides:
+
+- **Routing & Arbitration**: Multiplexes requests from multiple internal hosts to targeted devices based on a centralized address map.
+- **Clock Domain Crossing (CDC)**: Integrates asynchronous FIFO buffers to safely bridge different clock domains for host and device interfaces.
+- **Bus Width Conversion**: Automatically bridges interfaces of varying data widths (e.g., 32-bit to 128-bit) to ensure compatibility across the system.
+- **Interface Integrity**: Enforces parity/ECC protection at the port boundaries, ensuring that data corruption is detected at the ingress and egress of the interconnect fabric.
+
+## Internal Architecture
+
+Internally, the `CoralNPUXbar` utilizes a high-performance, low-latency interconnect fabric. For SoC integration, all internal communication details are abstracted into a standard AXI4 host-facing interface to maintain a seamless IP boundary.
+
+### Key Components
+
+| Component                   | Description                                                                                         |
+| :-------------------------- | :-------------------------------------------------------------------------------------------------- |
+| **InterconnectSocket1N**    | A 1-to-N socket that routes a single host's requests to multiple devices based on address decoding. |
+| **InterconnectSocketM1**    | An M-to-1 socket that arbitrates between multiple hosts competing for access to a single device.    |
+| **InterconnectFifoAsync**   | Asynchronous CDC FIFO for bridging clock domains.                                                   |
+| **InterconnectWidthBridge** | Logic for converting between different bus data widths.                                             |
+
+## Parameterization & Interfaces
+
+The crossbar is dynamically generated based on a `CrossbarConfig` object, which defines the topology, clock domains, and address regions.
+
+### Primary Host Interface (AXI4)
+
+The top-level IP wrapper exposes a standard **AXI4** interface for the host processor to access internal CSRs and memory.
+
+- **Address Width**: 32-bit.
+- **Data Width**: 32-bit (for CSR access) or 128-bit (for high-bandwidth memory access).
+- **Protocol**: AXI4 (No support for bursts or transaction IDs at the host-facing boundary to maintain integration simplicity).
+
+### Internal Memory Interfaces
+
+The crossbar provides high-bandwidth paths to internal memories:
+
+- **ITCM/DTCM**: Dedicated low-latency paths to Instruction and Data Tightly Coupled Memories.
+- **SRAM**: High-bandwidth interface to the on-chip shared SRAM.
+
+## Address Decoding & Routing
+
+The `CoralNPUXbar` performs combinational address decoding. If a host attempts to access an unmapped address region, the crossbar automatically routes the request to an internal **Error Responder**, which returns a standard bus error (e.g., `SLVERR` on AXI).
+
+## Implementation Details
+
+- **Arbitration**: Fixed-priority or Round-Robin arbitration is supported depending on the configuration of individual `InterconnectSocketM1` instances.
+- **Integrity**: Port integrity wrappers (`bus.PortIntegrity`) generate and check consistency bits on the address and data channels.
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** 8ba6f4108901602e14e28345b4bd009e6f3b6897 - **Primary Source(s):** `hdl/chisel/src/soc/CoralNPUXbar.scala`, `hdl/chisel/src/bus/Socket1N.scala`, `hdl/chisel/src/bus/SocketM1.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

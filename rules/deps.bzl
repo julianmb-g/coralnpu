@@ -191,6 +191,7 @@ def coralnpu_chisel_deps():
         licenses = ["notice"],
     )
 
+
     # Chiseltest
     scala_maven_import_external(
         name = "edu_berkeley_cs_firrtl",

@@ -1,0 +1,62 @@
+# Instruction Buffer
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> **Intended Audience:** Hardware Developers
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+## Decoupled IO Interface (`feedIn`)
+
+The `InstructionBuffer` module accepts incoming instructions through a specialized `DecoupledVectorIO` interface named `feedIn`. This interface encapsulates up to `n` `DecoupledIO` streams. The interface follows the convention that the first `nValid` elements are valid for enqueueing.
+
+- **Interface:** `DecoupledVectorIO`
+- **Signals:**
+  - `nReady`: Output from the buffer indicating how many elements it can currently accept (minimum of `n` or the available `nSpace` in the underlying `CircularBufferMulti`).
+  - `nValid`: Input to the buffer specifying the number of valid instructions being provided.
+  - `bits`: A vector of `n` instructions (`gen`).
+
+## N-Element Visibility Logic
+
+The buffer exposes `n` elements at its dequeue port (`io.out`). The validity of these elements is dynamically managed:
+
+- An element at `nIndex` is marked as `valid` if and only if `nIndex < nEnqueued` (meaning there are enough buffered instructions) AND the buffer is not currently being flushed (`!io.flush`).
+- The dequeue interface does not exert backpressure. Enqueued instructions become available for dequeueing one full cycle after enqueueing.
+
+## Ready Pop-Count Logic
+
+The downstream consumers pull instructions by asserting `ready` signals on the individual decoupled interfaces of `io.out`. The buffer aggregates these distributed ready signals to advance its internal pointers.
+
+- The buffer employs a hardware `PopCount` over all asserted `fire` signals (`valid && ready`) across the `n` output ports to determine the total number of instructions retired in the current cycle (`nReady`).
+- A hardware assertion (`OneHotInOrder`) guarantees that ready signals are contiguous. For example, consumers cannot assert `ready(0)` and `ready(2)` while leaving `ready(1)` de-asserted; instructions must be dispatched and retired in order.
+- This computed `nReady` count is then fed directly to the underlying `CircularBufferMulti`'s `deqReady` port to advance the read pointer.
+
+## Verification
+
+This hardware block is validated using standalone tests.
+
+- [Instruction Buffer Chisel Testbench](hdl/chisel/src/common/InstructionBufferTest.scala)
+
+<!-- mdformat off -->
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/common/InstructionBuffer.scala:L21-71` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- prettier-ignore-end -->
+<!-- mdformat on -->

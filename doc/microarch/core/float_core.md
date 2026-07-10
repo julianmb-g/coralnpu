@@ -1,0 +1,77 @@
+# FloatCore
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Developers
+
+## Overview
+
+The `FloatCore` module provides floating-point execution capabilities for the CoralNPU. It serves as the primary Chisel integration layer for the underlying `fpnew` (PULP FPU) SystemVerilog implementation.
+
+## Instantiation
+
+The `FloatCore` is instantiated as a standard Chisel `Module` configured by the system `Parameters`.
+
+Internally, `FloatCore` instantiates the underlying `fpnew_top` SystemVerilog module as a Chisel `BlackBox`. This blackbox handles the inline generation and instantiation of `fpnew_top` along with its required parameters and sub-modules. The generation logic (`GenerateCoreShimSource`) dynamically outputs the source code that bridges the Chisel interface to the SystemVerilog `fpnew_top` ports.
+
+## `fpnew` Configuration Mapping
+
+The `fpnew_top` module is parameterized exclusively for 32-bit operations to match the RISC-V `RV32F` specification. The local parameter `impl` controls the pipeline configuration:
+
+- **Pipeline Stages**: Hardcoded to 3 stages across all sub-units.
+- **Unit Types**:
+  - `ADDMUL` (Addition/Multiplication): `PARALLEL`
+  - `DIVSQRT` (Division/Square Root): `MERGED`
+  - `NONCOMP` (Non-computational): `PARALLEL`
+  - `CONV` (Conversions): `MERGED`
+- **Pipeline Config**: Configured as `DISTRIBUTED`.
+- **Formats**: Fixed to `FP32` for source and destination, and `INT32` for integer formats.
+- **DivSqrt Selection**: Controlled dynamically based on the system `Parameters` (`p.floatPulpDivsqrt`).
+
+## Interfaces
+
+`FloatCore` connects to the rest of the pipeline via the following interfaces:
+
+| Interface     | Type                             | Direction (rel. FloatCore)         | Description                                                              |
+| :------------ | :------------------------------- | :--------------------------------- | :----------------------------------------------------------------------- |
+| `inst`        | `Decoupled(FloatInstruction)`    | Input (Ready/Valid)                | Decoupled instruction input                                              |
+| `read_ports`  | `Vec(3, FRegfileRead)`           | Output (Addr/Valid), Input (Data)  | 3 read ports from the floating-point register file                       |
+| `write_ports` | `Vec(2, FRegfileWrite)`          | Output                             | 2 write ports to the floating-point register file                        |
+| `rs1` / `rs2` | `RegfileReadDataIO`              | Input                              | Scalar register file read inputs (used for operations like `fcvt.s.w`)   |
+| `scalar_rd`   | `Decoupled(RegfileWriteDataIO)`  | Output (Valid/Data), Input (Ready) | Decoupled scalar writeback for instructions that produce integer results |
+| `csr`         | `CsrFloatIO`                     | Output (`fflags`), Input (`frm`)   | Interface to/from system CSRs                                            |
+| `lsu_rd`      | `Valid(FloatRegfileWriteDataIO)` | Input                              | Valid interface for receiving loaded floating-point values from the LSU  |
+
+## Verification & Testing
+
+The `FloatCore` module is validated through standalone IP simulation. A key testbench for this block is the `hello_world_float_core_mini_axi.py` tutorial, which drives basic floating-point execution through the core's interfaces.
+
+- [FloatCore Cocotb Testbench](../../../tests/cocotb/tutorial/hello_world_float_core_mini_axi.py)
+
+<!-- mdformat off -->
+
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+<!-- prettier-ignore-end -->
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-08 - **Upstream Commit:** 31af3e9b03772ae7d0a2a209020d68f12b255990 - **Primary Source(s):** `hdl/chisel/src/coralnpu/float/FloatCore.scala:L71`, `hdl/chisel/src/coralnpu/float/FloatCore.scala:L166`, `hdl/chisel/src/coralnpu/float/FloatCore.scala:L231`, `hdl/chisel/src/coralnpu/float/FloatCoreInterface.scala:L180` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

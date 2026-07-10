@@ -175,12 +175,6 @@
   parameter VFCVT_RTZXFV    =   5'b00111;
   parameter VFCVT_FXUV      =   5'b00010;
   parameter VFCVT_FXV       =   5'b00011;
-  parameter VFWCVTFXU       =   5'b01010;
-  parameter VFWCVTFX        =   5'b01011;
-  parameter VFNCVTXUF       =   5'b10000;
-  parameter VFNCVTXF        =   5'b10001;
-  parameter VFNCVTRTZXUF    =   5'b10110;
-  parameter VFNCVTRTZXF     =   5'b10111;
   
   // vfunary1. They can be distinguished by vs1 field(inst_encoding[19:15]).
   parameter VFSQRT          =   5'b00000;

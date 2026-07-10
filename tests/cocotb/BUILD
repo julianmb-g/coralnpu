@@ -13,7 +13,6 @@
 # limitations under the License.
 
 load("@coralnpu_hw//third_party/python:requirements.bzl", "requirement")
-load("@gemma_deps//:requirements.bzl", gemma_requirement = "requirement")
 load("@rules_pkg//:pkg.bzl", "pkg_zip")
 load("//rules:coco_tb.bzl", "cocotb_test_suite", "verilator_cocotb_model")
 load("//rules:coralnpu_v2.bzl", "coralnpu_v2_binary")
@@ -36,7 +35,6 @@ COCOTB_TEST_BINARY_TARGETS = glob(["**/*.elf"]) + glob(["**/*.o"]) + [
     ":float_hazard_tests.elf",
     ":finish_txn_before_halt.elf",
     ":math.elf",
-    ":minstret_test.elf",
     ":stress_test.elf",
     ":unreachable_prefetch_fault.elf",
     ":vector_store_fault.elf",
@@ -45,15 +43,15 @@ COCOTB_TEST_BINARY_TARGETS = glob(["**/*.elf"]) + glob(["**/*.o"]) + [
     ":wfi_slot_2.elf",
     ":wfi_slot_3.elf",
     ":zfbfmin_test.elf",
-    ":zvfbf_test.elf",
     "//tests/cocotb/coralnpu_isa:coralnpu_isa_tests",
     "//tests/cocotb/exceptions:elf_files",
     "//third_party/riscv-tests:all_files",
 ]
 
 VCS_COMMON_DATA = [
+    ":coverage_exclude.cfg",
     ":xprop.cfg",
-    "@coralnpu_hw//hdl/verilog:dpi_files",
+    "//hdl/verilog:dpi_files",
 ]
 
 verilator_cocotb_model(
@@ -120,7 +118,6 @@ CORE_MINI_AXI_SIM_TESTCASES = [
     "unreachable_prefetch_fault",
     "core_mini_axi_frm_test",
     "core_mini_axi_backdoor_load_test",
-    "core_mini_axi_minstret_test",
 ]
 # END_TESTCASES_FOR_core_mini_axi_sim_cocotb
 
@@ -593,18 +590,12 @@ coralnpu_v2_binary(
 )
 
 coralnpu_v2_binary(
-    name = "minstret_test",
-    srcs = [
-        "minstret_test.cc",
-    ],
-)
-
-coralnpu_v2_binary(
     name = "mcycle_test",
     srcs = [
         "mcycle_test.cc",
     ],
 )
+
 
 # This test is used for baseline vector power analysis.
 coralnpu_v2_binary(
@@ -717,32 +708,6 @@ RVV_ML_OPS_TESTCASES = [
 ]
 # END_TESTCASES_FOR_rvv_ml_ops_cocotb_test
 
-py_binary(
-    name = "dump_gemma_tensors",
-    srcs = ["dump_gemma_tensors.py"],
-    tags = ["manual"],
-    deps = [
-        gemma_requirement("torch"),
-        gemma_requirement("transformers"),
-        gemma_requirement("accelerate"),
-        gemma_requirement("numpy"),
-    ],
-)
-
-genrule(
-    name = "generate_gemma_tensors",
-    outs = [
-        "gemma_q.npy",
-        "gemma_k.npy",
-        "gemma_v.npy",
-        "gemma_o.npy",
-    ],
-    cmd = "$(location :dump_gemma_tensors) --out_dir $(RULEDIR)",
-    local = True,
-    tags = ["manual"],
-    tools = [":dump_gemma_tensors"],
-)
-
 cocotb_test_suite(
     name = "rvv_ml_ops_cocotb_test",
     simulators = [
@@ -795,45 +760,6 @@ cocotb_test_suite(
         ],
         "size": "medium",
     },
-    verilator_model = ":rvv_core_mini_axi_model",
-)
-
-coralnpu_v2_binary(
-    name = "zvfbf_test",
-    srcs = [
-        "zvfbf_test.cc",
-    ],
-)
-
-cocotb_test_suite(
-    name = "zvfbf_cocotb_test",
-    simulators = [
-        "verilator",
-        "vcs",
-    ],
-    testcases = [
-        "zvfbf_test",
-    ],
-    testcases_vname = "ZVFBF_TESTCASES",
-    tests_kwargs = {
-        "hdl_toplevel": "RvvCoreMiniAxi",
-        "waves": False,
-        "seed": "42",
-        "test_module": ["zvfbf_test.py"],
-        "deps": [
-            "//coralnpu_test_utils:sim_test_fixture",
-            "@bazel_tools//tools/python/runfiles",
-        ],
-        "data": [
-            ":zvfbf_test.elf",
-        ],
-        "size": "medium",
-    },
-    vcs_build_args = VCS_BUILD_ARGS,
-    vcs_data = [":zvfbf_test.elf"] + VCS_COMMON_DATA,
-    vcs_defines = VCS_DEFINES,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_verilog_sources = ["//hdl/chisel/src/coralnpu:rvv_core_mini_axi_cc_library_verilog"],
     verilator_model = ":rvv_core_mini_axi_model",
 )
 
@@ -965,5 +891,4 @@ exports_files([
     "coverage_exclude.cfg",
     "xprop.cfg",
     "rvv_ml_ops_cocotb_test.py",
-    "rvv_flashattention_cocotb_test.py",
 ])

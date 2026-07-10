@@ -1,0 +1,46 @@
+# Vector Backend ALU Array
+
+> **Intended Audience:** Hardware Developers
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+The Vector Backend ALU (`rvv_backend_alu`) manages the multi-lane integer arithmetic pipeline within the Vector Core. It arbitrates and issues micro-operations (uops) from the ALU Reservation Station to multiple underlying ALU units (`rvv_backend_alu_unit`).
+
+## Structural Overview
+
+The integer ALU array consists of a configurable number of execution lanes, defined by the `` `NUM_ALU `` parameter. The top-level wrapper is responsible for receiving valid uops and routing them correctly based on current availability and operation type.
+
+### Lane Arbitration and Multi-Issue
+
+The `rvv_backend_alu` uses a combinatorial block decoding `result_ready` from the ROB to determine which ALU units are available for multi-issue dispatch.
+
+- **ALU Unit 0 (`u_alu_cmp_unit`)**: This is the primary execution lane. It is explicitly parameterized with `CMP_SUPPORT (1'b1)` to handle comparison instructions.
+- **ALU Unit 1...N (`u_alu_unit`)**: These lanes handle standard arithmetic logic. The arbitration logic explicitly prevents comparison operations (`!uop[x].is_cmp`) from being routed to these secondary units, forcing all compares into Unit 0.
+
+If both ALU 0 and ALU 1 are ready (`result_ready == 2'b11`), the dispatcher will issue to both lanes concurrently, provided the operation directed to ALU 1 is not a comparison.
+
+## Interfaces and Boundaries
+
+| Port             | Direction | Description                                                                       |
+| ---------------- | --------- | --------------------------------------------------------------------------------- |
+| `uop_valid`      | Input     | Array of valid signals indicating pending uops in the ALU Reservation Station.    |
+| `uop`            | Input     | Array of `ALU_RS_t` payloads containing the operation details.                    |
+| `pop`            | Output    | Array of signals acknowledging acceptance of the uop, allowing the RS to advance. |
+| `result_valid`   | Output    | Array indicating a computed result is ready to be written back.                   |
+| `result`         | Output    | Array of `PU2ROB_t` payloads containing the computed value.                       |
+| `result_ready`   | Input     | Array indicating the Reorder Buffer (ROB) is ready to accept the results.         |
+| `trap_flush_rvv` | Input     | Global vector trap flush signal, ensuring in-flight operations are cancelled.     |
+
+---
+
+## Execution Latency and Throughput
+
+The execution latency of the Vector ALU is fundamentally tied to the physical lane width. For common integer arithmetic and logical operations, including vector maximum/minimum (`VMAX`/`VMIN`), the underlying hardware achieves a steady-state throughput of **1 instruction per cycle**, executing as a purely combinatorial evaluation bounded by the ROB and reservation station readiness. The architectural latency is 1 cycle per `VLEN` data segment.
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_alu.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

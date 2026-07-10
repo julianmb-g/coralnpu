@@ -1,0 +1,10 @@
+load(
+    "@coralnpu_hw//rules:chisel.bzl",
+    "chisel_test",
+)
+
+chisel_test(
+    name = "safe_mux_test",
+    srcs = ["SafeMuxUpTo1HSpec.scala"],
+    deps = ["//hdl/chisel/src/common:library"],
+)

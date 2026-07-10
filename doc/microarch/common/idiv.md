@@ -1,0 +1,74 @@
+# Integer Divider (IDiv)
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+> **Intended Audience:** Hardware Developers
+
+The `IDiv` module implements a vectorized integer division and remainder unit for the CoralNPU. It executes dividing operations sequentially using a non-restoring division algorithm.
+
+## Architecture and State Machine
+
+The divider calculates results across `n` parallel lanes. It uses a state machine to drive the division across multiple cycles to reduce combinatorial depth.
+
+### Division Iterations and Latency
+
+The latency of the division operation is determined by the `Stages` parameter. By default, `Stages = 4`, which processes 4 bits per cycle.
+
+- **Rcnt (Round Count):** Calculated as `32 / Stages` (default 8).
+- **Total Latency:** The divider state machine iterates from `0` to `Rcnt`. The result is ready when `count === Rcnt.U`, yielding a pipeline latency of `Rcnt + 1` cycles (typically 9 cycles) from request to response.
+
+### State Transitions
+
+| State Register | Description                       | Transitions                                                                                          |
+| -------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `active`       | Division in progress.             | Set `true` when a valid request is accepted (`ivalid`). Set `false` when `count === Rcnt.U`.         |
+| `result`       | Division complete and data ready. | Set `true` when `active` and `count === Rcnt.U`. Set `false` when the output is consumed (`ovalid`). |
+| `count`        | Iteration counter.                | Cleared to `0` on `ivalid`. Increments by `1` while `active`.                                        |
+
+## Interfaces
+
+The `IDiv` unit uses standard Decoupled (ready/valid) handshaking for input operands and output results.
+
+| Interface | Direction | Description                                                       |
+| --------- | --------- | ----------------------------------------------------------------- |
+| `req`     | Input     | Operation type (DIV, DIVU, REM, REMU).                            |
+| `ina`     | Input     | Decoupled vector of `n` 32-bit numerators.                        |
+| `inb`     | Input     | Decoupled vector of `n` 32-bit denominators.                      |
+| `out`     | Output    | Decoupled vector of `n` 32-bit results (quotients or remainders). |
+
+## Supported Operations
+
+The operation type is provided via the `req` signal.
+
+- `DIV`: Signed division.
+- `DIVU`: Unsigned division.
+- `REM`: Signed remainder.
+- `REMU`: Unsigned remainder.
+
+<!-- mdformat off -->
+
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/common/IDiv.scala:L23-188` (No explicit testbench found) - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- prettier-ignore-end -->
+
+<!-- mdformat on -->

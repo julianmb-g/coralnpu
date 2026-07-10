@@ -23,8 +23,6 @@ main:
     # =========================================================================
     fmv.s f4, f1 # Initialize f4 with stale value (1.0f)
     flw f4, 12(sp) # load 4.0f
-    lbu t2, 0(sp) # Dummy
-    sb t2, 0(sp)  # Dummy
     fmadd.s f5, f2, f4, f3, rne
 
     fmv.x.w t0, f5

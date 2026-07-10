@@ -1,0 +1,73 @@
+# IBus to AXI Bridge (IBus2Axi)
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Developers, System Integrators
+
+## Overview
+
+The `IBus2Axi` module serves as a protocol bridge, translating instruction fetch requests from the CoralNPU's internal instruction bus (`IBusIO`) into standard AXI memory-mapped read transactions (`AxiMasterReadIO`). It manages the read path for instructions that miss the internal ITCM and must be fetched from the external AXI interface.
+
+## Interfaces
+
+| Interface | Type              | Direction       | Description                              |
+| :-------- | :---------------- | :-------------- | :--------------------------------------- |
+| `ibus`    | `IBusIO`          | Flipped (Slave) | Internal core instruction bus interface. |
+| `axi`     | `AxiMasterReadIO` | Master          | Standard AXI read-only master interface. |
+
+## Path Architecture
+
+### Read Path
+
+The module operates exclusively on the AXI read channels to explicitly fulfill instruction fetches.
+
+- **Address Phase**: `ibus.valid` drives the AXI `arvalid` signal. The address is aligned to the LSU data width using `linebit` (`log2Ceil(p.lsuDataBits / 8)`).
+- **Data Phase**: The bridge implements a state machine to track `sraddrActive` and `sdataValid`, and buffers incoming instruction data into the `sdata` register. The `io.ibus.rdata` is driven directly from this buffer.
+- **Handshake Logic**: `ibus.ready` is asserted when the AXI data cycle completes (`io.axi.data.valid`) or buffered data is available (`sdataValid`), provided the requested address matches the fetched address (`addrMatch`).
+
+### ARPROT Hardcoding Deviation (ADR-034)
+
+The AXI protection signal `arprot` is statically hardwired to `2.U` in the implementation:
+
+`io.axi.addr.bits.prot := 2.U`
+
+- **Value `2.U` (0b010)**: Indicates an **Unprivileged, Non-secure, Data access**.
+- **Deviation**: Because this bridge handles instruction fetches, the standard AXI expectation is that `ARPROT[2]` should be asserted (Instruction access). However, the implementation statically requests it as a Data access. System integrators must be aware of this when designing upstream AXI crossbars or memory protection units, as fetch requests will appear identically to standard data reads on the bus.
+
+## Fault Handling
+
+The module monitors the AXI read response code (`rresp`). If a read response indicates an error (`rresp =/= 0.U`), the module asserts `io.ibus.fault.valid`.
+
+The `FaultInfo` payload includes:
+
+- `write`: Always `false.B` (as this is a read-only fetch bridge).
+- `addr`: The physical block address (`saddrReg`) that triggered the fault.
+- `epc`: The original program counter (`io.ibus.addr`) associated with the faulting fetch request.
+
+<!-- mdformat off -->
+
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+<!-- prettier-ignore-end -->
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** e0a6c21ae9cf6ad4d578c0adf1256e4e7a21d2a8 - **Primary Source(s):** `hdl/chisel/src/coralnpu/IBus2Axi.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

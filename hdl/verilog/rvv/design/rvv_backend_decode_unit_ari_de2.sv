@@ -49,9 +49,6 @@ module rvv_backend_decode_unit_ari_de2
   EMUL_e                                              emul_max; 
   EEW_e                                               eew_max; 
 
-`ifdef TB_SUPPORT
-  logic   [`NUM_DE_UOP-1:0]                           res_updating_end;
-`endif
   logic                                               valid_opi;
   logic                                               valid_opm;
 `ifdef ZVE32F_ON
@@ -455,13 +452,7 @@ module rvv_backend_decode_unit_ari_de2
               VFCVT_RTZXUFV,
               VFCVT_RTZXFV,
               VFCVT_FXUV,
-              VFCVT_FXV,
-              VFWCVTFXU, 
-              VFWCVTFX,
-              VFNCVTXUF,
-              VFNCVTXF,
-              VFNCVTRTZXUF,
-              VFNCVTRTZXF: begin
+              VFCVT_FXV: begin
                 uop_exe_unit = FCVT;
               end
             endcase
@@ -1057,11 +1048,8 @@ module rvv_backend_decode_unit_ari_de2
   
   // update vd_offset and valid
   always_comb begin
-    vd_offset        = 'b0;
-    vd_valid         = 'b0;
-  `ifdef TB_SUPPORT
-    res_updating_end = '1;
-  `endif
+    vd_offset = 'b0;
+    vd_valid  = 'b0;
 
     for(int i=0;i<`NUM_DE_UOP;i++) begin: GET_VD_OFFSET  
       case(1'b1)
@@ -1116,11 +1104,8 @@ module rvv_backend_decode_unit_ari_de2
             VNSRA,
             VNCLIPU,
             VNCLIP: begin
-              vd_offset[i]        = {1'b0, uop_index_current[i][`UOP_INDEX_WIDTH_ALU-1:1]};
-              vd_valid[i]         = 1'b1;
-            `ifdef TB_SUPPORT
-              res_updating_end[i] = (emul_max==EMUL1) || uop_index_current[i][0];              
-            `endif
+              vd_offset[i] = {1'b0, uop_index_current[i][`UOP_INDEX_WIDTH_ALU-1:1]};
+              vd_valid[i]  = 1'b1;
             end
 
             VSLIDEUP_RGATHEREI16: begin
@@ -1137,11 +1122,8 @@ module rvv_backend_decode_unit_ari_de2
                     {EMUL2,EMUL1},
                     {EMUL4,EMUL2},
                     {EMUL8,EMUL4}: begin
-                      vd_offset[i]        = {1'b0, uop_index_current[i][`UOP_INDEX_WIDTH_ALU-1:1]};
-                      vd_valid[i]         = 1'b1;                    
-                    `ifdef TB_SUPPORT
-                      res_updating_end[i] = uop_index_current[i][0];              
-                    `endif
+                      vd_offset[i] = {1'b0, uop_index_current[i][`UOP_INDEX_WIDTH_ALU-1:1]};
+                      vd_valid[i]  = 1'b1;                    
                     end
                   endcase
                 end
@@ -1310,17 +1292,8 @@ module rvv_backend_decode_unit_ari_de2
                 VFCVT_RTZXUFV,
                 VFCVT_RTZXFV,
                 VFCVT_FXUV,
-                VFCVT_FXV,
-                VFWCVTFXU, 
-                VFWCVTFX: begin
+                VFCVT_FXV: begin
                   vd_offset[i] = uop_index_current[i][`UOP_INDEX_WIDTH_ALU-1:0];
-                  vd_valid[i]  = 1'b1;
-                end
-                VFNCVTXUF,
-                VFNCVTXF,
-                VFNCVTRTZXUF,
-                VFNCVTRTZXF: begin
-                  vd_offset[i] = {1'b0, uop_index_current[i][`UOP_INDEX_WIDTH_ALU-1:1]};
                   vd_valid[i]  = 1'b1;
                 end
               endcase              
@@ -1887,18 +1860,8 @@ module rvv_backend_decode_unit_ari_de2
                 VFCVT_RTZXUFV,
                 VFCVT_RTZXFV,
                 VFCVT_FXUV,
-                VFCVT_FXV,
-                VFNCVTXUF,
-                VFNCVTXF,
-                VFNCVTRTZXUF,
-                VFNCVTRTZXF: begin
+                VFCVT_FXV: begin
                   vs2_offset[i] = uop_index_current[i][`UOP_INDEX_WIDTH_ALU-1:0];
-                  vs2_valid[i]  = 1'b1;        
-                end
-
-                VFWCVTFXU, 
-                VFWCVTFX: begin
-                  vs2_offset[i] = {1'b0, uop_index_current[i][`UOP_INDEX_WIDTH_ALU-1:1]};
                   vs2_valid[i]  = 1'b1;        
                 end
               endcase
@@ -2178,7 +2141,6 @@ module rvv_backend_decode_unit_ari_de2
     for(j=0;j<`NUM_DE_UOP;j++) begin: ASSIGN_RES
     `ifdef TB_SUPPORT
       assign uop[j].uop_pc                = lcmd.cmd.inst_pc;
-      assign uop[j].res_updating_end      = res_updating_end[j];
     `endif  
       assign uop[j].uop_funct3            = inst_funct3;
       assign uop[j].uop_funct6.ari_funct6 = inst_funct6;

@@ -1,0 +1,67 @@
+# Generic Skid Buffer
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Developers, SoC Integrators
+
+## Overview
+
+The Generic Skid Buffer concept is applied in the `CoreAxi` wrapper (defined in `hdl/chisel/src/coralnpu/CoreAxi.scala`) to manage protocol conversion between the internal `FabricIO` and external AXI4 host interface. Specifically, a 2-entry buffer is used on the AXI Read Data channel (R) to decouple handshakes and prevent backpressure deadlocks.
+
+## Architecture
+
+In the implemented reality of the RTL, this "Skid Buffer" function is realized using a 2-entry `Queue` instance (`readDataSkid`) from the standard Chisel utility library.
+
+- **Decoupling:** It ensures that up to two outstanding read responses can be buffered if the internal fabric or the host interface is stalled.
+- **Handshake Separation:** It allows the AXI `RVALID`/`RREADY` handshake to operate independently of internal fabric response timing, preventing protocol violations or stalls in the internal fabric.
+- **Routing:** Read data is routed back to either the Instruction Bus (`ibus`) or Execution Bus (`ebus`) based on the transaction ID stored in the buffer.
+
+## Interfaces
+
+The buffer operates on the AXI4 Read Data channel interface within `CoreAxi`.
+
+| Signal                    | Direction             | Description                                                         |
+| :------------------------ | :-------------------- | :------------------------------------------------------------------ |
+| `io.axi_master.read.data` | Input (from Slave)    | The raw read data and valid signal from the external AXI interface. |
+| `readDataSkid.ready`      | Input (from Internal) | Handshake ready signal muxed between `ibus` and `ebus` based on ID. |
+| `readDataSkid.valid`      | Output (to Internal)  | Valid signal indicating data is available in the buffer.            |
+| `readDataSkid.bits`       | Output (to Internal)  | The buffered read data transaction.                                 |
+
+## Backpressure and Flow Control
+
+Backpressure from the internal consumers (`ibus` or `ebus`) is propagated back to the skid buffer via the `ready` signal. If neither consumer is ready to accept data, the skid buffer will hold the data (up to 2 entries). Once the buffer is full, backpressure is exerted on the external AXI interface via `RVALID`/`RREADY` protocol mechanics.
+
+## Verification
+
+This hardware block is validated implicitly via integration tests and related standalone testbenches:
+
+- [Core Axi CSR Test](hdl/chisel/src/coralnpu/CoreAxiCSRTest.scala)
+- [Core Mini Axi Sim Cocotb Test](tests/cocotb/core_mini_axi_sim.py)
+
+<!-- mdformat off -->
+
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+<!-- prettier-ignore-end -->
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/CoreAxi.scala:L254-260` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

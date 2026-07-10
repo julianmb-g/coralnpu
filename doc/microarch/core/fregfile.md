@@ -1,0 +1,71 @@
+# Floating-Point Register File (FRegfile)
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Developers
+
+The Floating-Point Register File (`FRegfile`) implements the 32 architectural single-precision floating-point registers (f0-f31) required by the RISC-V 'F' extension.
+
+## Interface and Ports
+
+The `FRegfile` is instantiated within the `SCore` with a specific port configuration:
+
+- **Read Ports**: 3 independent read ports.
+- **Write Ports**: 2 independent write ports.
+
+| Port Index | Direction | Typical Assignment (SCore)                     |
+| :--------- | :-------- | :--------------------------------------------- |
+| Read 0     | Output    | Primary FPU operands / Debug Module            |
+| Read 1     | Output    | Secondary FPU operands                         |
+| Read 2     | Output    | Tertiary FPU operands (e.g., FMA instructions) |
+| Write 0    | Input     | Primary FPU writeback / Debug Module           |
+| Write 1    | Input     | Shared Writeback: LSU (Load) and RVV (Vector)  |
+
+## Scoreboard Hazard Detection
+
+The `FRegfile` maintains a 32-bit `scoreboard` register.
+
+- **Allocation**: When an instruction targeting a floating-point register is dispatched, its corresponding bit is set via `scoreboard_set`.
+- **Deallocation**: When a write port commits data to a register, the corresponding bit is cleared (`scoreboard_clr`).
+- **Hazard Assertion**: The module actively monitors for multiple simultaneous clears to the same register. If this occurs outside of a Debug Module write (`dm_write_valid`), a `scoreboard_error` assertion is triggered to halt execution, indicating a structural hazard failure in the dispatch logic.
+
+## Writeback Arbitration Priority
+
+Write Port 1 is shared between the Load-Store Unit (LSU) and the RISC-V Vector (RVV) coprocessor for asynchronous writebacks (e.g., `vfmv.f.s`).
+
+A priority multiplexer arbitrates access to this write port. **The LSU always takes priority over RVV asynchronous writebacks.**
+
+If an LSU floating-point load and an RVV asynchronous float read arrive in the same cycle:
+
+1. The LSU write is committed to `FRegfile` Write Port 1.
+2. The RVV write is dropped and will attempt to arbitrate again in the next cycle.
+
+## Verification
+
+The functionality, read/write port access, and hazard detection logic of the `FRegfile` are verified in its dedicated testbench:
+
+- [FRegfileTest.scala](../../../hdl/chisel/src/coralnpu/scalar/FRegfileTest.scala)
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-08 - **Upstream Commit:** 035ec635c72146b99536f71197d75a0618f40bf1 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/FRegfile.scala:L21`, `hdl/chisel/src/coralnpu/scalar/SCore.scala:L318` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

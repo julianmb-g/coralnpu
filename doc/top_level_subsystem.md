@@ -1,0 +1,99 @@
+# CoralNPU Top-Level Subsystem
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** System Integrators, Hardware Developers
+
+This document provides a unified overview of the CoralNPU block relationships, memory hierarchy, and high-level system boundaries. The core IP interacts with external systems exclusively through the AXI4 interface. External integration details are out-of-scope for this document.
+
+## Architecture Overview
+
+The CoralNPU IP is composed of a top-level wrapper (`CoreAxi`) that adapts the internal Core interfaces into standardized AXI4 protocols.
+
+### Top-Level System Architecture Diagram
+
+```mermaid
+graph TD
+    subgraph CoralNPU SoC Subsystem
+        direction TB
+        Xbar[CoralNPUXbar Crossbar]
+
+        subgraph CoreAxi IP
+            CoreHost[CoreAxi axi_host]
+            CoreDevice[CoreAxi axi_device]
+
+            subgraph Core Subsystem
+                Core[NPU Core]
+                UFetch[UncachedFetch]
+                RBuf[RetirementBuffer]
+                Rvvi[RvviTrace]
+                TCM[Tightly Coupled Memory]
+
+                UFetch --> Core
+                Core --> RBuf
+                RBuf --> Rvvi
+                Core <--> TCM
+            end
+
+            IBus2Axi[IBus2Axi Bridge]
+            DBus2Axi[DBus2Axi Bridge]
+
+            Core -- IBus --> IBus2Axi
+            Core -- DBus --> DBus2Axi
+
+            IBus2Axi -- AXI4 Host --> CoreHost
+            DBus2Axi -- AXI4 Host --> CoreHost
+        end
+
+        Sram[Shared SRAM]
+        CoreHost -- AXI4 Host --> Xbar
+        Xbar -- AXI4 Device --> CoreDevice
+        Xbar -- AXI4 Device --> Sram
+    end
+```
+
+### Core Pipeline Internals
+
+The core processing engine inside the IP block is logically divided into scalar and vector domains.
+
+```mermaid
+graph LR
+    subgraph Core Processor
+        direction TB
+        UFetch[UncachedFetch]
+        TCM[Tightly Coupled Memory]
+        SCore[Scalar Core]
+        RvvCore[Vector Core]
+        RBuf[RetirementBuffer]
+        Rvvi[RvviTrace Interface]
+
+        UFetch --> SCore
+        SCore <--> TCM
+        SCore --> RvvCore
+        SCore --> RBuf
+        RBuf --> Rvvi
+    end
+```
+
+## Memory Hierarchy
+
+The CoralNPU includes on-chip tightly coupled memories (TCMs) for high-bandwidth, deterministic instruction and data access. The `IBus` (Instruction) and `DBus` (Data) natively interact with the TCMs before bridging to external memory over AXI4. Any requests missing the internal TCM are forwarded to the AXI4 fabric.
+
+---
+
+## Type-Safe Subsystem Boundaries
+
+To preserve strong typing at the integration boundaries, the `CoralNPUChiselSubsystem` leverages a `Custom` port configuration for complex types, such as the Debug Module request and response opcodes (`DmReqOp` and `DmRspOp`).
+
+When bridging internal modules to the external subsystem IO, the hardware generator explicitly checks if the classes of the internal and external ports match (`topIo.getClass == moduleIo.getClass`). If they do, the signals are connected directly without intermediate serialization. This prevents raw integer (`asUInt`) type erasure and ensures type safety across the subsystem boundary.
+
+### Standalone IP Physical Validation
+To validate top-level integration using the AXI4 interface, refer to the [AXI-based integration testbench](tests/verilator_sim/coralnpu/core_mini_axi_tb.cc).
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/CoreAxi.scala` (L23-L73), `hdl/chisel/src/soc/CoralNPUChiselSubsystem.scala` (L1-L100) - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

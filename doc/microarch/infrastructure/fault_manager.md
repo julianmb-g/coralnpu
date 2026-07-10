@@ -1,0 +1,45 @@
+# Fault Manager
+
+> **Intended Audience:** Hardware Developers, SW/Compiler Developers
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+The Fault Manager is a centralized unit responsible for aggregating hardware exceptions, illegal instructions, and memory access violations within the CoralNPU core. It prioritizes concurrent faults and prepares the necessary state (mepc, mcause, mtval) for trap handling.
+
+## Architecture
+
+The Fault Manager accepts inputs from multiple pipeline stages and functional units:
+
+- **Instruction Lane Faults**: CSR, JAL/JALR, Branch (BXX), and Undefined Instruction detection.
+- **Fetch Faults**: Access violations detected during instruction fetch.
+- **Memory Faults**: Load/Store access violations from the Load/Store Unit (LSU).
+- **Vector Faults**: Faults originating from the Vector Core (if enabled).
+
+The Fault Manager uses a priority encoder to select the highest-priority fault and produces a unified trap information bundle for the retirement/trap handling logic.
+
+## Exception Prioritization
+
+The Fault Manager prioritizes faults in the following order:
+
+1. Memory Faults (Load/Store)
+2. Vector Faults
+3. Instruction Fetch Faults
+4. Lane-specific faults (CSR, Control Flow, Undefined)
+
+## Trap State Output
+
+For any detected fault, the Fault Manager generates a FaultManagerOutput bundle:
+
+- mepc: The Program Counter of the faulting instruction (or faulting access).
+- mcause: The RISC-V exception cause code.
+- mtval: Trap Value (e.g., faulting address, illegal instruction bit pattern).
+- decode: A boolean flag indicating if the fault occurs during instruction decode.
+
+## Implementation Details
+
+- **Input Bandwidth**: Scalable based on instructionLanes.
+- **Logic**: Priority encoders and case-based multiplexing for cause/value generation.
+- **Traceability**: Implementation is localized to a single Chisel module.
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-10 - **Upstream Commit:** 8ba6f4108901602e14e28345b4bd009e6f3b6897 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/FaultManager.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

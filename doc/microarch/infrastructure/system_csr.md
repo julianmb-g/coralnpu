@@ -1,0 +1,81 @@
+# System Control and Status Registers (CSRs)
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Developers, Verification Engineers
+
+This document details the internal Control and Status Register (CSR) architecture implemented within the CoralNPU scalar core.
+
+## Internal RISC-V CSR Table (ADR-015)
+
+The hardware implements the following memory-mapped CSRs. Unmapped registers will trigger an illegal instruction fault via `CsrAddress.safe`.
+
+| Address    | Name          | Description                                  |
+| :--------- | :------------ | :------------------------------------------- |
+| `0x001`    | `fflags`      | Floating-Point Accrued Exceptions            |
+| `0x002`    | `frm`         | Floating-Point Dynamic Rounding Mode         |
+| `0x003`    | `fcsr`        | Floating-Point Control and Status            |
+| `0x008`    | `vstart`      | Vector Start Position                        |
+| `0x009`    | `vxsat`       | Vector Fixed-Point Saturate Flag             |
+| `0x00A`    | `vxrm`        | Vector Fixed-Point Rounding Mode             |
+| `0x300`    | `mstatus`     | Machine Status                               |
+| `0x301`    | `misa`        | Machine ISA                                  |
+| `0x304`    | `mie`         | Machine Interrupt Enable                     |
+| `0x305`    | `mtvec`       | Machine Trap-Vector Base-Address             |
+| `0x340`    | `mscratch`    | Machine Scratch                              |
+| `0x341`    | `mepc`        | Machine Exception Program Counter            |
+| `0x342`    | `mcause`      | Machine Cause                                |
+| `0x343`    | `mtval`       | Machine Trap Value                           |
+| `0x344`    | `mip`         | Machine Interrupt Pending                    |
+| `0x7A0`    | `tselect`     | Trigger Select                               |
+| `0x7A1`    | `tdata1`      | Trigger Data 1                               |
+| `0x7A2`    | `tdata2`      | Trigger Data 2                               |
+| `0x7A4`    | `tinfo`       | Trigger Info                                 |
+| `0x7B0`    | `dcsr`        | Debug Control and Status                     |
+| `0x7B1`    | `dpc`         | Debug PC                                     |
+| `0x7B2`    | `dscratch0`   | Debug Scratch 0                              |
+| `0x7B3`    | `dscratch1`   | Debug Scratch 1                              |
+| `0x7C0-7`  | `mcontext0-7` | Machine Context Tracking                     |
+| `0x7E0`    | `mpc`         | Machine PC (Internal)                        |
+| `0x7E1`    | `msp`         | Machine SP (Internal)                        |
+| `0xB00`    | `mcycle`      | Machine Cycle Counter                        |
+| `0xB02`    | `minstret`    | Machine Instructions Retired                 |
+| `0xB80`    | `mcycleh`     | Machine Cycle Counter (High)                 |
+| `0xB82`    | `minstreth`   | Machine Instructions Retired (High)          |
+| `0xC20`    | `vl`          | Vector Length                                |
+| `0xC21`    | `vtype`       | Vector Type                                  |
+| `0xC22`    | `vlenb`       | Vector Length in Bytes                       |
+| `0xF11`    | `mvendorid`   | Vendor ID (0x426)                            |
+| `0xF12`    | `marchid`     | Architecture ID (Unimplemented, returns 0)   |
+| `0xF13`    | `mimpid`      | Implementation ID (Unimplemented, returns 0) |
+| `0xF14`    | `mhartid`     | Hardware Thread ID                           |
+| `0xFC0`    | `kisa`        | CoralNPU-specific ISA                        |
+| `0xFC4-D4` | `kscm0-4`     | SCM Revision Information                     |
+
+<!-- mdformat off -->
+
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+<!-- prettier-ignore-end -->
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-07 - **Upstream Commit:** 8ba6f4108901602e14e28345b4bd009e6f3b6897 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Csr.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->
