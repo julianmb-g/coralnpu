@@ -20,10 +20,6 @@
 
 #include <algorithm>
 #include <map>
-#include <string>
-
-#include "absl/log/log.h"
-#include "absl/strings/str_format.h"
 
 #include "tests/verilator_sim/sysc_module.h"
 
@@ -37,114 +33,35 @@ struct Memory_if : Sysc_module {
     uint8_t  data[4096];
   };
 
-  std::string profile_;
+  Memory_if(sc_module_name n, const char* bin, int limit = -1) :
+      Sysc_module(n) {
+    FILE *f = fopen(bin, "rb");
 
-  bool IsValidAddress(uint32_t addr, uint32_t len) const {
-    uint32_t end_addr = addr + len;
-    if (profile_ == "default") {
-      // ITCM: 8KB at 0x0
-      bool in_itcm = (addr < 0x2000 && end_addr <= 0x2000);
-      // DTCM: 32KB at 0x10000
-      bool in_dtcm = (addr >= 0x10000 && end_addr <= 0x18000);
-      return in_itcm || in_dtcm;
-    } else if (profile_ == "highmem") {
-      // 1MB at 0x100000
-      return (addr >= 0x100000 && end_addr <= 0x200000);
+    fseek(f, 0, SEEK_END);
+    int64_t fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    uint8_t *fdata = new uint8_t[fsize];
+
+    fread(fdata, fsize, 1, f);
+    fclose(f);
+
+    if (limit > 0 && fsize > limit) {
+      printf("***ERROR Memory_if limit exceeded [%ld > %d]\n", fsize, limit);
+      exit(-1);
     }
-    return true; // "all" or other profile
-  }
 
-  std::string GetProfileBounds() const {
-    if (profile_ == "default") {
-      return "ITCM:[0x0 - 0x2000), DTCM:[0x10000 - 0x18000)";
-    } else if (profile_ == "highmem") {
-      return "[0x100000 - 0x200000)";
+    int addr = 0;
+    for (; addr < fsize; addr += kPageSize) {
+      const int64_t size = std::min(fsize - addr, int64_t(kPageSize));
+      AddPage(addr, size, fdata + addr);
     }
-    return "[0x0 - 0xFFFFFFFF)";
-  }
-
-  uint64_t GetOverflowDelta(uint32_t addr, uint32_t len) const {
-    uint32_t end_addr = addr + len;
-    if (profile_ == "default") {
-      if (addr < 0x10000 && end_addr > 0x2000) return end_addr - 0x2000;
-      if (end_addr > 0x18000) return end_addr - 0x18000;
-    } else if (profile_ == "highmem") {
-      if (addr < 0x100000) return 0x100000 - addr;
-      if (end_addr > 0x200000) return end_addr - 0x200000;
+    // Create pages for the rest of our memory space, that was not created
+    // for inserting the binary.
+    for (; addr < 0x400000; addr += kPageSize) {
+      AddPage(addr, kPageSize, nullptr);
     }
-    return 0;
-  }
 
-  // ... (rest of constructor logic, replacing calls to IsValidAddress)
-
-  // Memory_if constructor.
-  // Note: File I/O in constructors is generally a style violation because it can fail silently
-  // or abort the program. In our barebones simulation targets, we explicitly pass `bin = nullptr`
-  // and load ELFs backdoor using `LoadElfToMemory`, making this constructor completely infallible at runtime.
-  // We keep the file loading path here for backward compatibility with older SystemC testbenches,
-  // but updated the error logging to use standard Abseil loggers.
-  Memory_if(sc_module_name n, const char* bin, int limit = -1, const std::string& profile = "all") :
-      Sysc_module(n), profile_(profile) {
-    FILE *f = (bin != nullptr && bin[0] != '\0') ? fopen(bin, "rb") : nullptr;
-
-    if (f != nullptr) {
-      fseek(f, 0, SEEK_END);
-      int64_t fsize = ftell(f);
-      fseek(f, 0, SEEK_SET);
-      uint8_t *fdata = new uint8_t[fsize];
-
-      fread(fdata, fsize, 1, f);
-      fclose(f);
-
-      if (limit > 0 && fsize > limit) {
-        LOG(ERROR) << absl::StrFormat("***ERROR Memory_if limit exceeded [%ld > %d]", fsize, limit);
-        exit(-1);
-      }
-
-      int addr = 0;
-      for (; addr < fsize; addr += kPageSize) {
-        const int64_t size = std::min(fsize - addr, int64_t(kPageSize));
-        AddPage(addr, size, fdata + addr);
-      }
-      // Create pages for the rest of our memory space, that was not created
-      // for inserting the binary.
-      if (profile == "default") {
-        for (; addr < 0x18000; addr += kPageSize) {
-           if (IsValidAddress(addr, kPageSize)) AddPage(addr, kPageSize, nullptr);
-        }
-      } else if (profile == "highmem") {
-        for (; addr < 0x200000; addr += kPageSize) {
-           if (IsValidAddress(addr, kPageSize)) AddPage(addr, kPageSize, nullptr);
-        }
-      } else {
-        for (; addr < 0x400000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-      }
-
-      delete [] fdata;
-    } else {
-      if (profile == "default") {
-        // ITCM: 8KB at 0x0
-        for (int addr = 0; addr < 0x2000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-        // DTCM: 32KB at 0x10000
-        for (int addr = 0x10000; addr < 0x18000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-      } else if (profile == "highmem") {
-        // 1MB at 0x100000
-        for (int addr = 0x100000; addr < 0x200000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-      } else {
-        // Create pages for the rest of our memory space (up to 4MB)
-        for (int addr = 0; addr < 0x400000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-      }
-    }
+    delete [] fdata;
   }
 
   bool Read(uint32_t addr, int bytes, uint8_t* data) {
@@ -154,11 +71,6 @@ struct Memory_if : Sysc_module {
       const int limit = kPageSize - offset;
       const int len = std::min(bytes, limit);
 
-      if (!IsValidAddress(addr, len)) {
-        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, GetProfileBounds(), GetOverflowDelta(addr, len));
-        return false;
-      }
-
       if (!HasPage(maddr)) {
         return false;
       }
@@ -166,6 +78,13 @@ struct Memory_if : Sysc_module {
       auto& p = page_[maddr];
       uint8_t* d = p.data;
       memcpy(data, d + offset, len);
+#if 0
+      printf("READ  %08x", addr);
+      for (int i = 0; i < len; i++) {
+        printf(" %02x", data[i]);
+      }
+      printf("\n");
+#endif
       addr += len;
       data += len;
       bytes -= len;
@@ -181,18 +100,20 @@ struct Memory_if : Sysc_module {
       const int limit = kPageSize - offset;
       const int len = std::min(bytes, limit);
 
-      if (!IsValidAddress(addr, len)) {
-        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, GetProfileBounds(), GetOverflowDelta(addr, len));
-        return false;
-      }
-
       if (!HasPage(maddr)) {
-        AddPage(maddr, kPageSize, nullptr);
+        return false;
       }
 
       auto& p = page_[maddr];
       uint8_t* d = p.data;
       memcpy(d + offset, data, len);
+#if 0
+      printf("WRITE %08x", addr);
+      for (int i = 0; i < len; i++) {
+        printf(" %02x", data[i]);
+      }
+      printf("\n");
+#endif
       addr += len;
       data += len;
       bytes -= len;
@@ -258,8 +179,12 @@ struct Memory_if : Sysc_module {
     uint8_t* d = p.data;
 
     if (bytes < kPageSize || data == nullptr) {
+#if 1
       // remove need for .bss  (hacky?)
       memset(d, 0x00, kPageSize);
+#else
+      memset(d, 0xcc, kPageSize);
+#endif
     }
 
     if (data) {
