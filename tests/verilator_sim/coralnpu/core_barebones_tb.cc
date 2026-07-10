@@ -383,9 +383,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   sc_signal<sc_bv<32>> io_debug_dispatch_##x##_instAddr; \
   sc_signal<sc_bv<32>> io_debug_dispatch_##x##_instInst;
 
-  DECLARE_DEBUG_DISPATCH(0);
-  DECLARE_DEBUG_DISPATCH(1);
-  DECLARE_DEBUG_DISPATCH(2);
+  REPEAT_4(DECLARE_DEBUG_DISPATCH);
 #undef DECLARE_DEBUG_DISPATCH
 
   io_iflush_ready = 1;
@@ -604,9 +602,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   core.io_debug_dispatch_##x##_instAddr(io_debug_dispatch_##x##_instAddr); \
   core.io_debug_dispatch_##x##_instInst(io_debug_dispatch_##x##_instInst);
 
-  BIND_DEBUG_DISPATCH(0);
-  BIND_DEBUG_DISPATCH(1);
-  BIND_DEBUG_DISPATCH(2);
+  REPEAT_4(BIND_DEBUG_DISPATCH);
 #undef BIND_DEBUG_DISPATCH
 
   memory_interface.clock(testbench.clock);

@@ -21,11 +21,9 @@ import org.scalatest.ParallelTestExecution
 import org.scalatest.freespec.AnyFreeSpec
 
 import common.{ProcessTestResults}
-import coralnpu.Parameters
 
 
 class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with ParallelTestExecution {
-  val p = new Parameters
   class Tester extends Module {
     val io = IO(new Bundle {
       val inst  = Input(UInt(32.W))
@@ -39,7 +37,7 @@ class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with Paralle
     io.out_op := out.bits.op.asUInt
   }
 
-  class TesterCompressed(p: Parameters) extends Module {
+  class TesterCompressed extends Module {
     val io = IO(new Bundle {
       val inst  = Input(UInt(32.W))
       val out_valid = Output(Bool())
@@ -48,7 +46,7 @@ class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with Paralle
 
     val out = Wire(Valid(new RvvS1DecodedInstruction()))
     out := RvvS1DecodeCompressedInstruction(
-        RvvCompressedInstruction.from_uncompressed(p, io.inst, 0.U))
+        RvvCompressedInstruction.from_uncompressed(io.inst, 0.U))
     io.out_valid := out.valid
     io.out_op := out.bits.op.asUInt
   }
@@ -200,7 +198,7 @@ class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with Paralle
       (0xbe003057L, RvvAluOp.VNCLIP),  // vnclip.wi v0, v0, 0
     )
     simulate(new Tester)(test_decode(_, test_cases))
-    simulate(new TesterCompressed(p))(test_decode_compressed(_, test_cases))
+    simulate(new TesterCompressed)(test_decode_compressed(_, test_cases))
   }
 
   "Decode VAlu ops (with mask) correctly" in {
@@ -329,7 +327,7 @@ class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with Paralle
       (0xbc1030d7L, RvvAluOp.VNCLIP),  // vnclip.wi v1, v1, 0, v0.t
     )
     simulate(new Tester)(test_decode(_, test_cases))
-    simulate(new TesterCompressed(p))(test_decode_compressed(_, test_cases))
+    simulate(new TesterCompressed)(test_decode_compressed(_, test_cases))
   }
 
   "Errata 1: Decode VAlu ops with vd=vm" in {
@@ -444,6 +442,6 @@ class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with Paralle
       (0xbc003057L, RvvAluOp.VNCLIP),  // vnclip.wi v0, v0, 0, v0.t
     )
     simulate(new Tester)(test_decode(_, test_cases))
-    simulate(new TesterCompressed(p))(test_decode_compressed(_, test_cases))
+    simulate(new TesterCompressed)(test_decode_compressed(_, test_cases))
   }
 }

@@ -1743,6 +1743,14 @@ core.io_debug_rb_inst_7_valid(io_debug_rb_inst_7_valid);
     }
   }
   daemon.Stop();
+  // Copy the generated RVVI trace file to the host-accessible tmp_log directory.
+  std::string rvvi_file = absl::GetFlag(FLAGS_rvvi_out);
+  std::string dest_path = "./tmp_log/" + rvvi_file;
+  std::ifstream src(rvvi_file, std::ios::binary);
+  std::ofstream dest(dest_path, std::ios::binary);
+  dest << src.rdbuf();
+  src.close();
+  dest.close();
 #endif
 
   if (testbench.had_deadlock || testbench.had_io_fault) {
