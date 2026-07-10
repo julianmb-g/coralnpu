@@ -258,12 +258,8 @@ struct Memory_if : Sysc_module {
     uint8_t* d = p.data;
 
     if (bytes < kPageSize || data == nullptr) {
-#if 1
       // remove need for .bss  (hacky?)
       memset(d, 0x00, kPageSize);
-#else
-      memset(d, 0xcc, kPageSize);
-#endif
     }
 
     if (data) {

@@ -92,8 +92,7 @@ struct Core_if : Memory_if {
           io_ibus_fault_bits_write = false;
           io_ibus_fault_bits_addr = 0;
           io_ibus_fault_bits_epc = addr;
-          pending_exit_code_ = 65;
-          sc_stop();
+
         }
       } else {
        io_ibus_fault_valid = false;
@@ -115,8 +114,7 @@ struct Core_if : Memory_if {
           io_ebus_fault_bits_write = false;
           io_ebus_fault_bits_addr = addr;
           io_ebus_fault_bits_epc = 0; // PC not easily available here
-          pending_exit_code_ = 65;
-          sc_stop();
+
         }
       }
 
@@ -140,8 +138,7 @@ struct Core_if : Memory_if {
               io_ebus_fault_bits_write = true;
               io_ebus_fault_bits_addr = addr + i;
               io_ebus_fault_bits_epc = 0;
-              pending_exit_code_ = 65;
-              sc_stop();
+
             }
           }
         }
