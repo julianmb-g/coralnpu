@@ -1,0 +1,57 @@
+# Vector LSU Remap Unit
+
+> **Intended Audience:** Hardware Developers
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+The Vector LSU Remap Unit (`rvv_backend_lsu_remap`) acts as the synchronization layer between the out-of-order execution backend and the Load/Store Unit (LSU). It matches asynchronous LSU responses with their original in-flight micro-op metadata.
+
+## Response Tracking and Mapping
+
+The module accepts inputs from `NUM_LSU` parallel ports, taking both in-flight metadata (`LSU_MAP_INFO_t` via `mapinfo`) and physical execution results (`UOP_LSU_t` via `lsu_res`).
+
+- **ROB Entry Mapping:** The `rob_entry` associated with the completed operation is extracted directly from the `mapinfo` and forwarded to the Reorder Buffer (ROB) along with the write data (`w_data`).
+- **Completion Validation:** A result is considered valid (`result_valid`) and ready to be routed to the ROB if:
+  - For `IS_LOAD` operations: The LSU signals `vregfile_write_valid`.
+  - For `IS_STORE` operations: The LSU signals `lsu_vstore_last`.
+
+## Trap Generation Logic
+
+If the LSU encounters an exception during memory access (e.g., an unaligned access or memory fault), it asserts `trap_valid` within the `lsu_res` payload.
+
+- The remap unit intercepts this signal and prioritizes it over normal completion.
+- It asserts `trap_valid_rmp2rob` and forwards the specific `rob_entry` (`trap_rob_entry_rmp2rob`) directly to the ROB.
+- This allows the ROB to flag the exception precisely at the faulting instruction.
+
+## Dequeue (Pop) Semantics
+
+Entries are popped (`pop_mapinfo`, `pop_lsu_res`) from the tracking queues only when the ROB acknowledges the result (`result_ready`) or when a trap is successfully handed off (`trap_ready_rob2rmp`), ensuring no state is dropped during backpressure.
+
+## Interfaces
+
+| Signal                   | Direction | Type                           | Description                                 |
+| :----------------------- | :-------- | :----------------------------- | :------------------------------------------ |
+| `mapinfo_valid`          | Input     | `logic [NUM_LSU-1:0]`          | Valid signal for metadata from LSU mapping. |
+| `mapinfo`                | Input     | `LSU_MAP_INFO_t [NUM_LSU-1:0]` | LSU mapping metadata payload.               |
+| `pop_mapinfo`            | Output    | `logic [NUM_LSU-1:0]`          | Pop signal for metadata queue.              |
+| `lsu_res_valid`          | Input     | `logic [NUM_LSU-1:0]`          | Valid signal for LSU execution result.      |
+| `lsu_res`                | Input     | `UOP_LSU_t [NUM_LSU-1:0]`      | LSU execution result payload.               |
+| `pop_lsu_res`            | Output    | `logic [NUM_LSU-1:0]`          | Pop signal for result queue.                |
+| `result_valid`           | Output    | `logic [NUM_LSU-1:0]`          | Valid signal for result to ROB.             |
+| `result`                 | Output    | `PU2ROB_t [NUM_LSU-1:0]`       | Result payload to ROB.                      |
+| `result_ready`           | Input     | `logic [NUM_LSU-1:0]`          | Ready signal from ROB.                      |
+| `trap_valid_rmp2rob`     | Output    | `logic`                        | Valid signal for trap to ROB.               |
+| `trap_rob_entry_rmp2rob` | Output    | `logic [ROB_DEPTH_WIDTH-1:0]`  | ROB entry associated with the trap.         |
+| `trap_ready_rob2rmp`     | Input     | `logic`                        | Ready signal from ROB for trap.             |
+
+<!-- mdformat off -->
+
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+<!-- prettier-ignore-end -->
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_lsu_remap.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

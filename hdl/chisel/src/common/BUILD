@@ -30,30 +30,30 @@ chisel_library(
 chisel_library(
     name = "index_allocator",
     srcs = ["IndexAllocator.scala"],
-    visibility = ["//visibility:public"],
     deps = [":library"],
+    visibility = ["//visibility:public"],
 )
 
 chisel_library(
     name = "common",
     srcs = [
-        "CoralNPUArbiter.scala",
         "Fifo.scala",
         "FifoIxO.scala",
         "FifoX.scala",
         "FifoXe.scala",
         "IDiv.scala",
+        "CoralNPUArbiter.scala",
         "MathUtil.scala",
         "Slice.scala",
     ],
     visibility = ["//visibility:public"],
     exports = [
-        ":index_allocator",
         ":library",
+        ":index_allocator",
     ],
     deps = [
-        ":index_allocator",
         ":library",
+        ":index_allocator",
         "@chipsalliance_rocket_chip//:asyncqueue",
     ],
 )

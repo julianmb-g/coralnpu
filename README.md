@@ -30,6 +30,7 @@ Coral NPU offers the following top-level feature set:
 
 ## Quick Start
 
+### Standard AXI Simulation
 ```bash
 # Ensure that test suite passes
 bazel run //tests/cocotb:core_mini_axi_sim_cocotb
@@ -42,6 +43,39 @@ bazel build //tests/verilator_sim:core_mini_axi_sim
 
 # Run the binary on the simulator:
 bazel-bin/tests/verilator_sim/core_mini_axi_sim --binary bazel-out/k8-fastbuild-ST-dd8dc713f32d/bin/examples/coralnpu_v2_hello_world_add_floats.elf
+```
+
+### High-Speed Barebones Simulation (New)
+For ultra-fast validation of self-checking binaries, use the barebones targets which bypass AXI and peripherals.
+
+**Barebones Core (No Tracing):**
+```bash
+# Build the simulator:
+bazel build //tests/verilator_sim:core_barebones_sim
+
+# Run an ELF (standard CoralNPU load address 0x80000000):
+bazel-bin/tests/verilator_sim/core_barebones_sim path/to/your_test.elf
+
+# Or use the convenience script:
+./run_e2e_baseline.sh
+```
+
+**RVVI Traced Core (Asynchronous):**
+```bash
+# Build the simulator:
+bazel build //tests/verilator_sim:core_rvvi_traced_sim
+
+# Run an ELF and generate trace.rvvi:
+bazel-bin/tests/verilator_sim/core_rvvi_traced_sim path/to/your_test.elf
+
+# Or use the convenience script:
+./run_e2e_rvvi.sh
+```
+
+**Backpressure & Stress Tests:**
+```bash
+./run_e2e_backpressure.sh
+./run_e2e_termination.sh
 ```
 
 

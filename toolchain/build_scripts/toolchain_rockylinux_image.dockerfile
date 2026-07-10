@@ -15,8 +15,6 @@ RUN dnf install -y git
 Run dnf install python3.9 -y
 RUN dnf install -y \
                 cmake \
-                wget \
-                curl \
                 make \
                 gcc \
                 clang \
@@ -39,5 +37,5 @@ RUN dnf install -y \
                 libslirp-devel \
                 expat-devel
 
-RUN git config --system user.name "Foo Bar"
-RUN git config --system user.email "foo@bar.com"
+RUN git config --global user.name "Foo Bar"
+RUN git config --global user.email "foo@bar.com"

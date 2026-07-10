@@ -1,0 +1,71 @@
+# Fifo Hardware Primitive
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** Hardware Developers, Compiler Engineers
+
+## Overview
+
+The `Fifo` primitive (defined in `hdl/chisel/src/common/Fifo.scala`) is the fundamental decoupled queue abstraction utilized throughout the CoralNPU pipeline. It implements an N-1 internal queue coupled with a registered output stage.
+
+## Architecture
+
+The FIFO employs a dual-stage architecture:
+
+- **Internal Memory Array:** An `m` depth memory array where `m = n - 1`.
+- **Output Stage:** A registered output stage that holds the head element, ensuring that the critical path for valid data output is isolated from the memory read path.
+
+### Pass-Through Behavior
+
+- **`passReady = false` (Default):** The FIFO operates with a strict 1-cycle latency. The input `ready` signal is exclusively dependent on the internal buffer capacity (`wready`).
+- **`passReady = true`:** The FIFO allows a combinatorial pass-through path. The input `ready` signal becomes a logical OR of the internal capacity (`wready`) and the downstream consumer's `ready` signal (`io.out.ready`).
+
+## Interfaces
+
+| Signal     | Direction | Type                    | Description                                                |
+| :--------- | :-------- | :---------------------- | :--------------------------------------------------------- |
+| `io.in`    | Input     | `Flipped(Decoupled(T))` | The decoupled input interface for enqueuing data.          |
+| `io.out`   | Output    | `Decoupled(T)`          | The decoupled output interface for dequeuing data.         |
+| `io.count` | Output    | `UInt`                  | The current number of valid elements residing in the FIFO. |
+
+## Backpressure Semantics
+
+Backpressure is managed by the `count` register, which tracks the exact number of valid elements across the internal memory and the output register.
+
+- Enqueuing is permitted when `count < n`.
+- If `passReady` is disabled, the `ready` signal is de-asserted when the queue is full.
+- If `passReady` is enabled, data can continue to flow even when full, provided the downstream consumer is simultaneously popping data (`io.out.ready` is high).
+
+## Verification
+
+This hardware block is validated implicitly via integration tests and related standalone testbenches:
+
+- [TLUL FIFO Sync Cocotb Test](tests/cocotb/tlul/test_tlul_fifo_sync.py)
+- [TLUL FIFO Async Cocotb Test](tests/cocotb/tlul/test_tlul_fifo_async.py)
+- [RVV FIFO SV Testbench](hdl/verilog/rvv/sve/rvv_fifo_tb/tests/rvv_fifo_test.sv)
+
+<!-- mdformat off -->
+<!-- prettier-ignore-start -->
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/common/Fifo.scala:L27-117` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- prettier-ignore-end -->
+<!-- mdformat on -->

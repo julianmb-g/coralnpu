@@ -1,0 +1,63 @@
+# Scalar Arithmetic Logic Unit (ALU)
+
+<!--
+ Copyright 2024 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+
+> **Intended Audience:** Hardware Developers
+
+## Overview
+
+The Scalar Arithmetic Logic Unit (ALU) is the primary execution unit for RISC-V scalar integer instructions within the CoralNPU. It supports the standard RV32IM base integer instruction set and the ZBB bit-manipulation extension.
+
+## Interfaces
+
+| Port     | Direction | Type                      | Description                      |
+| :------- | :-------- | :------------------------ | :------------------------------- |
+| `io.req` | Input     | Valid(AluCmd)             | Command request from the decoder |
+| `io.rs1` | Input     | RegfileReadDataIO         | Scalar Register 1 Read Data      |
+| `io.rs2` | Input     | RegfileReadDataIO         | Scalar Register 2 Read Data      |
+| `io.rd`  | Output    | Valid(RegfileWriteDataIO) | Execution Result                 |
+
+## Functionality
+
+The ALU operates on a single-cycle latency for most operations, driven by the decode request and the register file read ports. The `AluCmd` defines the specific operation to be performed, covering a wide range of arithmetic, logic, and bit-manipulation functions.
+
+### Operations
+
+The ALU implements the following operations as defined in the `AluOp` enumeration:
+
+- **Arithmetic**: `ADD`, `SUB`
+- **Comparison**: `SLT`, `SLTU`, `MAX`, `MAXU`, `MIN`, `MINU`
+- **Logic**: `XOR`, `OR`, `AND`, `ANDN`, `ORN`, `XNOR`
+- **Shifts/Rotation**: `SLL`, `SRL`, `SRA`, `ROL`, `ROR`
+- **Bit Manipulation**: `CLZ`, `CTZ`, `CPOP`, `SEXTB`, `SEXTH`, `ORCB`, `REV8`, `ZEXTH`
+
+## Implementation Details
+
+The ALU performs operations based on the command and the register file read data, with a MuxLookup performing the function based on the requested `AluOp`.
+
+The RTL implementation is found in `hdl/chisel/src/coralnpu/scalar/Alu.scala`.
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Alu.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->

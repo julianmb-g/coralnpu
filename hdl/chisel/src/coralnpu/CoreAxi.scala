@@ -40,7 +40,7 @@ class CoreAxi(p: Parameters, coreModuleName: String) extends RawModule {
     val timer_irq = Input(Bool())
     val software_irq = Input(Bool())
     // Debug data interface
-    val debug = Option.when(p.shouldExposeDebugPorts)(new DebugIO(p))
+    val debug = new DebugIO(p)
     val dm = new DebugModuleIO(p)
     val te = Input(Bool())
   })
@@ -116,8 +116,7 @@ class CoreAxi(p: Parameters, coreModuleName: String) extends RawModule {
     for (i <- 1 until p.csrInCount) {
       core.io.csr.in.value(i) := 0.U
     }
-    require(io.debug.isDefined == core.io.debug.isDefined, "Debug port presence mismatch between CoreAxi and Core")
-    io.debug.zip(core.io.debug).foreach { case (ioDebug, coreDebug) => ioDebug <> coreDebug }
+    io.debug <> core.io.debug
     // Tie-offs (no cache to flush)
     core.io.dflush.ready := true.B
     core.io.iflush.ready := true.B

@@ -27,7 +27,7 @@ int main() {
     asm volatile(
         "vsetvli t0, %[vl], e16, m1, ta, ma;"
         "vle16.v v1, (%[src]);"
-        "vfwcvtbf16.f.f.v v8, v1;"
+        ".word 0x4a169457;" // vfwcvtbf16.s.f.vv v8, v1
         "vse32.v v8, (%[dst]);"
         :
         : [src] "r"(src_bf16), [dst] "r"(vfwcvt_res), [vl] "r"(4)
@@ -39,7 +39,7 @@ int main() {
     asm volatile(
         "vsetvli t0, %[vl], e16, m1, ta, ma;"
         "vle32.v v8, (%[src]);"
-        "vfncvtbf16.f.f.w v1, v8;"
+        ".word 0x4a8e90d7;" // vfncvtbf16.s.f.vv v1, v8
         "vse16.v v1, (%[dst]);"
         :
         : [src] "r"(vfwcvt_res), [dst] "r"(vfncvt_res), [vl] "r"(4)
@@ -54,7 +54,7 @@ int main() {
         "vle16.v v1, (%[src1]);"
         "vle16.v v2, (%[src2]);"
         "vle32.v v8, (%[acc]);"
-        "vfwmaccbf16.vv v8, v1, v2;"
+        ".word 0xee209457;" // vfwmaccbf16.v.v.v v8, v1, v2
         "vse32.v v8, (%[dst]);"
         :
         : [src1] "r"(src_bf16), [src2] "r"(src2_bf16), [acc] "r"(vfwcvt_res), [dst] "r"(vfwmacc_res), [vl] "r"(4)

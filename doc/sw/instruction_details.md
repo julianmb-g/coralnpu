@@ -1,0 +1,24 @@
+# Instruction Details
+
+> **Intended Audience:** Software Developers, Compiler Engineers
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+## Core Controls & Fences
+
+| Instruction | Encoding                                   | Description                             |
+| :---------- | :----------------------------------------- | :-------------------------------------- |
+| `ecall`     | `0x00000073`                               | Environment Call                        |
+| `ebreak`    | `0x00100073`                               | Environment Break                       |
+| `mret`      | `0x30200073`                               | Machine Return                          |
+| `wfi`       | `0x10500073`                               | Wait for Interrupt                      |
+| `fencei`    | `0x0000100f`                               | Fence Instruction                       |
+| `mpause`    | `0x08000073`                               | Core Pause/Idle                         |
+
+<!-- mdformat off -->
+<!-- prettier-ignore -->
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Decode.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+<!-- mdformat on -->
