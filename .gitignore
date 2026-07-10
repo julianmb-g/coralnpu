@@ -5,3 +5,6 @@ bazel-testlogs
 bazel-*
 tmp_log/
 *.rvvi
+fix_changelog.py
+fix_changelog2.py
+tmp_bazel_out/
