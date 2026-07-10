@@ -31,7 +31,7 @@ graph TD
     end
     XBAR[System Crossbar]
     CPU[CoralNPU Core]
-    
+
     CPU -- "CSR Access (32-bit)" --> XBAR
     XBAR -- "TL-UL Slave" --> CSR
     FSM -- "Memory Access (128-bit)" --> XBAR
@@ -42,50 +42,52 @@ graph TD
 
 The DMA engine is mapped to the peripheral address space at base `0x40050000`.
 
-| Offset | Name | Access | Reset | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `0x00` | `CTRL` | RW | `0x0` | Control register (Enable, Start, Abort). |
-| `0x04` | `STATUS` | RO | `0x0` | Status register (Busy, Done, Error Code). |
-| `0x08` | `DESC_ADDR` | RW | `0x0` | Address of the first descriptor in memory. |
-| `0x0C` | `CUR_DESC` | RO | `0x0` | Address of the currently executing descriptor. |
-| `0x10` | `XFER_REMAIN` | RO | `0x0` | Number of bytes remaining in the current transfer. |
+| Offset | Name          | Access | Reset | Description                                        |
+| :----- | :------------ | :----- | :---- | :------------------------------------------------- |
+| `0x00` | `CTRL`        | RW     | `0x0` | Control register (Enable, Start, Abort).           |
+| `0x04` | `STATUS`      | RO     | `0x0` | Status register (Busy, Done, Error Code).          |
+| `0x08` | `DESC_ADDR`   | RW     | `0x0` | Address of the first descriptor in memory.         |
+| `0x0C` | `CUR_DESC`    | RO     | `0x0` | Address of the currently executing descriptor.     |
+| `0x10` | `XFER_REMAIN` | RO     | `0x0` | Number of bytes remaining in the current transfer. |
 
 ### Register Fields
 
 #### CTRL (0x00)
+
 - `[0] enable`: Master enable for the DMA engine.
 - `[1] start`: Write 1 to start processing the descriptor chain. Self-clearing.
 - `[2] abort`: Write 1 to immediately halt the DMA engine and return to IDLE.
 
 #### STATUS (0x04)
+
 - `[0] busy`: Set when the DMA is actively processing a descriptor.
 - `[1] done`: Set when the DMA completes a descriptor chain.
 - `[2] error`: Set if a TileLink error or abort occurs.
 - `[7:4] error_code`: Indicates the failure state:
-    - `0`: No error.
-    - `1`: Descriptor Fetch Error.
-    - `2`: Poll Request Error.
-    - `3`: Data Read Error.
-    - `4`: Data Write Error.
-    - `5`: User Abort.
+  - `0`: No error.
+  - `1`: Descriptor Fetch Error.
+  - `2`: Poll Request Error.
+  - `3`: Data Read Error.
+  - `4`: Data Write Error.
+  - `5`: User Abort.
 
 ## Descriptor Format
 
 Descriptors are 32 bytes and must be 32-byte aligned. The engine fetches them in two 128-bit beats via its host port.
 
-| Offset | Field | Bits | Description |
-| :--- | :--- | :--- | :--- |
-| `0x00` | `src_addr` | `[31:0]` | Source base address. |
-| `0x04` | `dst_addr` | `[31:0]` | Destination base address. |
-| `0x08` | `xfer_len` | `[23:0]` | Total transfer length in bytes (Max 16MB). |
-| | `xfer_width` | `[26:24]` | Beat size: `log2(bytes)`. Supported: 0 (1B) to 4 (16B). |
-| | `src_fixed` | `[27]` | If 1, the source address does not increment. |
-| | `dst_fixed` | `[28]` | If 1, the destination address does not increment. |
-| | `poll_en` | `[29]` | Enables peripheral flow control (status polling). |
-| `0x0C` | `next_desc` | `[31:0]` | Pointer to the next descriptor. `0x0` ends the chain. |
-| `0x10` | `poll_addr` | `[31:0]` | Peripheral status register address to poll. |
-| `0x14` | `poll_mask` | `[31:0]` | Bitmask for the polled value. |
-| `0x18` | `poll_value` | `[31:0]` | Expected value for the masked status. |
+| Offset | Field        | Bits      | Description                                             |
+| :----- | :----------- | :-------- | :------------------------------------------------------ |
+| `0x00` | `src_addr`   | `[31:0]`  | Source base address.                                    |
+| `0x04` | `dst_addr`   | `[31:0]`  | Destination base address.                               |
+| `0x08` | `xfer_len`   | `[23:0]`  | Total transfer length in bytes (Max 16MB).              |
+|        | `xfer_width` | `[26:24]` | Beat size: `log2(bytes)`. Supported: 0 (1B) to 4 (16B). |
+|        | `src_fixed`  | `[27]`    | If 1, the source address does not increment.            |
+|        | `dst_fixed`  | `[28]`    | If 1, the destination address does not increment.       |
+|        | `poll_en`    | `[29]`    | Enables peripheral flow control (status polling).       |
+| `0x0C` | `next_desc`  | `[31:0]`  | Pointer to the next descriptor. `0x0` ends the chain.   |
+| `0x10` | `poll_addr`  | `[31:0]`  | Peripheral status register address to poll.             |
+| `0x14` | `poll_mask`  | `[31:0]`  | Bitmask for the polled value.                           |
+| `0x18` | `poll_value` | `[31:0]`  | Expected value for the masked status.                   |
 
 ## Peripheral Flow Control (Polling)
 
@@ -112,6 +114,12 @@ The DMA engine's operation is governed by a synchronous state machine:
 - **Data Buffer**: Internal 128-bit register (`xfer.data_buf`) stores data between read and write beats.
 - **Traceability**: Implementation is localized to a single Chisel module.
 
---------------------------------------------------------------------------------
+## Alignment and Strides
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-10 - **Upstream Commit:** dcba60f9bb7e0efe1292972d8fcd71427c3f18f2 - **Primary Source(s):** `hdl/chisel/src/bus/DmaEngine.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+- **Descriptor Alignment**: Descriptors are 32 bytes in length and MUST be 32-byte aligned in memory. This is critical for the `sFetchDesc0` and `sFetchDesc1` states (hdl/chisel/src/bus/DmaEngine.scala:59-71).
+- **Data Beat Alignment**: Data transfer beats are defined by `xfer_width`. The engine supports beat sizes from 1 byte (`xfer_width=0`) up to 16 bytes (`xfer_width=4`) (hdl/chisel/src/bus/DmaEngine.scala:128).
+- **Stride Control**: The DMA does not directly support explicit strides in the descriptor. Strided access is achieved by configuring multiple linked descriptors or by setting `src_fixed` or `dst_fixed` to prevent incrementing the address for specific source or destination buffers (hdl/chisel/src/bus/DmaEngine.scala:65-66, 269-270).
+
+---
+
+**Provenance & Traceability** - **Verified As Of:** 2026-07-10 - **Upstream Commit:** c9d3cd8816886ced4a935722205fd47aeb72eed9 - **Primary Source(s):** `hdl/chisel/src/bus/DmaEngine.scala` (Lines 38-71, 128-270) - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
