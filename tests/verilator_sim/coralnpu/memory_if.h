@@ -20,18 +20,37 @@
 
 #include <algorithm>
 #include <map>
+#include <string>
 
+#include "absl/log/log.h"
+#include "absl/strings/str_format.h"
 #include "tests/verilator_sim/sysc_module.h"
 
 // A memory model base class
 struct Memory_if : Sysc_module {
   const int kPageSize = 4 * 1024;
   const int kPageMask = ~(kPageSize - 1);
+  std::string profile_ = "default";
 
   struct memory_page_t {
     uint32_t addr;
     uint8_t  data[4096];
   };
+
+  bool IsValidAddress(uint32_t addr, int len) {
+    if (addr > 0xFFFFFFFFU - len) return false;
+    if (profile_ == "default") {
+        return (addr >= 0x0 && addr + len <= 0x400000);
+    } else if (profile_ == "highmem") {
+        return (addr >= 0x0 && addr + len <= 0x200000);
+    }
+    return false;
+  }
+
+  uint32_t GetOverflowDelta(uint32_t addr, int len) {
+      if (addr > 0xFFFFFFFFU - len) return 0xFFFFFFFFU - addr;
+      return 0;
+  }
 
   Memory_if(sc_module_name n, const char* bin, int limit = -1) :
       Sysc_module(n) {
@@ -65,6 +84,10 @@ struct Memory_if : Sysc_module {
   }
 
   bool Read(uint32_t addr, int bytes, uint8_t* data) {
+    if (!IsValidAddress(addr, bytes)) {
+      LOG(ERROR) << absl::StrFormat("Read access out of bounds at %08x", addr);
+      exit(-1);
+    }
     while (bytes > 0) {
       const uint32_t maddr = addr & kPageMask;
       const uint32_t offset = addr - maddr;
@@ -94,6 +117,10 @@ struct Memory_if : Sysc_module {
   }
 
   bool Write(uint32_t addr, int bytes, const uint8_t* data) {
+    if (!IsValidAddress(addr, bytes)) {
+      LOG(ERROR) << absl::StrFormat("Write access out of bounds at %08x", addr);
+      exit(-1);
+    }
     while (bytes > 0) {
       const uint32_t maddr = addr & kPageMask;
       const uint32_t offset = addr - maddr;
@@ -179,7 +206,7 @@ struct Memory_if : Sysc_module {
     uint8_t* d = p.data;
 
     if (bytes < kPageSize || data == nullptr) {
-#if 1
+#if 0
       // remove need for .bss  (hacky?)
       memset(d, 0x00, kPageSize);
 #else
