@@ -32,9 +32,9 @@ struct DBus2Axi_tb : Sysc_tb {
   sc_out<sc_bv<32> > io_dbus_addr;
   sc_out<sc_bv<32> > io_dbus_adrx;
   sc_out<sc_bv<6> > io_dbus_size;
-  sc_out<sc_bv<256> > io_dbus_wdata;
+  sc_out<sc_bv<KP_lsuDataBits> > io_dbus_wdata;
   sc_out<sc_bv<32> > io_dbus_wmask;
-  sc_in<sc_bv<256> > io_dbus_rdata;
+  sc_in<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
   sc_in<sc_bv<32> > io_dbus_pc;
   sc_in<bool> io_fault_valid;
   sc_in<bool> io_fault_bits_write;
@@ -50,7 +50,7 @@ struct DBus2Axi_tb : Sysc_tb {
   sc_in<sc_bv<2> > io_axi_write_addr_bits_burst;
   sc_in<sc_bv<3> > io_axi_write_addr_bits_size;
   sc_in<sc_bv<8> > io_axi_write_addr_bits_len;
-  sc_in<sc_bv<256> > io_axi_write_data_bits_data;
+  sc_in<sc_bv<KP_lsuDataBits> > io_axi_write_data_bits_data;
   sc_in<sc_bv<32> > io_axi_write_data_bits_strb;
   sc_in<bool> io_axi_write_data_bits_last;
   sc_out<sc_bv<6> > io_axi_write_resp_bits_id;
@@ -67,15 +67,15 @@ struct DBus2Axi_tb : Sysc_tb {
   sc_in<sc_bv<8> > io_axi_read_addr_bits_len;
   sc_out<sc_bv<2> > io_axi_read_data_bits_resp;
   sc_out<sc_bv<6> > io_axi_read_data_bits_id;
-  sc_out<sc_bv<256> > io_axi_read_data_bits_data;
+  sc_out<sc_bv<KP_lsuDataBits> > io_axi_read_data_bits_data;
   sc_out<bool> io_axi_read_data_bits_last;
 
   using Sysc_tb::Sysc_tb;
 
   void posedge() {
     sc_bv<32> dbus_wmask;
-    sc_bv<256> dbus_wdata;
-    for (int i = 0; i < 8; ++i) dbus_wdata.set_word(i, rand_uint32());
+    sc_bv<KP_lsuDataBits> dbus_wdata;
+    for (int i = 0; i < KP_lsuDataBits / 32; ++i) dbus_wdata.set_word(i, rand_uint32());
     dbus_wmask.set_word(0, rand_uint32());
 
     if (!io_dbus_valid || io_dbus_ready) {
@@ -107,7 +107,7 @@ struct DBus2Axi_tb : Sysc_tb {
     if (io_dbus_valid && io_dbus_write && !dbus_write_active_) {
       dbus_write_active_ = true;
       axi_write_addr_t a;
-      sc_bv<256> data;
+      sc_bv<KP_lsuDataBits> data;
       sc_bv<32> strb;
       a.addr = io_dbus_addr.read().get_word(0);
       a.id = 0x00;  // from RTL
@@ -159,8 +159,8 @@ struct DBus2Axi_tb : Sysc_tb {
         check(false);
       }
 
-      sc_bv<256> data;
-      for (int i = 0; i < 8; ++i) data.set_word(i, rand_uint32());
+      sc_bv<KP_lsuDataBits> data;
+      for (int i = 0; i < KP_lsuDataBits / 32; ++i) data.set_word(i, rand_uint32());
       axi_read_data_t raxi;
       raxi.id = dut.id;
       raxi.data = data;
@@ -253,7 +253,7 @@ struct DBus2Axi_tb : Sysc_tb {
   struct axi_read_data_t {
     uint32_t id : 7;
     uint32_t resp : 7;
-    sc_bv<256> data;
+    sc_bv<KP_lsuDataBits> data;
 
     bool operator!=(const axi_read_data_t& rhs) const {
       if (id != rhs.id) return true;
@@ -286,7 +286,7 @@ struct DBus2Axi_tb : Sysc_tb {
   };
 
   struct axi_write_data_t {
-    sc_bv<256> data;
+    sc_bv<KP_lsuDataBits> data;
     sc_bv<32> strb;
     bool last;
 
@@ -315,7 +315,7 @@ struct DBus2Axi_tb : Sysc_tb {
   };
 
   struct dbus_read_data_t {
-    sc_bv<256> data;
+    sc_bv<KP_lsuDataBits> data;
 
     bool operator!=(const dbus_read_data_t& rhs) const {
       if (data != rhs.data) return true;
@@ -361,9 +361,9 @@ static void DBus2Axi_test(char* name, int loops, bool trace) {
   sc_signal<sc_bv<32> > io_dbus_addr;
   sc_signal<sc_bv<32> > io_dbus_adrx;
   sc_signal<sc_bv<6> > io_dbus_size;
-  sc_signal<sc_bv<256> > io_dbus_wdata;
+  sc_signal<sc_bv<KP_lsuDataBits> > io_dbus_wdata;
   sc_signal<sc_bv<32> > io_dbus_wmask;
-  sc_signal<sc_bv<256> > io_dbus_rdata;
+  sc_signal<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
   sc_signal<sc_bv<32> > io_dbus_pc;
   sc_signal<bool> io_fault_valid;
   sc_signal<bool> io_fault_bits_write;
@@ -379,7 +379,7 @@ static void DBus2Axi_test(char* name, int loops, bool trace) {
   sc_signal<sc_bv<2> > io_axi_write_addr_bits_burst;
   sc_signal<sc_bv<3> > io_axi_write_addr_bits_size;
   sc_signal<sc_bv<8> > io_axi_write_addr_bits_len;
-  sc_signal<sc_bv<256> > io_axi_write_data_bits_data;
+  sc_signal<sc_bv<KP_lsuDataBits> > io_axi_write_data_bits_data;
   sc_signal<sc_bv<32> > io_axi_write_data_bits_strb;
   sc_signal<bool> io_axi_write_data_bits_last;
   sc_signal<sc_bv<6> > io_axi_write_resp_bits_id;
@@ -396,7 +396,7 @@ static void DBus2Axi_test(char* name, int loops, bool trace) {
   sc_signal<sc_bv<8> > io_axi_read_addr_bits_len;
   sc_signal<sc_bv<2> > io_axi_read_data_bits_resp;
   sc_signal<sc_bv<6> > io_axi_read_data_bits_id;
-  sc_signal<sc_bv<256> > io_axi_read_data_bits_data;
+  sc_signal<sc_bv<KP_lsuDataBits> > io_axi_read_data_bits_data;
   sc_signal<bool> io_axi_read_data_bits_last;
 
   DBus2Axi_tb tb("DBus2Axi_tb", loops, true /*random*/);
