@@ -1,10 +1,17 @@
+# Bazel build artifacts
 bazel-bin
 bazel-out
 bazel-testlogs
+bazel-coralnpu-verilator-core
+bazel-workspace
 .bazelrc.user
-bazel-*
+
+# Temporary files
 tmp_log/
-*.rvvi
-fix_changelog.py
-fix_changelog2.py
 tmp_bazel_out/
+*.log
+*.vcd
+
+# Generated files
+*.rvvi
+mpact_riscv_BUILD.orig
