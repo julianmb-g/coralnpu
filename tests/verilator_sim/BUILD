@@ -340,6 +340,7 @@ cc_test(
         "coralnpu/dbus2axi_tb.cc",
     ],
     deps = [
+        ":coralnpu_if",
         ":sim_libs",
         "//hdl/chisel/src/coralnpu:dbus2axi_cc_library",
     ],

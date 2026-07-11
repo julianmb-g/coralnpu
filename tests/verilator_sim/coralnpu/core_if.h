@@ -19,6 +19,26 @@
 #include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 #include "tests/verilator_sim/coralnpu/memory_if.h"
 
+#ifndef KP_programCounterBits
+#define KP_programCounterBits 32
+#endif
+
+#ifndef KP_fetchDataBits
+#define KP_fetchDataBits 256
+#endif
+
+#ifndef KP_lsuAddrBits
+#define KP_lsuAddrBits 32
+#endif
+
+#ifndef KP_lsuDataBits
+#define KP_lsuDataBits 256
+#endif
+
+#ifndef KP_dbusSize
+#define KP_dbusSize 3
+#endif
+
 constexpr int kAxiWaitState = 3;
 
 static bool rand_bool() {

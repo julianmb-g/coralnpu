@@ -49,7 +49,7 @@ class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with Paralle
 
     val out = Wire(Valid(new RvvS1DecodedInstruction()))
     out := RvvS1DecodeCompressedInstruction(
-        RvvCompressedInstruction.from_uncompressed(io.inst, 0.U))
+        RvvCompressedInstruction.from_uncompressed(p, io.inst, 0.U))
     io.out_valid := out.valid
     io.out_op := out.bits.op.asUInt
   }
