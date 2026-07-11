@@ -96,22 +96,22 @@ struct CoreMiniAxi_tb : Sysc_tb {
     sc_signal<bool> regfile_writeAddr_1_valid;
     sc_signal<bool> regfile_writeAddr_2_valid;
     sc_signal<bool> regfile_writeAddr_3_valid;
-    sc_signal<sc_bv<5>> regfile_writeAddr_0_bits;
-    sc_signal<sc_bv<5>> regfile_writeAddr_1_bits;
-    sc_signal<sc_bv<5>> regfile_writeAddr_2_bits;
-    sc_signal<sc_bv<5>> regfile_writeAddr_3_bits;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeAddr_0_bits;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeAddr_1_bits;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeAddr_2_bits;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeAddr_3_bits;
     sc_signal<bool> regfile_writeData_0_valid;
     sc_signal<bool> regfile_writeData_1_valid;
     sc_signal<bool> regfile_writeData_2_valid;
     sc_signal<bool> regfile_writeData_3_valid;
     sc_signal<bool> regfile_writeData_4_valid;
     sc_signal<bool> regfile_writeData_5_valid;
-    sc_signal<sc_bv<5>> regfile_writeData_0_bits_addr;
-    sc_signal<sc_bv<5>> regfile_writeData_1_bits_addr;
-    sc_signal<sc_bv<5>> regfile_writeData_2_bits_addr;
-    sc_signal<sc_bv<5>> regfile_writeData_3_bits_addr;
-    sc_signal<sc_bv<5>> regfile_writeData_4_bits_addr;
-    sc_signal<sc_bv<5>> regfile_writeData_5_bits_addr;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeData_0_bits_addr;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeData_1_bits_addr;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeData_2_bits_addr;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeData_3_bits_addr;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeData_4_bits_addr;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> regfile_writeData_5_bits_addr;
     sc_signal<sc_bv<32>> regfile_writeData_0_bits_data;
     sc_signal<sc_bv<32>> regfile_writeData_1_bits_data;
     sc_signal<sc_bv<32>> regfile_writeData_2_bits_data;
@@ -121,11 +121,11 @@ struct CoreMiniAxi_tb : Sysc_tb {
 #if (KP_enableFloat == true)
     // Float signals
     sc_signal<bool> float_writeAddr_valid;
-    sc_signal<sc_bv<5>> float_writeAddr_bits;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> float_writeAddr_bits;
     sc_signal<bool> float_writeData_0_valid;
     sc_signal<bool> float_writeData_1_valid;
-    sc_signal<sc_bv<5>> float_writeData_0_bits_addr;
-    sc_signal<sc_bv<5>> float_writeData_1_bits_addr;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> float_writeData_0_bits_addr;
+    sc_signal<sc_bv<KP_scalarRegCountWidth>> float_writeData_1_bits_addr;
     sc_signal<sc_bv<32>> float_writeData_0_bits_data;
     sc_signal<sc_bv<32>> float_writeData_1_bits_data;
 #endif
@@ -134,7 +134,7 @@ struct CoreMiniAxi_tb : Sysc_tb {
 #define RB_DEBUG_IO_VEC(x, y) \
   sc_signal<bool> rb_inst_##x##_bits_vecWrites_##y##_valid; \
   sc_signal<sc_bv<KP_rvvVlen>> rb_inst_##x##_bits_vecWrites_##y##_bits_data; \
-  sc_signal<sc_bv<5>> rb_inst_##x##_bits_vecWrites_##y##_bits_idx;
+  sc_signal<sc_bv<KP_scalarRegCountWidth>> rb_inst_##x##_bits_vecWrites_##y##_bits_idx;
 #define RB_DEBUG_IO_VECS_8(x) \
   RB_DEBUG_IO_VEC(x, 0) RB_DEBUG_IO_VEC(x, 1) RB_DEBUG_IO_VEC(x, 2) RB_DEBUG_IO_VEC(x, 3) \
   RB_DEBUG_IO_VEC(x, 4) RB_DEBUG_IO_VEC(x, 5) RB_DEBUG_IO_VEC(x, 6) RB_DEBUG_IO_VEC(x, 7)
