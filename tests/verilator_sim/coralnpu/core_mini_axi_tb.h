@@ -124,8 +124,8 @@ struct CoreMiniAxi_tb : Sysc_tb {
     sc_signal<sc_bv<KP_scalarRegCountWidth>> float_writeAddr_bits;
     sc_signal<bool> float_writeData_0_valid;
     sc_signal<bool> float_writeData_1_valid;
-    sc_signal<sc_bv<KP_scalarRegCountWidth>> float_writeData_0_bits_addr;
-    sc_signal<sc_bv<KP_scalarRegCountWidth>> float_writeData_1_bits_addr;
+    sc_signal<sc_bv<5>> float_writeData_0_bits_addr;
+    sc_signal<sc_bv<5>> float_writeData_1_bits_addr;
     sc_signal<sc_bv<32>> float_writeData_0_bits_data;
     sc_signal<sc_bv<32>> float_writeData_1_bits_data;
 #endif

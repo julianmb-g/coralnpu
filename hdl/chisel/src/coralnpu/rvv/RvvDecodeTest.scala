@@ -21,6 +21,7 @@ import org.scalatest.ParallelTestExecution
 import org.scalatest.freespec.AnyFreeSpec
 
 import common.{ProcessTestResults}
+import coralnpu.Parameters
 
 
 class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with ParallelTestExecution {

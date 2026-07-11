@@ -66,6 +66,11 @@ cc_library(
         "coralnpu/memory_if.h",
     ],
     defines = ["CORALNPU_SIMD=256"],
+    deps = [
+        ":sim_libs",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/strings",
+    ],
 )
 
 cc_binary(
@@ -378,5 +383,34 @@ cc_test(
         ":coralnpu_if",
         ":sim_libs",
         "//hdl/chisel/src/coralnpu:l1icache_cc_library",
+    ],
+)
+
+cc_test(
+    name = "memory_if_test",
+    srcs = [
+        "coralnpu/memory_if_test.cc",
+    ],
+    deps = [
+        ":coralnpu_if",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "core_rvvi_watchdog_test",
+    srcs = [
+        "coralnpu/core_rvvi_watchdog_test.cc",
+    ],
+    deps = [
+        "//tests/verilator_sim/rvvi:rvvi_libs",
+        "//tests/verilator_sim:sim_libs",
+        "//tests/verilator_sim:util",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/flags:usage",
     ],
 )

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "tests/verilator_sim/sysc_tb.h"
+#include "tests/verilator_sim/coralnpu/core_if.h"
 
 #include "VL1ICache.h"
 

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "VDBus2AxiV2.h"
+#include "tests/verilator_sim/coralnpu/core_if.h"
 #include "tests/verilator_sim/sysc_tb.h"
 
 struct DBus2Axi_tb : Sysc_tb {

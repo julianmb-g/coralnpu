@@ -55,6 +55,10 @@ class SpscRingBuffer {
     return head_.load(std::memory_order_acquire) == tail_.load(std::memory_order_acquire);
   }
 
+  bool IsFull() const {
+    return head_.load(std::memory_order_acquire) - tail_.load(std::memory_order_acquire) >= Size;
+  }
+
  private:
   std::array<T, Size> buffer_;
   alignas(64) std::atomic<size_t> head_;

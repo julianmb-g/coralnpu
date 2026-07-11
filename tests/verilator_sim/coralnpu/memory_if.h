@@ -28,9 +28,12 @@
 
 // A memory model base class
 struct Memory_if : Sysc_module {
+  static constexpr const char* kHighMem = "highmem";
   const int kPageSize = 4 * 1024;
   const int kPageMask = ~(kPageSize - 1);
   std::string profile_ = "default";
+
+  virtual void eval() override {}
 
   struct memory_page_t {
     uint32_t addr;
@@ -39,22 +42,27 @@ struct Memory_if : Sysc_module {
 
   bool IsValidAddress(uint32_t addr, int len) {
     if (addr > 0xFFFFFFFFU - len) return false;
-    if (profile_ == "default") {
-        return (addr >= 0x0 && addr + len <= 0x400000);
-    } else if (profile_ == "highmem") {
-        return (addr >= 0x0 && addr + len <= 0x200000);
+    uint32_t end_addr = addr + len;
+    if (profile_ == "highmem") {
+      // Highmem is [0x0, 0x200000)
+      return end_addr <= 0x200000;
+    } else {
+      // Default is [0x100000, 0x200000)
+      return addr >= 0x100000 && end_addr <= 0x200000;
     }
-    return false;
   }
 
   uint32_t GetOverflowDelta(uint32_t addr, int len) {
-      if (addr > 0xFFFFFFFFU - len) return 0xFFFFFFFFU - addr;
-      return 0;
+      uint32_t delta = 0;
+      if (addr > 0xFFFFFFFFU - len) delta = len - (0xFFFFFFFFU - addr + 1);
+      printf("GetOverflowDelta: addr=%x, len=%x, delta=%x\n", addr, len, delta);
+      return delta;
   }
 
-  Memory_if(sc_module_name n, const char* bin, int limit = -1) :
-      Sysc_module(n) {
+  Memory_if(sc_module_name n, const char* bin, int limit = -1, const std::string& profile = "default") :
+      Sysc_module(n), profile_(profile) {
     FILE *f = fopen(bin, "rb");
+    if (!f) return;  // Handle cases like "/dev/null"
 
     fseek(f, 0, SEEK_END);
     int64_t fsize = ftell(f);
@@ -63,6 +71,7 @@ struct Memory_if : Sysc_module {
 
     fread(fdata, fsize, 1, f);
     fclose(f);
+
 
     if (limit > 0 && fsize > limit) {
       printf("***ERROR Memory_if limit exceeded [%ld > %d]\n", fsize, limit);
@@ -74,10 +83,18 @@ struct Memory_if : Sysc_module {
       const int64_t size = std::min(fsize - addr, int64_t(kPageSize));
       AddPage(addr, size, fdata + addr);
     }
-    // Create pages for the rest of our memory space, that was not created
-    // for inserting the binary.
-    for (; addr < 0x400000; addr += kPageSize) {
-      AddPage(addr, kPageSize, nullptr);
+    if (profile_ == "highmem") {
+      // Highmem also includes ITCM at 0x0 to 0x100000.
+      for (; addr < 0x200000; addr += kPageSize) {
+        AddPage(addr, kPageSize, nullptr);
+      }
+    } else {
+      // Default is [0x100000, 0x200000)
+      for (; addr < 0x200000; addr += kPageSize) {
+        if (addr >= 0x100000) {
+          AddPage(addr, kPageSize, nullptr);
+        }
+      }
     }
 
     delete [] fdata;
