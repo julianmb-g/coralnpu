@@ -44,6 +44,8 @@ class RvvS1DecodeInstructionSpec extends AnyFreeSpec with ChiselSim with Paralle
       val out_op = Output(UInt(RvvAluOp.getWidth.W))
     })
 
+    val p = new coralnpu.Parameters
+
     val out = Wire(Valid(new RvvS1DecodedInstruction()))
     out := RvvS1DecodeCompressedInstruction(
         RvvCompressedInstruction.from_uncompressed(io.inst, 0.U))

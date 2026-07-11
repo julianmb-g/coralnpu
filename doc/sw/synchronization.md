@@ -17,6 +17,8 @@ External hosts offload complex execution sequences by writing chained DMA descri
 - The NPU's DMA Engine asynchronously fetches and executes these descriptors.
 - The host monitors the `STATUS` register (polling for the `done` flag) or the `XFER_REMAIN` register to synchronize with the NPU's progress.
 
+For detailed descriptor memory layouts, register-level CSR specs, circular ring buffer algorithms, status polling mechanisms, and complete C programming examples, see the dedicated [Command Ring Buffer & Execution Queue](command_ring.md) documentation.
+
 ## Synchronization Primitives
 
 The CoralNPU scalar core and instruction decode pipeline enforce strict serialization and interlocks to maintain synchronization between instruction execution and memory accesses.

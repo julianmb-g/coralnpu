@@ -40,7 +40,7 @@ To find the information most relevant to your work, please follow the links tail
 | **Hardware Developers** | RTL implementation, microarchitecture, cycle-level timing, pipeline hazards.                 | [Core Execution pipeline](microarch/microarch.md), [Interfaces & Buses](microarch/interfaces_and_buses.md)                                           |
 | **SW/Compiler Devs**    | Instruction encoding, CSR programming, memory map, exception handling, dataflow constraints. | [Hardware/Software Interface](hardware_software_interface.md), [Verification](verification.md), [FlashAttention Kernel](sw/flash_attention.md)       |
 | **HW Integrators**      | IP integration, AXI4 bus boundaries, reset sequencing, memory parameters.                    | [Interfaces & Buses](microarch/interfaces_and_buses.md), [Top-Level Subsystem](top_level_subsystem.md)                                               |
-| **Software Folks**      | High-level data movement (DMA), software configuration, ring buffers, interrupts.            | [Software DMA](microarch/infrastructure/dma.md), [Synchronization Primitives](sw/synchronization.md), [FlashAttention Kernel](sw/flash_attention.md) |
+| **Software Folks**      | High-level data movement (DMA), software configuration, ring buffers, interrupts.            | [Software DMA](microarch/infrastructure/dma.md), [Command Ring Buffer](sw/command_ring.md), [Synchronization Primitives](sw/synchronization.md), [FlashAttention Kernel](sw/flash_attention.md) |
 
 ## System Architecture Overview
 
@@ -149,6 +149,7 @@ _For the top-level CoralNPU SoC Subsystem architecture diagram, please refer to 
 - [Activation Functions](sw/activations.md)
 - [Software DMA](microarch/infrastructure/dma.md)
 - [Synchronization Primitives](sw/synchronization.md)
+- [Command Ring Buffer & Execution Queue](sw/command_ring.md)
 - [Multi-Head FlashAttention RVV Kernel](sw/flash_attention.md)
 
 ### Validation

@@ -39,10 +39,31 @@ The `ClockGate` module exposes the following ports:
 
 The `ClockGate` module provides block-level (coarse-grained) clock gating capabilities. The CoralNPU IP explicitly **lacks** support for fine-grained clock gating (e.g., at the individual flip-flop or register level) within the functional modules themselves. All clock gating is managed at the macro-block interface boundaries.
 
+## System Integration & Clock Management
+
+The `ClockGate` module is instantiated in top-level wrappers (e.g., `CoreAxi.scala`) to implement functional clock gating for the core pipeline.
+
+### Clock Distribution Hierarchy
+
+1. **Source Clock**: External `aclk` is processed by `RstSync` to generate a stable internal clock (`clk_o`).
+2. **Gated Clock**: A `ClockGate` instance (`cg`) gates this internal clock to yield the Core clock.
+
+### Functional Gating Conditions
+
+The Core clock is enabled (`ClockGate.enable = 1`) only when active work is pending or debugging is active. The enable logic evaluates the following conditions:
+
+- Registered interrupts (`irq`, `timer_irq`, `software_irq`).
+- Debug Module requests (`haltreq`).
+- Functional execution (`!core.io.wfi`) when clock gating is not disabled by CSR (`!csr.io.cg`).
+
+### Reset Sequence Interlocking
+
+The reset sequence is interlocked with clock gating via `RstSync`. The clock is actively held disabled during reset assertion and for a fixed delay post-deassertion to ensure clean startup transitions. See [Reset Synchronization](./rstsync.md) for sequence details.
+
 <!-- mdformat off -->
 <!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/ClockGate.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-07-10 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/ClockGate.scala`, `hdl/chisel/src/coralnpu/CoreAxi.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
 <!-- mdformat on -->
