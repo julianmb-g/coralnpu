@@ -40,8 +40,7 @@
 #include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 #include "tests/verilator_sim/sysc_tb.h"
 #include "tests/verilator_sim/util.h"
-#include "tests/verilator_sim/coralnpu/elf_loader.h"
-
+#include "tests/verilator_sim/elf.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #if TRACE_ENABLED
@@ -69,7 +68,270 @@ ABSL_FLAG(std::string, memory_profile, "default", "Memory profile ('default' or 
 ABSL_FLAG(bool, simulate_deadlock, false, "Simulate a delta cycle deadlock to test the monitor");
 ABSL_FLAG(bool, simulate_io_fault, false, "Simulate an IO fault to test handling");
 
-#include "tests/verilator_sim/coralnpu/core_rvvi_tb.h"
+struct CoreRvvi_tb : Sysc_tb {
+  using Sysc_tb::cycle;
+  sc_in<bool> io_halted;
+  sc_in<bool> io_fault;
+  sc_in<bool> io_ibus_valid;
+
+  uint64_t last_time = 0;
+  uint64_t last_delta = 0;
+  bool had_deadlock = false;
+
+  sc_event next_delta_evt;
+
+  SC_HAS_PROCESS(CoreRvvi_tb);
+
+  
+  // RVVI ports
+  sc_in<bool> io_debug_rb_inst_0_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_0_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_0_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_0_bits_idx;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_data;
+  sc_in<bool> io_debug_rb_inst_0_bits_trap;
+
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_0_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_0_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_0_bits_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_1_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_1_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_1_bits_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_2_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_2_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_2_bits_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_3_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_3_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_3_bits_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_4_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_4_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_4_bits_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_5_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_5_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_5_bits_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_6_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_6_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_6_bits_idx;
+  sc_in<bool> io_debug_rb_inst_0_bits_vecWrites_7_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_0_bits_vecWrites_7_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_0_bits_vecWrites_7_bits_idx;
+sc_in<bool> io_debug_rb_inst_1_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_1_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_1_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_1_bits_idx;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_data;
+  sc_in<bool> io_debug_rb_inst_1_bits_trap;
+
+  sc_in<bool> io_debug_rb_inst_1_bits_vecWrites_0_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_vecWrites_0_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_1_bits_vecWrites_0_bits_idx;
+  sc_in<bool> io_debug_rb_inst_1_bits_vecWrites_1_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_vecWrites_1_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_1_bits_vecWrites_1_bits_idx;
+  sc_in<bool> io_debug_rb_inst_1_bits_vecWrites_2_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_vecWrites_2_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_1_bits_vecWrites_2_bits_idx;
+  sc_in<bool> io_debug_rb_inst_1_bits_vecWrites_3_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_vecWrites_3_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_1_bits_vecWrites_3_bits_idx;
+  sc_in<bool> io_debug_rb_inst_1_bits_vecWrites_4_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_vecWrites_4_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_1_bits_vecWrites_4_bits_idx;
+  sc_in<bool> io_debug_rb_inst_1_bits_vecWrites_5_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_vecWrites_5_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_1_bits_vecWrites_5_bits_idx;
+  sc_in<bool> io_debug_rb_inst_1_bits_vecWrites_6_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_vecWrites_6_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_1_bits_vecWrites_6_bits_idx;
+  sc_in<bool> io_debug_rb_inst_1_bits_vecWrites_7_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_1_bits_vecWrites_7_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_1_bits_vecWrites_7_bits_idx;
+sc_in<bool> io_debug_rb_inst_2_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_2_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_2_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_2_bits_idx;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_data;
+  sc_in<bool> io_debug_rb_inst_2_bits_trap;
+
+  sc_in<bool> io_debug_rb_inst_2_bits_vecWrites_0_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_vecWrites_0_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_2_bits_vecWrites_0_bits_idx;
+  sc_in<bool> io_debug_rb_inst_2_bits_vecWrites_1_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_vecWrites_1_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_2_bits_vecWrites_1_bits_idx;
+  sc_in<bool> io_debug_rb_inst_2_bits_vecWrites_2_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_vecWrites_2_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_2_bits_vecWrites_2_bits_idx;
+  sc_in<bool> io_debug_rb_inst_2_bits_vecWrites_3_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_vecWrites_3_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_2_bits_vecWrites_3_bits_idx;
+  sc_in<bool> io_debug_rb_inst_2_bits_vecWrites_4_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_vecWrites_4_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_2_bits_vecWrites_4_bits_idx;
+  sc_in<bool> io_debug_rb_inst_2_bits_vecWrites_5_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_vecWrites_5_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_2_bits_vecWrites_5_bits_idx;
+  sc_in<bool> io_debug_rb_inst_2_bits_vecWrites_6_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_vecWrites_6_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_2_bits_vecWrites_6_bits_idx;
+  sc_in<bool> io_debug_rb_inst_2_bits_vecWrites_7_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_2_bits_vecWrites_7_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_2_bits_vecWrites_7_bits_idx;
+sc_in<bool> io_debug_rb_inst_3_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_3_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_3_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_3_bits_idx;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_data;
+  sc_in<bool> io_debug_rb_inst_3_bits_trap;
+
+  sc_in<bool> io_debug_rb_inst_3_bits_vecWrites_0_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_vecWrites_0_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_3_bits_vecWrites_0_bits_idx;
+  sc_in<bool> io_debug_rb_inst_3_bits_vecWrites_1_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_vecWrites_1_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_3_bits_vecWrites_1_bits_idx;
+  sc_in<bool> io_debug_rb_inst_3_bits_vecWrites_2_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_vecWrites_2_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_3_bits_vecWrites_2_bits_idx;
+  sc_in<bool> io_debug_rb_inst_3_bits_vecWrites_3_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_vecWrites_3_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_3_bits_vecWrites_3_bits_idx;
+  sc_in<bool> io_debug_rb_inst_3_bits_vecWrites_4_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_vecWrites_4_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_3_bits_vecWrites_4_bits_idx;
+  sc_in<bool> io_debug_rb_inst_3_bits_vecWrites_5_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_vecWrites_5_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_3_bits_vecWrites_5_bits_idx;
+  sc_in<bool> io_debug_rb_inst_3_bits_vecWrites_6_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_vecWrites_6_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_3_bits_vecWrites_6_bits_idx;
+  sc_in<bool> io_debug_rb_inst_3_bits_vecWrites_7_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_3_bits_vecWrites_7_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_3_bits_vecWrites_7_bits_idx;
+sc_in<bool> io_debug_rb_inst_4_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_4_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_4_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_4_bits_idx;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_data;
+  sc_in<bool> io_debug_rb_inst_4_bits_trap;
+
+  sc_in<bool> io_debug_rb_inst_4_bits_vecWrites_0_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_vecWrites_0_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_4_bits_vecWrites_0_bits_idx;
+  sc_in<bool> io_debug_rb_inst_4_bits_vecWrites_1_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_vecWrites_1_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_4_bits_vecWrites_1_bits_idx;
+  sc_in<bool> io_debug_rb_inst_4_bits_vecWrites_2_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_vecWrites_2_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_4_bits_vecWrites_2_bits_idx;
+  sc_in<bool> io_debug_rb_inst_4_bits_vecWrites_3_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_vecWrites_3_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_4_bits_vecWrites_3_bits_idx;
+  sc_in<bool> io_debug_rb_inst_4_bits_vecWrites_4_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_vecWrites_4_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_4_bits_vecWrites_4_bits_idx;
+  sc_in<bool> io_debug_rb_inst_4_bits_vecWrites_5_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_vecWrites_5_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_4_bits_vecWrites_5_bits_idx;
+  sc_in<bool> io_debug_rb_inst_4_bits_vecWrites_6_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_vecWrites_6_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_4_bits_vecWrites_6_bits_idx;
+  sc_in<bool> io_debug_rb_inst_4_bits_vecWrites_7_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_4_bits_vecWrites_7_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_4_bits_vecWrites_7_bits_idx;
+sc_in<bool> io_debug_rb_inst_5_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_5_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_5_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_5_bits_idx;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_data;
+  sc_in<bool> io_debug_rb_inst_5_bits_trap;
+
+  sc_in<bool> io_debug_rb_inst_5_bits_vecWrites_0_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_vecWrites_0_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_5_bits_vecWrites_0_bits_idx;
+  sc_in<bool> io_debug_rb_inst_5_bits_vecWrites_1_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_vecWrites_1_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_5_bits_vecWrites_1_bits_idx;
+  sc_in<bool> io_debug_rb_inst_5_bits_vecWrites_2_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_vecWrites_2_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_5_bits_vecWrites_2_bits_idx;
+  sc_in<bool> io_debug_rb_inst_5_bits_vecWrites_3_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_vecWrites_3_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_5_bits_vecWrites_3_bits_idx;
+  sc_in<bool> io_debug_rb_inst_5_bits_vecWrites_4_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_vecWrites_4_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_5_bits_vecWrites_4_bits_idx;
+  sc_in<bool> io_debug_rb_inst_5_bits_vecWrites_5_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_vecWrites_5_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_5_bits_vecWrites_5_bits_idx;
+  sc_in<bool> io_debug_rb_inst_5_bits_vecWrites_6_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_vecWrites_6_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_5_bits_vecWrites_6_bits_idx;
+  sc_in<bool> io_debug_rb_inst_5_bits_vecWrites_7_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_5_bits_vecWrites_7_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_5_bits_vecWrites_7_bits_idx;
+sc_in<bool> io_debug_rb_inst_6_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_6_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_6_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_6_bits_idx;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_data;
+  sc_in<bool> io_debug_rb_inst_6_bits_trap;
+
+  sc_in<bool> io_debug_rb_inst_6_bits_vecWrites_0_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_vecWrites_0_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_6_bits_vecWrites_0_bits_idx;
+  sc_in<bool> io_debug_rb_inst_6_bits_vecWrites_1_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_vecWrites_1_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_6_bits_vecWrites_1_bits_idx;
+  sc_in<bool> io_debug_rb_inst_6_bits_vecWrites_2_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_vecWrites_2_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_6_bits_vecWrites_2_bits_idx;
+  sc_in<bool> io_debug_rb_inst_6_bits_vecWrites_3_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_vecWrites_3_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_6_bits_vecWrites_3_bits_idx;
+  sc_in<bool> io_debug_rb_inst_6_bits_vecWrites_4_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_vecWrites_4_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_6_bits_vecWrites_4_bits_idx;
+  sc_in<bool> io_debug_rb_inst_6_bits_vecWrites_5_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_vecWrites_5_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_6_bits_vecWrites_5_bits_idx;
+  sc_in<bool> io_debug_rb_inst_6_bits_vecWrites_6_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_vecWrites_6_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_6_bits_vecWrites_6_bits_idx;
+  sc_in<bool> io_debug_rb_inst_6_bits_vecWrites_7_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_6_bits_vecWrites_7_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_6_bits_vecWrites_7_bits_idx;
+sc_in<bool> io_debug_rb_inst_7_valid;
+  sc_in<sc_bv<KP_programCounterBits>> io_debug_rb_inst_7_bits_pc;
+  sc_in<sc_bv<32>> io_debug_rb_inst_7_bits_inst;
+  sc_in<sc_bv<KP_retirementBufferIdxWidth>> io_debug_rb_inst_7_bits_idx;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_data;
+  sc_in<bool> io_debug_rb_inst_7_bits_trap;
+
+  sc_in<bool> io_debug_rb_inst_7_bits_vecWrites_0_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_vecWrites_0_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_0_bits_idx;
+  sc_in<bool> io_debug_rb_inst_7_bits_vecWrites_1_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_vecWrites_1_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_1_bits_idx;
+  sc_in<bool> io_debug_rb_inst_7_bits_vecWrites_2_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_vecWrites_2_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_2_bits_idx;
+  sc_in<bool> io_debug_rb_inst_7_bits_vecWrites_3_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_vecWrites_3_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_3_bits_idx;
+  sc_in<bool> io_debug_rb_inst_7_bits_vecWrites_4_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_vecWrites_4_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_4_bits_idx;
+  sc_in<bool> io_debug_rb_inst_7_bits_vecWrites_5_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_vecWrites_5_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_5_bits_idx;
+  sc_in<bool> io_debug_rb_inst_7_bits_vecWrites_6_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_vecWrites_6_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_6_bits_idx;
+  sc_in<bool> io_debug_rb_inst_7_bits_vecWrites_7_valid;
+  sc_in<sc_bv<KP_rvvVlen>> io_debug_rb_inst_7_bits_vecWrites_7_bits_data;
+  sc_in<sc_bv<KP_rvvRegCountWidth>> io_debug_rb_inst_7_bits_vecWrites_7_bits_idx;
 
 
   SpscRingBuffer<TracePacket, BUFFER_SIZE>* buffer;
@@ -314,8 +576,47 @@ ABSL_FLAG(bool, simulate_io_fault, false, "Simulate an IO fault to test handling
   }
 };
 
-
-
+bool LoadElfToMemory(const std::string& file_name, Core_if& memory_interface, uint32_t& entry_point) {
+  int fd = open(file_name.c_str(), O_RDONLY);
+  if (fd < 0) {
+    LOG(ERROR) << "Failed to open ELF file: " << file_name;
+    return false;
+  }
+  struct stat sb;
+  if (fstat(fd, &sb) != 0) {
+    LOG(ERROR) << "fstat failed on: " << file_name;
+    close(fd);
+    return false;
+  }
+  auto file_size = sb.st_size;
+  auto file_data = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  if (file_data == MAP_FAILED) {
+    LOG(ERROR) << "mmap failed on: " << file_name;
+    close(fd);
+    return false;
+  }
+  close(fd);
+  uint32_t elf_magic = 0x464c457f;
+  uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
+  bool load_ok = true;
+  if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
+    entry_point = ::LoadElf(data8,
+              [&memory_interface, &load_ok](void* dest, const void* src, size_t count) {
+                uint64_t addr = reinterpret_cast<uint64_t>(dest);
+                if (!memory_interface.Write(addr, count, reinterpret_cast<const uint8_t*>(src))) {
+                  LOG(ERROR) << absl::StrFormat("[FATAL] ELF load violation. Requested: [0x%08lx - 0x%08lx]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + count, memory_interface.GetProfileBounds(), memory_interface.GetOverflowDelta(addr, count));
+                  load_ok = false;
+                }
+                return dest;
+              });
+    munmap(file_data, file_size);
+    return load_ok;
+  } else {
+    LOG(ERROR) << "Invalid ELF magic";
+  }
+  munmap(file_data, file_size);
+  return false;
+}
 
 static int CoreRvvi_run(const char* name, const char* bin, const int instruction_limit,
                      const bool trace, const std::string& rvvi_out,
