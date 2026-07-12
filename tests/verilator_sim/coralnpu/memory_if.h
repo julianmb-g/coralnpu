@@ -159,6 +159,16 @@ struct Memory_if : Sysc_module {
       const int limit = kPageSize - offset;
       const int len = std::min(bytes, limit);
 
+      if (!IsValidAddress(addr, len)) {
+        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, GetProfileBounds(), GetOverflowDelta(addr, len));
+        return false;
+      }
+
+      if (!IsValidAddress(addr, len)) {
+        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, GetProfileBounds(), GetOverflowDelta(addr, len));
+        return false;
+      }
+
       if (!HasPage(maddr)) {
         return false;
       }
