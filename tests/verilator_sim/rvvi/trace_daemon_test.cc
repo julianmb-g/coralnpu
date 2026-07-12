@@ -15,19 +15,19 @@
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_packet.h"
-#include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
+#include "tests/verilator_sim/rvvi/mpact_trace_formatter.h"
 #include "gtest/gtest.h"
 #include <sstream>
 #include <thread>
 #include <chrono>
 
-namespace mpact::sim::riscv::rvvi {
+namespace coralnpu::sim::rvvi {
 
 class TraceDaemonTest : public ::testing::Test {
  protected:
   SpscRingBuffer<> buffer_;
   std::stringstream output_stream_;
-  CustomFallbackFormatter formatter_;
+  MpactTraceFormatter formatter_;
 };
 
 TEST_F(TraceDaemonTest, StartAndStopDaemon) {
@@ -129,10 +129,10 @@ TEST_F(TraceDaemonTest, InterleavedPacketStreams) {
   daemon.Stop();
   
   std::string output = output_stream_.str();
-  // Check I1 with R1 (Disassembly fallback adds 'inst_0x...')
-  EXPECT_NE(output.find("rvvi,0,0000000000001000,00001234,inst_0x00001234,x1:0000aaaa"), std::string::npos);
+  // Check I1 with R1
+  EXPECT_NE(output.find("rvvi,0,0000000000001000,00001234,<unimplemented: mpact-riscv missing>,x1:0000aaaa"), std::string::npos);
   // Check I2 with R2
-  EXPECT_NE(output.find("rvvi,0,0000000000002000,00005678,inst_0x00005678,x2:0000bbbb"), std::string::npos);
+  EXPECT_NE(output.find("rvvi,0,0000000000002000,00005678,<unimplemented: mpact-riscv missing>,x2:0000bbbb"), std::string::npos);
 }
 
 TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
@@ -307,4 +307,4 @@ TEST_F(TraceDaemonTest, IncompleteChunkSequenceDiscarded) {
   }, ::testing::ExitedWithCode(1), "Trace reassembly error: Incomplete chunks");
 }
 
-} // namespace mpact::sim::riscv::rvvi
+} // namespace coralnpu::sim::rvvi

@@ -295,33 +295,7 @@ cc_test(
     ],
 )
 
-cc_test(
-    name = "core_barebones_tb_test",
-    srcs = [
-        "coralnpu/core_barebones_tb_test.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
-    ],
-    deps = [
-        ":coralnpu_if",
-        ":elf",
-        ":sim_libs",
-        ":util",
-        "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
-        "@com_google_googletest//:gtest",
-    ],
-)
 
-cc_test(
-    name = "core_rvvi_tb_test",
-    srcs = [
-        "coralnpu/core_rvvi_tb_test.cc",
-    ],
-    deps = [
-        ":spsc_ring_buffer",
-        ":trace_daemon",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
 
 cc_test(
     name = "core_barebones_tb_test",
@@ -345,8 +319,8 @@ cc_test(
         "coralnpu/core_rvvi_tb_test.cc",
     ],
     deps = [
-        ":spsc_ring_buffer",
-        ":trace_daemon",
+        
+        "//tests/verilator_sim/rvvi:rvvi_libs",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -407,8 +381,8 @@ cc_binary(
         ":coralnpu_if",
         ":elf",
         ":sim_libs",
-        ":spsc_ring_buffer",
-        ":trace_daemon",
+        
+        "//tests/verilator_sim/rvvi:rvvi_libs",
         ":util",
         "//hdl/chisel/src/coralnpu:core_verification_cc_library",
         "@com_google_absl//absl/flags:flag",
@@ -419,53 +393,9 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "core_barebones_sim",
-    srcs = [
-        "coralnpu/core_barebones_tb.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
-    ],
-    defines = [
-        "VERILATOR_MODEL=VCoreBarebones",
-    ],
-    deps = [
-        ":coralnpu_if",
-        ":elf",
-        ":sim_libs",
-        ":util",
-        "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/flags:usage",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/strings:str_format",
-    ],
-)
 
-cc_binary(
-    name = "core_rvvi_traced_sim",
-    srcs = [
-        "coralnpu/core_rvvi_traced_sim.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreVerification_parameters.h",
-    ],
-    defines = [
-        "VERILATOR_MODEL=VCoreVerification",
-    ],
-    deps = [
-        ":coralnpu_if",
-        ":elf",
-        ":sim_libs",
-        ":spsc_ring_buffer",
-        ":trace_daemon",
-        ":util",
-        "//hdl/chisel/src/coralnpu:core_verification_cc_library",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/flags:usage",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/strings:str_format",
-    ],
-)
+
+
 
 cc_binary(
     name = "core_mini_sim",
@@ -554,70 +484,17 @@ cc_test(
     ],
 )
 
-cc_library(
-    name = "trace_packet",
-    hdrs = ["rvvi/trace_packet.h"],
-    visibility = ["//visibility:public"],
-)
 
-cc_library(
-    name = "spsc_ring_buffer",
-    hdrs = ["rvvi/spsc_ring_buffer.h"],
-    deps = [":trace_packet"],
-    visibility = ["//visibility:public"],
-)
 
-cc_library(
-    name = "trace_daemon",
-    srcs = ["rvvi/trace_daemon.cc"],
-    hdrs = [
-        "rvvi/custom_fallback_formatter.h",
-        "rvvi/mpact_trace_formatter.h",
-        "rvvi/trace_daemon.h",
-        "rvvi/trace_formatter_interface.h",
-    ],
-    deps = [
-        ":spsc_ring_buffer",
-        ":trace_packet",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/strings:str_format",
-    ],
-    visibility = ["//visibility:public"],
-)
 
-cc_test(
-    name = "spsc_ring_buffer_test",
-    srcs = [
-        "rvvi/spsc_ring_buffer_test.cc",
-    ],
-    deps = [
-        ":spsc_ring_buffer",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
 
-cc_test(
-    name = "trace_daemon_test",
-    srcs = [
-        "rvvi/trace_daemon_test.cc",
-    ],
-    deps = [
-        ":trace_daemon",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
 
-cc_test(
-    name = "mpact_trace_formatter_test",
-    srcs = [
-        "rvvi/mpact_trace_formatter_test.cc",
-        "rvvi/mpact_trace_formatter.h",
-    ],
-    deps = [
-        ":trace_daemon",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+
+
+
+
+
+
 
 cc_test(
     name = "core_rvvi_watchdog_test",
@@ -625,7 +502,7 @@ cc_test(
         "coralnpu/core_rvvi_watchdog_test.cc",
     ],
     deps = [
-        ":trace_daemon",
+        "//tests/verilator_sim/rvvi:rvvi_libs",
         ":sim_libs",
         ":util",
         "@com_google_googletest//:gtest_main",
@@ -644,77 +521,18 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
-cc_library(
-    name = "trace_packet",
-    hdrs = ["rvvi/trace_packet.h"],
-    visibility = ["//visibility:public"],
-)
 
-cc_library(
-    name = "spsc_ring_buffer",
-    hdrs = ["rvvi/spsc_ring_buffer.h"],
-    deps = [":trace_packet"],
-    visibility = ["//visibility:public"],
-)
 
-cc_library(
-    name = "trace_daemon",
-    srcs = ["rvvi/trace_daemon.cc"],
-    hdrs = [
-        "rvvi/custom_fallback_formatter.h",
-        "rvvi/mpact_trace_formatter.h",
-        "rvvi/trace_daemon.h",
-        "rvvi/trace_formatter_interface.h",
-    ],
-    deps = [
-        ":spsc_ring_buffer",
-        ":trace_packet",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/strings:str_format",
-    ],
-    visibility = ["//visibility:public"],
-)
 
-cc_test(
-    name = "spsc_ring_buffer_test",
-    srcs = [
-        "rvvi/spsc_ring_buffer_test.cc",
-    ],
-    deps = [
-        ":spsc_ring_buffer",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
 
-cc_test(
-    name = "trace_daemon_test",
-    srcs = [
-        "rvvi/trace_daemon_test.cc",
-    ],
-    deps = [
-        ":trace_daemon",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
 
-cc_test(
-    name = "mpact_trace_formatter_test",
-    srcs = [
-        "rvvi/mpact_trace_formatter_test.cc",
-        "rvvi/mpact_trace_formatter.h",
-    ],
-    deps = [
-        ":trace_daemon",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
 
-cc_binary(
-    name = "gen_elf",
-    srcs = [
-        "utils/gen_elf.cc",
-    ],
-    visibility = ["//visibility:public"],
-)
+
+
+
+
+
+
+
 
 

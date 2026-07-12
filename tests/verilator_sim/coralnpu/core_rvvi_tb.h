@@ -60,7 +60,7 @@
 #define BUFFER_SIZE 4096
 #endif
 
-using namespace mpact::sim::riscv::rvvi;
+using namespace coralnpu::sim::rvvi;
 
 struct CoreRvvi_tb : Sysc_tb {
   using Sysc_tb::cycle;

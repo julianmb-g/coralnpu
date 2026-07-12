@@ -8,7 +8,6 @@ cc_library(
         "trace_daemon.cc",
     ],
     hdrs = [
-        "custom_fallback_formatter.h",
         "mpact_trace_formatter.h",
         "spsc_ring_buffer.h",
         "trace_daemon.h",
@@ -19,5 +18,31 @@ cc_library(
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
+    ],
+)
+cc_test(
+    name = "spsc_ring_buffer_test",
+    srcs = ["spsc_ring_buffer_test.cc"],
+    deps = [
+        ":rvvi_libs",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "trace_daemon_test",
+    srcs = ["trace_daemon_test.cc"],
+    deps = [
+        ":rvvi_libs",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mpact_trace_formatter_test",
+    srcs = ["mpact_trace_formatter_test.cc"],
+    deps = [
+        ":rvvi_libs",
+        "@com_google_googletest//:gtest_main",
     ],
 )

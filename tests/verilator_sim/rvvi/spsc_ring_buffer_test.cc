@@ -17,7 +17,7 @@
 #include "gtest/gtest.h"
 #include <thread>
 
-namespace mpact::sim::riscv::rvvi {
+namespace coralnpu::sim::rvvi {
 
 class SpscRingBufferTest : public ::testing::Test {
  protected:
@@ -94,4 +94,4 @@ TEST(SpscRingBufferConcurrentTest, ConcurrentStressTest) {
   EXPECT_TRUE(buffer.IsEmpty());
 }
 
-} // namespace mpact::sim::riscv::rvvi
+} // namespace coralnpu::sim::rvvi

@@ -17,6 +17,8 @@
 #include "hw_sim/core_mini_axi_wrapper.h"
 #include "hw_sim/coralnpu_simulator.h"
 
+namespace coralnpu::sim {
+
 class CoreMiniAxiSimulator : public CoralNPUSimulator {
  public:
   CoreMiniAxiSimulator() : context_(), wrapper_(&context_) {
@@ -117,3 +119,5 @@ AxiRData CoreMiniAxiSimulator::ReadCallback(const AxiAddr& addr) {
 CoralNPUSimulator* CoralNPUSimulator::Create() {
   return new CoreMiniAxiSimulator();
 }
+
+}  // namespace coralnpu::sim

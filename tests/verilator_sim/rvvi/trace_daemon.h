@@ -26,7 +26,7 @@
 #include "tests/verilator_sim/rvvi/trace_packet.h"
 #include "tests/verilator_sim/rvvi/trace_formatter_interface.h"
 
-namespace mpact::sim::riscv::rvvi {
+namespace coralnpu::sim::rvvi {
 
 #ifndef BUFFER_SIZE
 #define BUFFER_SIZE 4096
@@ -83,6 +83,6 @@ class TraceDaemon {
   void FlushPendingInstruction();
 };
 
-} // namespace mpact::sim::riscv::rvvi
+} // namespace coralnpu::sim::rvvi
 
 #endif // TESTS_VERILATOR_SIM_RVVI_TRACE_DAEMON_H_

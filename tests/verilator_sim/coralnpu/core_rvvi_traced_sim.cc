@@ -56,7 +56,7 @@
 
 
 
-using namespace mpact::sim::riscv::rvvi;
+using namespace coralnpu::sim::rvvi;
 
 // Fulfills the RVVI Traced Target Implementation requirement. Extracts state from
 // io_debug_rb_... ports and formats it using the asynchronous trace daemon.

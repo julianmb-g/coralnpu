@@ -17,6 +17,8 @@
 
 #include "hw_sim/mailbox.h"
 
+namespace coralnpu::sim {
+
 class CoralNPUSimulator {
  public:
   static CoralNPUSimulator* Create();
@@ -36,5 +38,7 @@ class CoralNPUSimulator {
   // when the core halts.
   virtual void Run(uint32_t start_addr) = 0;
 };
+
+}  // namespace coralnpu::sim
 
 #endif  // HW_SIM_CORALNPU_SIMULATOR_H_

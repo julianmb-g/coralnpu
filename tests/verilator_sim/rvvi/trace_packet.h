@@ -17,7 +17,7 @@
 
 #include <cstdint>
 
-namespace mpact::sim::riscv::rvvi {
+namespace coralnpu::sim::rvvi {
 
 struct alignas(64) TracePacket {
   uint8_t type; // 'I' (Instruction), 'T' (Trap), 'R' (Register Update), 'E' (Terminate)
@@ -40,6 +40,6 @@ struct alignas(64) TracePacket {
   };
 };
 
-} // namespace mpact::sim::riscv::rvvi
+} // namespace coralnpu::sim::rvvi
 
 #endif  // TESTS_VERILATOR_SIM_RVVI_TRACE_PACKET_H_

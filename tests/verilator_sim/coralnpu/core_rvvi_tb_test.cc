@@ -12,15 +12,15 @@
 #include <string>
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
-#include "tests/verilator_sim/rvvi/custom_fallback_formatter.h"
+#include "tests/verilator_sim/rvvi/mpact_trace_formatter.h"
 
-using namespace mpact::sim::riscv::rvvi;
+using namespace coralnpu::sim::rvvi;
 
 TEST(CoreRvviTbTest, TracingFidelity) {
   SpscRingBuffer<TracePacket, 4096> buffer;
   std::stringstream output;
   TraceDaemon daemon(&buffer, &output);
-  CustomFallbackFormatter formatter;
+  MpactTraceFormatter formatter;
   daemon.SetTraceFormatter(&formatter);
   daemon.Start();
 
@@ -59,7 +59,7 @@ TEST(CoreRvviTbTest, BackpressureZeroLoss) {
   SpscRingBuffer<TracePacket, 4096> buffer;
   std::stringstream output;
   TraceDaemon daemon(&buffer, &output);
-  CustomFallbackFormatter formatter;
+  MpactTraceFormatter formatter;
   daemon.SetTraceFormatter(&formatter);
 
   // Don't start daemon yet, fill the buffer completely
