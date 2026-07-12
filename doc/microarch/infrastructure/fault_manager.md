@@ -1,5 +1,22 @@
 # Fault Manager
 
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+
 > **Intended Audience:** Hardware Developers, SW/Compiler Developers
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
@@ -42,4 +59,4 @@ For any detected fault, the Fault Manager generates a FaultManagerOutput bundle:
 
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-10 - **Upstream Commit:** 8ba6f4108901602e14e28345b4bd009e6f3b6897 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/FaultManager.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+> **Provenance & Traceability** - **Verified As Of:** 2026-07-10 - **Upstream Commit:** 8ba6f4108901602e14e28345b4bd009e6f3b6897 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/FaultManager.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

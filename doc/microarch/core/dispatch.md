@@ -138,4 +138,4 @@ The following instructions must execute in the first dispatch slot, with no othe
 <!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Decode.scala:L216`, `hdl/chisel/src/coralnpu/scalar/Decode.scala:L301` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Decode.scala:L216`, `hdl/chisel/src/coralnpu/scalar/Decode.scala:L301` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
