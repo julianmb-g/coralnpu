@@ -242,6 +242,7 @@ chisel_test(
 
 chisel_test(
     name = "sv_generation_utils_test",
+    size = "large",
     srcs = [
         "SvGenerationUtilsTest.scala",
     ],
