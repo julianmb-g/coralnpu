@@ -90,6 +90,7 @@ class TlulSocket1N(
   io.tl_h.a.ready := readys(io.dev_select_i)
 
   // 4. D-channel Response Arbitration
+  // TODO(ADR-006): Restore TlulFifoSync to prevent cross-domain deadlocks caused by combinational pass-through.
   val d_arb = Module(new Arbiter(new OpenTitanTileLink.D_Channel(p), N + 1))
   for (i <- 0 until N) {
     d_arb.io.in(i) <> io.tl_d(i).d
