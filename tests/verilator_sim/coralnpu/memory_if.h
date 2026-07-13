@@ -181,8 +181,7 @@ struct Memory_if : Sysc_module {
       for (int i = 0; i < len; i++) {
         printf(" %02x", data[i]);
       }
-      printf("
-");
+      printf("\n");
 #endif
       addr += len;
       data += len;
@@ -216,8 +215,7 @@ struct Memory_if : Sysc_module {
         for (int i = 0; i < len; i++) {
           printf(" %02x", data[i]);
         }
-        printf("
-");
+        printf("\n");
       }
 #endif
       addr += len;
@@ -272,14 +270,12 @@ struct Memory_if : Sysc_module {
                const uint8_t* data = nullptr) {
     const uint32_t addrbase = addr & kPageMask;
     if (addr != addrbase) {
-      printf("AddPage(%08x, %d)
-", addr, bytes);
+      printf("AddPage(%08x, %d)\n", addr, bytes);
       assert(false && "AddPage: address not page aligned");
     }
 
     if (HasPage(addr)) {
-      printf("AddPage(%08x, %d)
-", addr, bytes);
+      printf("AddPage(%08x, %d)\n", addr, bytes);
       assert(false && "AddPage: address already populated");
     }
 
