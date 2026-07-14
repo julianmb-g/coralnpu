@@ -90,6 +90,23 @@ TEST(BarebonesMemoryTest, LoadElf) {
   EXPECT_EQ(loaded_payload, 0xdeadbeef);
 }
 
+TEST(BarebonesMemoryTest, LoadElfInvalid) {
+  MockMemory mem;
+  std::vector<uint8_t> elf_data(1024, 0); // Invalid data
+  
+  auto copy_fn = [&mem](void* dest, const void* src, size_t count) -> void* {
+    uint64_t addr = reinterpret_cast<uint64_t>(dest);
+    mem.Write(addr, count, reinterpret_cast<const uint8_t*>(src));
+    return dest;
+  };
+
+  uint32_t entry_point = LoadElf(elf_data.data(), copy_fn);
+  
+  // This test should fail until we implement proper ELF validation, 
+  // which will return 0xFFFFFFFF for invalid ELF.
+  EXPECT_EQ(entry_point, 0xFFFFFFFF); 
+}
+
 #include "hdl/chisel/src/coralnpu/VCoreBarebones_parameters.h"
 #include "tests/verilator_sim/coralnpu/core_if.h"
 

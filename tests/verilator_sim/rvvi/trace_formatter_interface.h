@@ -18,7 +18,7 @@
 #include <cstdint>
 #include <string>
 
-namespace mpact::sim::riscv::rvvi {
+namespace coralnpu::sim::rvvi {
 
 class TraceFormatterInterface {
  public:
@@ -28,6 +28,6 @@ class TraceFormatterInterface {
   virtual std::string Disassemble(uint32_t inst) = 0;
 };
 
-} // namespace mpact::sim::riscv::rvvi
+} // namespace coralnpu::sim::rvvi
 
 #endif // TESTS_VERILATOR_SIM_RVVI_TRACE_FORMATTER_INTERFACE_H_

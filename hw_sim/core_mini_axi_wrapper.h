@@ -28,6 +28,8 @@
 #include "VCoreMiniAxi.h"
 #endif
 
+namespace coralnpu::sim {
+
 class CoreMiniAxiWrapper {
  public:
   explicit CoreMiniAxiWrapper(VerilatedContext* context)
@@ -231,5 +233,7 @@ class CoreMiniAxiWrapper {
   const uint8_t* const halted_;
   const uint8_t* const wfi_;
 };
+
+}  // namespace coralnpu::sim
 
 #endif  // HW_SIM_CORE_MINI_AXI_WRAPPER_H_

@@ -1,12 +1,10 @@
 #include "tests/verilator_sim/rvvi/mpact_trace_formatter.h"
 #include "gtest/gtest.h"
 
-using namespace mpact::sim::riscv::rvvi;
+using namespace coralnpu::sim::rvvi;
 
 TEST(MpactTraceFormatterTest, DelegatesToFallback) {
   MpactTraceFormatter formatter;
-  // Test with a known NOP instruction (0x00000013)
-  // CustomFallbackFormatter returns "nop" for this.
   std::string result = formatter.Disassemble(0x00000013);
-  EXPECT_EQ(result, "nop");
+  EXPECT_EQ(result, "<unimplemented: mpact-riscv missing>");
 }

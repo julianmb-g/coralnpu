@@ -25,6 +25,8 @@
 
 #include "absl/types/span.h"
 
+namespace coralnpu::sim {
+
 // A class that wraps and controls a verilator clock signal. Also provides an
 // observer mechanism
 class Clock {
@@ -641,5 +643,7 @@ class AxiMasterWriteDriver : Clock::Observer {
   AxiWData axi_data_;
   std::function<AxiWResp(const AxiAddr&, const AxiWData&)> write_cb_;
 };
+
+}  // namespace coralnpu::sim
 
 #endif  // HW_SIM_HW_PRIMITIVES_H_

@@ -26,7 +26,7 @@
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_daemon.h"
 
-using namespace mpact::sim::riscv::rvvi;
+using namespace coralnpu::sim::rvvi;
 
 // A mock daemon that doesn't consume anything, to test backpressure.
 class MockStuckDaemon {

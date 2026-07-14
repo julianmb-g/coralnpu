@@ -22,7 +22,7 @@
 #include <string>
 #include <chrono>
 
-namespace mpact::sim::riscv::rvvi {
+namespace coralnpu::sim::rvvi {
 
 /*
  * Rationale for Threading and Queueing Mechanism in TraceDaemon:
@@ -299,4 +299,4 @@ template class TraceDaemon<512, 64>;
 template class TraceDaemon<1024, 64>;
 template class TraceDaemon<2048, 64>; // Default
 
-} // namespace mpact::sim::riscv::rvvi
+} // namespace coralnpu::sim::rvvi

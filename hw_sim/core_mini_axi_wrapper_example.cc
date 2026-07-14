@@ -23,6 +23,8 @@
 #include "hw_sim/core_mini_axi_wrapper.h"
 #include "tests/verilator_sim/elf.h"
 
+using namespace coralnpu::sim;
+
 int main() {
   VerilatedContext context;
   CoreMiniAxiWrapper wrapper(&context);

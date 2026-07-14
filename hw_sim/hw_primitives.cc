@@ -14,6 +14,8 @@
 
 #include "hw_sim/hw_primitives.h"
 
+namespace coralnpu::sim {
+
 Clock::Observer::Observer(Clock* clock)
   : clock_(clock) {
   clock_->AddObserver(this);
@@ -78,4 +80,6 @@ AxiAddr AxiAddr::FromIdAddrSize(int id, uint32_t addr, uint32_t byte_length) {
   axi_addr.addr_bits_region = 0;
   return axi_addr;
 }
+
+}  // namespace coralnpu::sim
 

@@ -19,6 +19,13 @@
 
 uint32_t LoadElf(uint8_t* data, CopyFn copy_fn) {
   const Elf32_Ehdr* elf_header = reinterpret_cast<Elf32_Ehdr*>(data);
+  // Check magic number
+  if (elf_header->e_ident[EI_MAG0] != ELFMAG0 ||
+      elf_header->e_ident[EI_MAG1] != ELFMAG1 ||
+      elf_header->e_ident[EI_MAG2] != ELFMAG2 ||
+      elf_header->e_ident[EI_MAG3] != ELFMAG3) {
+    return 0xFFFFFFFF; // Invalid ELF
+  }
   for (int i = 0; i < elf_header->e_phnum; ++i) {
     const Elf32_Phdr* program_header = reinterpret_cast<Elf32_Phdr*>(
         data + elf_header->e_phoff + sizeof(Elf32_Phdr) * i);

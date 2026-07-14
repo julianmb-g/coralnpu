@@ -20,7 +20,7 @@
 #include <cstddef>
 #include "tests/verilator_sim/rvvi/trace_packet.h"
 
-namespace mpact::sim::riscv::rvvi {
+namespace coralnpu::sim::rvvi {
 
 template <typename T = TracePacket, size_t Size = 4096>
 class SpscRingBuffer {
@@ -66,6 +66,6 @@ class SpscRingBuffer {
   char padding_[64 - sizeof(std::atomic<size_t>)]; // Ensure tail_ is padded at the end.
 };
 
-} // namespace mpact::sim::riscv::rvvi
+} // namespace coralnpu::sim::rvvi
 
 #endif  // TESTS_VERILATOR_SIM_RVVI_SPSC_RING_BUFFER_H_
