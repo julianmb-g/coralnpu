@@ -188,6 +188,7 @@ chisel_test(
     size = "large",
     srcs = [
         "LibraryTest.scala",
+        "SafeMuxUpTo1HSpec.scala",
     ],
     deps = [
         ":library",

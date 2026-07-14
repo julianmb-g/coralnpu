@@ -234,7 +234,7 @@ object MuxUpTo1H {
   def apply[T <: Data](defaultVal: T, sel: Seq[Bool], data: Seq[T]): T = {
     assert(PopCount(sel) <= 1.U)
 
-    val defaultSel = !sel.reduce(_ || _)
+    val defaultSel = !sel.foldLeft(false.B)(_ || _)
     Mux1H(sel ++ Seq(defaultSel), data ++ Seq(defaultVal))
   }
 
@@ -252,8 +252,8 @@ object SafeMuxUpTo1H {
   ): ValidIO[E] = {
     val valid    = MuxUpTo1H(defaultVal.valid, sel, data.map(_.valid))
     val bitsUInt = MuxUpTo1H(defaultVal.bits.asUInt, sel, data.map(_.bits.asUInt))
-    val bits     = enumObj.safe(bitsUInt)._1
-    MakeValid(valid, bits.asInstanceOf[E])
+    val (bits, isSafe) = enumObj.safe(bitsUInt)
+    ForceZero(MakeValid(valid && isSafe, bits.asInstanceOf[E]))
   }
 
   def apply[E <: Data](
