@@ -901,3 +901,15 @@ chisel_cc_library(
         "//hdl/verilog:sram_1rw_256x256",
     ],
 )
+
+chisel_test(
+    name = "coralnpu_decode_tests",
+    srcs = [
+        "scalar/DecodeTest.scala",
+    ],
+    deps = [
+        ":coralnpu_scalar",
+        ":coralnpu_base",
+        "//hdl/chisel/src/common:testing",
+    ],
+)
