@@ -273,3 +273,65 @@ async def test_spi_master_half_duplex_tx(dut):
     status = int(resp["data"])
     dut._log.info(f"Final STATUS: 0x{status:X}")
     assert (status & 2) != 0, "RX FIFO should be empty in HDTX mode"
+
+@cocotb.test()
+async def test_spi_master_consecutive_tx_rx(dut):
+    """Tests consecutive transmissions to verify state resets correctly."""
+    await setup_dut(dut)
+
+    host_if = TileLinkULInterface(
+        dut,
+        host_if_name="io_external_hosts_test_host_32",
+        clock_name="io_async_ports_hosts_test_clock",
+        reset_name="io_async_ports_hosts_test_reset",
+        width=32,
+    )
+    await host_if.init()
+
+    # Enable SPI Master (Div=2, CPOL=0, CPHA=0, Enable=1)
+    ctrl_val = (2 << 8) | 1
+    await host_if.host_put(create_a_channel_req(address=SPI_REG_CONTROL, data=ctrl_val, mask=0xF, width=host_if.width))
+    await host_if.host_get_response()
+
+    # Assert CSID 0 and Auto Mode
+    await host_if.host_put(create_a_channel_req(address=SPI_REG_CSID, data=0, mask=0xF, width=host_if.width))
+    await host_if.host_get_response()
+    await host_if.host_put(create_a_channel_req(address=SPI_REG_CSMODE, data=0, mask=0xF, width=host_if.width))
+    await host_if.host_get_response()
+
+    # Transaction 1: Drive MISO=1 (0xFF)
+    dut.io_external_ports_spim_miso.value = 1
+    await host_if.host_put(create_a_channel_req(address=SPI_REG_TXDATA, data=0xAA, mask=0xF, width=host_if.width))
+    await host_if.host_get_response()
+
+    # Wait for completion (STATUS bit 2 becomes 0 for Busy)
+    while True:
+        await host_if.host_put(create_a_channel_req(address=SPI_REG_STATUS, is_read=True, width=host_if.width))
+        resp = await host_if.host_get_response()
+        if (int(resp["data"]) & 4) == 0:
+            break
+        await Timer(10, units="ns")
+
+    # Read RXDATA 1
+    await host_if.host_put(create_a_channel_req(address=SPI_REG_RXDATA, is_read=True, width=host_if.width))
+    resp = await host_if.host_get_response()
+    rxdata1 = int(resp["data"])
+    assert rxdata1 == 0xFF, f"Expected 0xFF, got 0x{rxdata1:X}"
+
+    # Transaction 2: Drive MISO=0 (0x00)
+    dut.io_external_ports_spim_miso.value = 0
+    await host_if.host_put(create_a_channel_req(address=SPI_REG_TXDATA, data=0xBB, mask=0xF, width=host_if.width))
+    await host_if.host_get_response()
+
+    while True:
+        await host_if.host_put(create_a_channel_req(address=SPI_REG_STATUS, is_read=True, width=host_if.width))
+        resp = await host_if.host_get_response()
+        if (int(resp["data"]) & 4) == 0:
+            break
+        await Timer(10, units="ns")
+
+    # Read RXDATA 2
+    await host_if.host_put(create_a_channel_req(address=SPI_REG_RXDATA, is_read=True, width=host_if.width))
+    resp = await host_if.host_get_response()
+    rxdata2 = int(resp["data"])
+    assert rxdata2 == 0x00, f"Expected 0x00, got 0x{rxdata2:X}"

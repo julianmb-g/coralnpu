@@ -450,6 +450,7 @@ SPI_MASTER_TESTCASES = [
     "test_spi_master_basic_tx",
     "test_spi_master_half_duplex_rx",
     "test_spi_master_half_duplex_tx",
+    "test_spi_master_consecutive_tx_rx",
 ]
 # END_TESTCASES_FOR_spi_master_cocotb
 
