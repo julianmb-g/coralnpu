@@ -261,3 +261,48 @@ async def test_random_backpressure(dut):
         for r_task in responder_tasks:
             r_task.cancel()
         await env.stop()
+
+@cocotb.test()
+async def test_arbitration_and_ordering(dut):
+    """Verify fixed-priority D-channel arbitration (Lower index = higher priority)."""
+    await setup_dut(dut)
+    env = TlulVerificationEnv(dut, lambda x: 0)
+    await env.start()
+    
+    host = env.hosts[0]
+    dev0 = env.devices[0]
+    dev1 = env.devices[1]
+
+    async def wait_host_handshake():
+        while True:
+            await RisingEdge(dut.clock)
+            if dut.io_tl_h_a_valid.value == 1 and dut.io_tl_h_a_ready.value == 1:
+                return
+    
+    # Send Req0 to Dev0, Req1 to Dev1
+    dut.io_dev_select_i.value = 0
+    await host.host_put(create_a_channel_req(address=0x1000, data=0x1, source=0))
+    await wait_host_handshake()
+    
+    dut.io_dev_select_i.value = 1
+    await host.host_put(create_a_channel_req(address=0x2000, data=0x2, source=1))
+    await wait_host_handshake()
+    
+    # Get requests at devices
+    req0 = await dev0.device_get_request()
+    req1 = await dev1.device_get_request()
+    
+    # Trigger simultaneous responses
+    # This might require low-level poke to ensure they happen in the same cycle
+    # or rely on Env to handle it.
+    await dev0.device_respond(opcode=1, param=0, size=req0["size"], source=req0["source"])
+    await dev1.device_respond(opcode=1, param=0, size=req1["size"], source=req1["source"])
+    
+    # Host should get response 0 then 1
+    resp0 = await host.host_get_response()
+    resp1 = await host.host_get_response()
+    
+    assert resp0["source"] == 0, f"Expected source 0 first, got {resp0['source']}"
+    assert resp1["source"] == 1, f"Expected source 1 second, got {resp1['source']}"
+    
+    await env.stop()

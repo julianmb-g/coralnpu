@@ -28,3 +28,22 @@ can be found in the table below:
 | Mlu              | 2                | mul, mulh, ...         |
 | Dvu              | Variable         | div, rem, ...          |
 | Lsu              | 2+               | lw, sw, ...            |
+
+## Interconnect Arbitration
+
+### TlulSocket1N and TlulSocketM1
+
+The `TlulSocket1N` and `TlulSocketM1` interconnects utilize fixed-priority
+arbitration on the D-channel to resolve simultaneous responses. In this
+policy, downstream devices with lower indices have higher priority for D-channel
+access to the upstream host.
+
+#### State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+    IDLE --> ARBITRATE : req_i(n)
+    ARBITRATE --> GRANT : win
+    GRANT --> IDLE : ack
+```

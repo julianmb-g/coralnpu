@@ -161,6 +161,7 @@ TLUL_SOCKET_1N_TESTCASES = [
     "test_steering_and_locking",
     "test_error_response",
     "test_random_backpressure",
+    "test_arbitration_and_ordering",
 ]
 # END_TESTCASES_FOR_tlul_socket_1n_128_cocotb_test
 

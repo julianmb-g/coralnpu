@@ -15,7 +15,6 @@
 load("@coralnpu_hw//rules:autogen.bzl", "autogen_scm_info")
 load(
     "@coralnpu_hw//rules:chisel.bzl",
-    "chisel_binary",
     "chisel_cc_library",
     "chisel_library",
     "chisel_test",
@@ -908,8 +907,8 @@ chisel_test(
         "scalar/DecodeTest.scala",
     ],
     deps = [
-        ":coralnpu_scalar",
         ":coralnpu_base",
+        ":coralnpu_scalar",
         "//hdl/chisel/src/common:testing",
     ],
 )
