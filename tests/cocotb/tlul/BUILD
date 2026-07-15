@@ -167,6 +167,7 @@ TLUL_SOCKET_1N_TESTCASES = [
 
 cocotb_test_suite(
     name = "tlul_socket_1n_128_cocotb_test",
+    timeout = "moderate",
     simulators = [
         "verilator",
         "vcs",
