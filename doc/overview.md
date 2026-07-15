@@ -60,10 +60,16 @@ is decoupled from the backend by a FIFO structure that buffers vector
 instructions, posting only to the relevant command queues when dependencies are
 resolved in the vector regfile. The vector core supports data widths of 8, 16, and 32 bits.
 
+Registers        | Names         | Width
+---------------- | ------------- | -----------------------
+Vector (64)      | v0..v63       | 256 bits (eg. int32 x8)
+Accumulator      | acc<8><8>     | 8x8x 32 bits
+
 | Registers   | Names     | Width                   |
 | ----------- | --------- | ----------------------- |
 | Vector (32) | v0..v31   | 256 bits (eg. int32 x8) |
 | Accumulator | acc<8><8> | 8x8x 32 bits            |
+
 
 ### MAC
 

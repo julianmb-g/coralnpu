@@ -35,9 +35,9 @@ def extract_gemma_attention_block(out_dir):
     """
     model_id = "google/gemma-3-270m-it"
     tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForCausalLM.from_pretrained(model_id,
-                                                 device_map="cpu",
-                                                 torch_dtype=torch.float32)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id, device_map="cpu", torch_dtype=torch.float32
+    )
 
     prompt = "The architecture of the Coral NPU is designed for"
     inputs = tokenizer(prompt, return_tensors="pt")
@@ -46,13 +46,15 @@ def extract_gemma_attention_block(out_dir):
     original_sdpa = torch.nn.functional.scaled_dot_product_attention
 
     # Define interceptor hook
-    def sdpa_hook(query,
-                  key,
-                  value,
-                  attn_mask=None,
-                  dropout_p=0.0,
-                  is_causal=False,
-                  **kwargs):
+    def sdpa_hook(
+        query,
+        key,
+        value,
+        attn_mask=None,
+        dropout_p=0.0,
+        is_causal=False,
+        **kwargs
+    ):
         # Only want to capture the very first layer to keep it simple
         if "q" not in extracted_data:
             # Gemma tensors shape: (batch, num_heads, seq_len, head_dim)
@@ -61,14 +63,16 @@ def extract_gemma_attention_block(out_dir):
             extracted_data["k"] = key[0, 0, :, :].detach().numpy()
             extracted_data["v"] = value[0, 0, :, :].detach().numpy()
 
-            output = original_sdpa(query, key, value, attn_mask, dropout_p,
-                                   is_causal, **kwargs)
+            output = original_sdpa(
+                query, key, value, attn_mask, dropout_p, is_causal, **kwargs
+            )
 
             extracted_data["o"] = output[0, 0, :, :].detach().numpy()
             return output
 
-        return original_sdpa(query, key, value, attn_mask, dropout_p, is_causal,
-                             **kwargs)
+        return original_sdpa(
+            query, key, value, attn_mask, dropout_p, is_causal, **kwargs
+        )
 
     print("Running forward pass and intercepting Attention I/O...")
     # Hook into the forward pass
@@ -84,13 +88,27 @@ def extract_gemma_attention_block(out_dir):
     np.save(os.path.join(out_dir, "gemma_k.npy"), extracted_data["k"])
     np.save(os.path.join(out_dir, "gemma_v.npy"), extracted_data["v"])
     np.save(os.path.join(out_dir, "gemma_o.npy"), extracted_data["o"])
-    print(f"Successfully saved exact Gemma Q, K, V, and Golden O to {out_dir}!")
+
+    np.save(
+        os.path.join(out_dir, "gemma_rms_input.npy"), rms_extracted["input"]
+    )
+    np.save(
+        os.path.join(out_dir, "gemma_rms_weight.npy"), rms_extracted["weight"]
+    )
+    np.save(
+        os.path.join(out_dir, "gemma_rms_output.npy"), rms_extracted["output"]
+    )
+    print(
+        f"Successfully saved exact Gemma Attention and RMSNorm tensors to {out_dir}!"
+    )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out_dir",
-                        default=".",
-                        help="Output directory for generated tensors")
+    parser.add_argument(
+        "--out_dir",
+        default=".",
+        help="Output directory for generated tensors"
+    )
     args = parser.parse_args()
     extract_gemma_attention_block(args.out_dir)

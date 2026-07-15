@@ -477,6 +477,7 @@ chisel_library(
         "Parameters.scala",
     ],
     deps = [
+        "//hdl/chisel/src/bus",
     ],
 )
 

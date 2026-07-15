@@ -17,7 +17,6 @@ package bus
 import chisel3._
 import chisel3.util._
 import chisel3.experimental.BundleLiterals._
-import coralnpu.Parameters
 import freechips.rocketchip.util.{AsyncQueue, AsyncQueueParams}
 
 class DmaDesc extends Bundle {
@@ -27,7 +26,8 @@ class DmaDesc extends Bundle {
 }
 
 object SpiFrameParserPhase extends ChiselEnum {
-  val sOp, sAddr3, sAddr2, sAddr1, sAddr0, sLen1, sLen0, sSendDesc, sWriteData, sWaitEnd = Value
+  val sOp, sAddr3, sAddr2, sAddr1, sAddr0, sLen1, sLen0, sSendDesc, sWriteData, sWaitEnd, sReset =
+    Value
 }
 
 object DmaEnginePhase extends ChiselEnum {
@@ -47,8 +47,13 @@ class SpiFrameParserRegs extends Bundle {
   val wr_remain = UInt(32.W)
 
   def onOp(byte_valid: Bool, byte_bits: UInt): SpiFrameParserRegs = {
-    val res = Wire(new SpiFrameParserRegs)
-    res.phase     := Mux(byte_valid, SpiFrameParserPhase.sAddr3, this.phase)
+    val res      = Wire(new SpiFrameParserRegs)
+    val is_reset = (byte_bits === 3.U)
+    res.phase := Mux(
+      byte_valid,
+      Mux(is_reset, SpiFrameParserPhase.sReset, SpiFrameParserPhase.sAddr3),
+      this.phase
+    )
     res.op        := Mux(byte_valid, byte_bits, this.op)
     res.addr      := Mux(byte_valid, 0.U, this.addr)
     res.len       := Mux(byte_valid, 0.U, this.len)
@@ -57,10 +62,10 @@ class SpiFrameParserRegs extends Bundle {
   }
 
   def onAddr(
-      next_phase: SpiFrameParserPhase.Type,
-      byte_valid: Bool,
-      byte_bits: UInt,
-      shift: Int
+    next_phase: SpiFrameParserPhase.Type,
+    byte_valid: Bool,
+    byte_bits: UInt,
+    shift: Int
   ): SpiFrameParserRegs = {
     val res = Wire(new SpiFrameParserRegs)
     res.phase := Mux(byte_valid, next_phase, this.phase)
@@ -76,10 +81,10 @@ class SpiFrameParserRegs extends Bundle {
   }
 
   def onLen(
-      next_phase: SpiFrameParserPhase.Type,
-      byte_valid: Bool,
-      byte_bits: UInt,
-      shift: Int
+    next_phase: SpiFrameParserPhase.Type,
+    byte_valid: Bool,
+    byte_bits: UInt,
+    shift: Int
   ): SpiFrameParserRegs = {
     val res = Wire(new SpiFrameParserRegs)
     res.phase := Mux(byte_valid, next_phase, this.phase)
@@ -241,7 +246,7 @@ class DmaEngineRegs extends Bundle {
 }
 
 /** Spi2TLULV2_SpiDomain: Handles SPI interface logic (clocked by `spi_clk`). */
-class Spi2TLULV2_SpiDomain(p: Parameters) extends Module {
+class Spi2TLULV2_SpiDomain(p: TLULParameters) extends Module {
   val io = IO(new Bundle {
     val q_mosi_pin = Flipped(Decoupled(UInt(1.W)))
     val q_miso_pin = Decoupled(UInt(1.W))
@@ -421,8 +426,8 @@ class Spi2TLULV2_SpiDomain(p: Parameters) extends Module {
 }
 
 /** Spi2TLULV2_TlulDomain: Handles TileLink-related logic (clocked by system `clock`). */
-class Spi2TLULV2_TlulDomain(p: Parameters) extends Module {
-  val tlul_p = new TLULParameters(p)
+class Spi2TLULV2_TlulDomain(p: TLULParameters) extends Module {
+  val tlul_p = p
   val io     = IO(new Bundle {
     val q_tl_a = Decoupled(new OpenTitanTileLink.A_Channel(tlul_p))
     val q_tl_d = Flipped(Decoupled(new OpenTitanTileLink.D_Channel(tlul_p)))
@@ -508,9 +513,9 @@ class Spi2TLULV2_TlulDomain(p: Parameters) extends Module {
 /** Spi2TLULV2: Converts SPI frames into TileLink-UL (TL-UL) transactions. Wrapper that instantiates
   * SPI and TLUL domains and connects them via AsyncQueues.
   */
-class Spi2TLULV2(p: Parameters) extends Module {
-  assert(p.lsuDataBits == 128)
-  val tlul_p = new TLULParameters(p)
+class Spi2TLULV2(p: TLULParameters) extends Module {
+  assert(p.w == 16)
+  val tlul_p = p
   val io     = IO(new Bundle {
     val spi_clk    = Input(Clock())
     val spi_rst_n  = Input(Bool())

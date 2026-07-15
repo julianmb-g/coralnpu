@@ -15,25 +15,25 @@ BASE_BRANCH=${BASE_BRANCH:-""}
 # TODO: enable linters as we clean up the codebase
 # Define linters: [name]="command and flags"
 declare -A LINTER_COMMANDS=(
-    ["yapf"]="true" #  "yapf3 --diff"
+    ["yapf"]="yapf3 --diff"
     ["buildifier"]="buildifier -mode=check"
     ["verible-verilog-lint"]="true" #  "verible-verilog-lint"
-    ["verible-verilog-format"]="true" #  "verible-verilog-format --verify"
+    ["verible-verilog-format"]="verible-verilog-format --verify --inplace"
     # ["clang-tidy"]="clang-tidy" # Pending compilation database
     ["clang-format"]="clang-format --dry-run --Werror"
-    ["scalafmt"]="true" #  "scalafmt --config .scalafmt.conf --test --list"
+    ["scalafmt"]="scalafmt --config .scalafmt --test"
     ["shellcheck"]="shellcheck -x"
-    ["markdownlint"]="true" #  "mdl"
+    ["markdownlint"]="mdl --no-verbose"
 )
 
 # Define fix mode commands: [name]="command and flags"
 declare -A LINTER_FIX_COMMANDS=(
-    ["yapf"]="true" #  "yapf3 -i"
+    ["yapf"]="yapf3 -i"
     ["buildifier"]="buildifier -mode=fix"
-    ["verible-verilog-format"]="true" #  "verible-verilog-format --inplace"
+    ["verible-verilog-format"]="verible-verilog-format --inplace"
     # ["clang-tidy"]="clang-tidy -fix" # Pending compilation database
     ["clang-format"]="clang-format -i"
-    ["scalafmt"]="true" #  "scalafmt --config .scalafmt.conf"
+    ["scalafmt"]="scalafmt --config .scalafmt"
 )
 
 # Define diff-aware linters: [name]="command and flags"

@@ -48,14 +48,19 @@ class Fixture:
             self.entry_point = await self.core_mini_axi.load_elf(f)
             for symbol in symbols:
                 try:
-                    self.symbols[symbol] = self.core_mini_axi.lookup_symbol(f, symbol)
+                    self.symbols[symbol] = self.core_mini_axi.lookup_symbol(
+                        f, symbol
+                    )
                 except Exception as e:
                     if not optional:
                         raise e
             if optional_symbols:
                 for symbol in optional_symbols:
                     try:
-                        self.symbols[symbol] = self.core_mini_axi.lookup_symbol(f, symbol)
+                        self.symbols[symbol
+                                     ] = self.core_mini_axi.lookup_symbol(
+                                         f, symbol
+                                     )
                     except Exception:
                         pass
 
@@ -67,9 +72,11 @@ class Fixture:
         await self.core_mini_axi.write_word(self.symbols[symbol], data)
 
     async def write_ptr(
-            self, addr_symbol: str, data_symbol: str, offset: int = 0):
+        self, addr_symbol: str, data_symbol: str, offset: int = 0
+    ):
         await self.core_mini_axi.write_word(
-            self.symbols[addr_symbol], self.symbols[data_symbol] + offset)
+            self.symbols[addr_symbol], self.symbols[data_symbol] + offset
+        )
 
     async def read(self, symbol: str, size: int):
         return await self.core_mini_axi.read(self.symbols[symbol], size)
@@ -80,12 +87,14 @@ class Fixture:
     async def run_to_halt(self, timeout_cycles=10000):
         await self.core_mini_axi.execute_from(self.entry_point)
         return await self.core_mini_axi.wait_for_halted(
-            timeout_cycles=timeout_cycles)
+            timeout_cycles=timeout_cycles
+        )
 
     async def run_to_fault(self, timeout_cycles=10000):
         await self.core_mini_axi.execute_from(self.entry_point)
         return await self.core_mini_axi.wait_for_fault(
-            timeout_cycles=timeout_cycles)
+            timeout_cycles=timeout_cycles
+        )
 
     def fault(self):
         return self.core_mini_axi.dut.io_fault.value == 1
