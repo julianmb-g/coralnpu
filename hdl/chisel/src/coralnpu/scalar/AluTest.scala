@@ -93,38 +93,38 @@ class AluSpec extends AnyFreeSpec with ChiselSim {
 
   "CLZ" in {
     val test_cases = Seq(
-      (0L, 32L),
-      (1L, 31L),
-      (3L, 30L),
-      (0xffff8000L, 0L),
-      (0x00800000L, 8L),
-      (0x00007fffL, 17L),
-      (0x7fffffffL, 1L),
-      (0x0007ffffL, 13L),
-      (0x80000000L, 0L),
-      (0x121f5000L, 3L),
-      (0x04000000L, 5L),
-      (0x0000000eL, 28L),
-      (0x20401341L, 2L)
+      (0L, BigInt(32L)),
+      (1L, BigInt(31L)),
+      (3L, BigInt(30L)),
+      (0xffff8000L, BigInt(0L)),
+      (0x00800000L, BigInt(8L)),
+      (0x00007fffL, BigInt(17L)),
+      (0x7fffffffL, BigInt(1L)),
+      (0x0007ffffL, BigInt(13L)),
+      (0x80000000L, BigInt(0L)),
+      (0x121f5000L, BigInt(3L)),
+      (0x04000000L, BigInt(5L)),
+      (0x0000000eL, BigInt(28L)),
+      (0x20401341L, BigInt(2L))
     )
     simulate(new Alu(p))(test_unary_op(_, 13.U, AluOp.CLZ, test_cases))
   }
 
   "CTZ" in {
     val test_cases = Seq(
-      (0x00000000L, 32L),
-      (0x00000001L, 0L),
-      (0x00000003L, 0L),
-      (0xffff8000L, 15L),
-      (0x00800000L, 23L),
-      (0x00007fffL, 0L),
-      (0x7fffffffL, 0L),
-      (0x0007ffffL, 0L),
-      (0x80000000L, 31L),
-      (0x121f5000L, 12L),
-      (0xc0000000L, 30L),
-      (0x0000000eL, 1L),
-      (0x20401341L, 0L)
+      (0x00000000L, BigInt(32L)),
+      (0x00000001L, BigInt(0L)),
+      (0x00000003L, BigInt(0L)),
+      (0xffff8000L, BigInt(15L)),
+      (0x00800000L, BigInt(23L)),
+      (0x00007fffL, BigInt(0L)),
+      (0x7fffffffL, BigInt(0L)),
+      (0x0007ffffL, BigInt(0L)),
+      (0x80000000L, BigInt(31L)),
+      (0x121f5000L, BigInt(12L)),
+      (0xc0000000L, BigInt(30L)),
+      (0x0000000eL, BigInt(1L)),
+      (0x20401341L, BigInt(0L))
     )
     simulate(new Alu(p))(test_unary_op(_, 13.U, AluOp.CTZ, test_cases))
   }

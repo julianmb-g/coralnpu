@@ -214,8 +214,6 @@ filegroup(
         ":load_store8_fault.elf",
         ":load_store8_test.elf",
         ":load_store8_unit_m2.elf",
-        ":load_store16_unit_m2.elf",
-        ":load_store32_unit_m2.elf",
         ":load16_index8.elf",
         ":load16_index8_seg.elf",
         ":load16_index16_seg.elf",

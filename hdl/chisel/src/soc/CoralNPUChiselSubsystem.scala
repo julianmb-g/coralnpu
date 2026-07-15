@@ -174,25 +174,25 @@ class CoralNPUChiselSubsystem(
     // --- 4. Dynamic Module Instantiation helper (with combined reset) ---
     def instantiateModule(config: ChiselModuleConfig): BaseModule = {
       config.params match {
-        case p: CoreTlulParameters =>
-          val core_p = new Parameters
-          core_p.m = p.memoryRegions
-          core_p.lsuDataBits = p.lsuDataBits
-          core_p.enableRvv = p.enableRvv
-          core_p.enableFetchL0 = p.enableFetchL0
-          core_p.fetchDataBits = p.fetchDataBits
-          core_p.enableFloat = p.enableFloat
-          core_p.itcmSizeKBytes = itcmSize.kBytes
-          core_p.dtcmSizeKBytes = dtcmSize.kBytes
-          Module(new CoreTlul(core_p, config.name))
-
-        case p: Spi2TlulParameters =>
+              case p: CoreTlulParameters =>
+                val core_p = new Parameters
+                core_p.m = p.memoryRegions
+                core_p.lsuDataBits = p.lsuDataBits
+                core_p.enableRvv = p.enableRvv
+                core_p.enableFetchL0 = p.enableFetchL0
+                core_p.fetchDataBits = p.fetchDataBits
+                core_p.enableFloat = p.enableFloat
+                core_p.itcmSizeKBytes = itcmSize.kBytes
+                core_p.dtcmSizeKBytes = dtcmSize.kBytes
+                Module(new CoreTlul(core_p, config.name))
+              case p: Spi2TlulParameters =>
           val spi2tlul_p = new Parameters
           spi2tlul_p.lsuDataBits = p.lsuDataBits
           spi2tlul_p.axi2IdBits = 8
-          Module(new Spi2TLUL(spi2tlul_p))
+          Module(new Spi2TLUL(spi2tlul_p.toTLUL()))
 
           case p: SpiMasterParameters =>
+
             val spi_p = new Parameters
             spi_p.lsuDataBits = p.lsuDataBits
             spi_p.axi2IdBits = 10
@@ -250,22 +250,25 @@ class CoralNPUChiselSubsystem(
       .toMap
 
     // --- Dynamic Wiring ---
-    // Note: SpeciallyHandledHosts modified to matches the XBAR port names to accomodate multiple hosts in one IP
-    val speciallyHandledHosts = Set("ispyocto_m1", "ispyocto_m2")
 
-    // Create a map of all ports on all instantiated modules for easy lookup.
-    val modulePorts = mutable.Map[String, Data]()
-    instantiatedModules.foreach { case (moduleName, module) =>
-      DataMirror.modulePorts(module).foreach { case (portName, port) =>
-        populatePorts(s"$moduleName.$portName", port, modulePorts)
-      }
-    }
+        // Note: SpeciallyHandledHosts modified to matches the XBAR port names to accomodate multiple hosts in one IP
+        val speciallyHandledHosts = Set("ispyocto_m1", "ispyocto_m2")
 
-    // --- Clock & Reset Connections ---
-    instantiatedModules.foreach { case (name, module) =>
-      modulePorts.get(s"$name.io.clk").foreach(_ := io.clk_i)
-      modulePorts.get(s"$name.io.clk_i").foreach(_ := io.clk_i)
-      modulePorts.get(s"$name.io.clock").foreach(_ := io.clk_i)
+        val instantiatedModules: Map[String, BaseModule] = otherModules ++ Map("spi2tlul" -> spi2tlul, "xbar" -> xbar)
+
+        // Create a map of all ports on all instantiated modules for easy lookup.
+        val modulePorts = mutable.Map[String, Data]()
+        instantiatedModules.foreach { case (moduleName, module) =>
+          DataMirror.modulePorts(module).foreach { case (portName, port) =>
+            populatePorts(s"$moduleName.$portName", port, modulePorts)
+          }
+        }
+
+        // --- Clock & Reset Connections ---
+        instantiatedModules.foreach { case (name, module) =>
+          modulePorts.get(s"$name.io.clk").foreach(_ := io.clk_i)
+          modulePorts.get(s"$name.io.clk_i").foreach(_ := io.clk_i)
+          modulePorts.get(s"$name.io.clock").foreach(_ := io.clk_i)
 
       val m_rst_ni = if (name == "spi2tlul") io.rst_ni else combined_rst_n.asAsyncReset
       val m_reset  =

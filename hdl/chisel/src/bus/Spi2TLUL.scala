@@ -59,4 +59,6 @@ class Spi2TLUL(p: TLULParameters) extends Module {
   v2.io.q_tl_d.bits <> io.tl.d.bits
   v2.io.q_tl_d.valid := io.tl.d.valid
   io.tl.d.ready      := v2.io.q_tl_d.ready
+
+  io.sys_rst_o := v2.io.sys_rst_o
 }

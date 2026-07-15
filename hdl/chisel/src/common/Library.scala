@@ -252,8 +252,8 @@ object SafeMuxUpTo1H {
   ): ValidIO[E] = {
     val valid    = MuxUpTo1H(defaultVal.valid, sel, data.map(_.valid))
     val bitsUInt = MuxUpTo1H(defaultVal.bits.asUInt, sel, data.map(_.bits.asUInt))
-    val bits     = enumObj.safe(bitsUInt)._1
-    MakeValid(valid, bits.asInstanceOf[E])
+    val (bits, isSafe) = enumObj.safe(bitsUInt)
+    ForceZero(MakeValid(valid && isSafe, bits.asInstanceOf[E]))
   }
 
   def apply[E <: Data](
