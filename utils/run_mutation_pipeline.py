@@ -19,7 +19,7 @@ def run_mutation_pipeline(test_target, no_revert, output_log):
         "-w", "/workspace",
         container_name,
         "/bin/bash", "-c",
-        f"set -x; bazel test {test_target}"
+        f"set -x; bazel test -j 16 {test_target}"
     ]
 
     print("DEBUG: Running command: " + " ".join(podman_command))

@@ -115,5 +115,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Work around differeing libmpfr versions between distros
     ln -sf /lib/x86_64-linux-gnu/libmpfr.so.6.2.0 /lib/x86_64-linux-gnu/libmpfr.so.4
 EOF
+
+# Host compiler shim
+ENV CC=/usr/bin/clang
+ENV CXX=/usr/bin/clang++
+
 USER ${_USERNAME}
 WORKDIR /home/${_USERNAME}/

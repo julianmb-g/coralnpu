@@ -1,0 +1,9 @@
+[
+  "//hdl/chisel/src/coralnpu:coralnpu_fetch_reorder_buffer_tests",
+  "//hdl/chisel/src/coralnpu:coralnpu_fetch_control_tests",
+  "//hdl/chisel/src/coralnpu:coralnpu_fetcher_tests",
+  "//hdl/chisel/src/coralnpu:coralnpu_fabric_arbiter_tests",
+  "//hdl/chisel/src/coralnpu:coralnpu_fabric_mux_tests",
+  "//hdl/chisel/src/common:gather_test",
+  "//hdl/chisel/src/common:scatter_test"
+]
