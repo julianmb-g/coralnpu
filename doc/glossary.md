@@ -43,78 +43,62 @@ This document defines acronyms and domain-specific terms used throughout the Cor
 
 - **L0 Cache**: A fully-associative micro-cache embedded directly within the Instruction Fetch Unit to buffer recently fetched cache lines and minimize latency for tight execution loops.
 
-- **L1 Cache**: The primary set-associative cache hierarchy (L1I and L1D) managed by the core's memory subsystem, arbitrating access between the scalar execution pipelines and the AXI4 interconnect. **Note:** These caches are dormant/uninstantiated in the production CoralNPU IP block and serve as reference designs for custom hierarchies.
+- **L1 Cache**: The primary set-associative cache hierarchy (L1I and L1D) managed by the core's memory subsystem, arbitrating access between the scalar execution pipelines and the AXI4 interconnect. **Note:** 
 
-- **linkOk**: A hardware check in the Retirement Buffer that verifies the fetched Program Counter matches the expected target of the previous instruction to handle fetch mispredictions.
+... [544,001 characters omitted] ...
 
-- **LMUL**: Length Multiplier. A RISC-V Vector field that specifies the grouping of multiple vector registers to form a single larger vector.
+                          |
++| `VSLL`       | `100101` | 0/1 |                                 |
++| `VMV1R`      | `100111` |  1  | `imm5 == 0`                     |
++| `VMV2R`      | `100111` |  1  | `imm5 == 1`, Align 2            |
++| `VMV4R`      | `100111` |  1  | `imm5 == 3`, Align 4            |
++| `VMV8R`      | `100111` |  1  | `imm5 == 7`, Align 8            |
++| `VSRL`       | `101000` | 0/1 |                                 |
++| `VSRA`       | `101001` | 0/1 |                                 |
++| `VSSRL`      | `101010` | 0/1 |                                 |
++| `VSSRA`      | `101011` | 0/1 |                                 |
++| `VNSRL`      | `101100` | 0/1 |                                 |
++| `VNSRA`      | `101101` | 0/1 |                                 |
++| `VNCLIPU`    | `101110` | 0/1 |                                 |
++| `VNCLIP`     | `101111` | 0/1 |                                 |
 
-- **LRU**: Least Recently Used. A deterministic eviction protocol applied in the core's reference set-associative caches (L1D/L1I), prioritizing the retention of recently accessed memory lines by maintaining access age metrics in a dedicated state array.
+### OPFVV - Floating-Point Vector-Vector Operations (funct3 = 001)
 
-- **LSU**: Load/Store Unit. Handles all memory operations issued by the core by translating memory instructions into transactions on the appropriate AXI4 bus, utilizing an internal command queue and slot mechanism for scheduling.
+| Instruction   |  Funct6  |   vs1   | Constraints |
+| :------------ | :------: | :-----: | :---------- |
+| `VFWCVTBF16`  | `010010` | `01101` | Widening    |
+| `VFNCVTBF16`  | `010010` | `11101` |             |
+| `VFWMACCBF16` | `111011` |   vs1   | Widening    |
 
-- **MLU**: Multiply Unit. A pipelined integer multiplier unit in the scalar core (`doc/microarch/mlu.md`) responsible for executing RISC-V M-extension instructions with deterministic latency.
+### OPFVF - Floating-Point Vector-Scalar Operations (funct3 = 101)
 
-- **mpause**: A custom RISC-V instruction that halts the core execution and gates its clock until an interrupt or external debug request is received.
+| Instruction   |  Funct6  |   rs1   | Constraints |
+| :------------ | :------: | :-----: | :---------- |
+| `VFWCVTBF16`  | `010010` | `01101` | Widening    |
+| `VFWMACCBF16` | `111011` |   rs1   | Widening    |
 
-- **NPUSim**: A high-level, bit-accurate functional simulator for the Coral NPU. It provides Python and C++ bindings to allow rapid software development and verification without the overhead of full RTL simulation.
+## Scheduling and Execution Constraints
 
-- **PMT/RDT**: Vector Permutation and Reduction Unit. Handles cross-lane data movement and vector-to-scalar reductions.
+### Zero `vstart` Requirement
 
-- **RAS**: Return Address Stack. A microarchitectural LIFO structure within the Branch Unit (BRU) that maintains a dynamic history of function calls to preemptively resolve return jumps, avoiding pipeline flushes on standard subroutine returns.
+The following operations (typically OPMVV mode, funct3 = 010) are tracked for compressed instruction validation and require `vstart` to be zero to execute without trapping:
 
-- **RS**: **Reservation Station**. A distributed buffer in the[Vector Backend](microarch/rvv_backend.md) used for out-of-order instruction issue.
+- **Reductions**: `vredsum`, `vredand`, `vredor`, `vredxor`, `vredminu`, `vredmin`, `vredmaxu`, `vredmax`, `vwredsumu`, `vwredsum`.
+- **Unary Operations**: `vcpop`, `vfirst`, `vmsbf`, `vmsof`, `vmsif`, `viota`.
+- **Compression**: `vcompress`.
 
-- **RT**: **Retire Unit** (Vector Backend). The final sequential pipeline stage that orchestrates the in-order writeback of completed execution results to the Vector Register File, signaling the safe deallocation of Reservation Stations.
+_Note: These instructions are validated in `RvvDecode.scala` for internal compressed pipeline tracking._
 
-- **ROB**: **Retirement Buffer** (most common usage). Manages the lifecycle of in-flight instructions and ensures in-order retirement. May also refer to a**Reorder Buffer** in specific units like the VFPU, Fetcher, or[Vector Backend](microarch/rvv_backend.md).
+## Hardware `vstart` Memory Fault Behavior (ADR-043)
 
-- **RVV**: RISC-V Vector extension. The architectural specification implemented by the Vector Core, specifically adhering to the Zve32f profile for 32-bit floating-point support.
+The CoralNPU hardware does NOT dynamically update the `vstart` CSR on a mid-instruction memory fault (such as a trap during a vector load/store operation).
 
-- **Scoreboarding**: The hardware dependency-tracking matrix within the RVV Backend's Dispatch Unit, resolving RAW, WAR, and WAW hazards by monitoring in-flight register reservations.
-
-- **SIMD**: Single Instruction, Multiple Data. The data-level parallelism paradigm implemented by the RVV Vector Backend, utilizing wide 128-bit datapaths to process multiple scalar elements per cycle.
-
-- **Speculative Fetching**: The ability of the [IFU](microarch/fetch.md) to initiate instruction requests for addresses that have not yet been definitively reached by the program execution (e.g., predicted branch targets or next-line prefetching).
-
-- **SRF**: Scalar Register File. The 31-entry 32-bit architectural register file in the scalar core frontend, implemented using flop arrays to support high-speed, multi-ported access for instruction decode and writeback.
-
-- **System CSR**: Exposes the AXI4-mapped architectural baseline for external host management, providing dedicated interface boundaries for managing lifecycle state transitions, power gating, and exception vectors distinct from datapath logic.
-
-- **TCM**: Tightly-Coupled Memory. The collective SRAM architecture (ITCM and DTCM) accessed via the FabricIO protocol, providing guaranteed single-cycle access latency for real-time inference workloads.
-
-- **UQ**: **Uop Queue**. An intermediate decoupling buffer positioned between the decode and dispatch stages of the vector backend, absorbing varying throughput latencies of the stripmining logic.
-
-- **VALU**: Vector Arithmetic Logic Unit. The primary SIMD execution pipeline within the RVV backend (`doc/microarch/rvvalu.md`), utilizing an array of parallel adders/shifters and directly accessing the VRF to process decoupled vector micro-operations.
-
-- **VADC / VSBC**: Vector Add/Subtract with Carry. SIMD instructions utilizing a dedicated carry-in/borrow-in bit from the v0 mask register, essential for chaining operations across multi-word precision boundaries.
-
-- **VMADC / VMSBC**: Vector Masked Add/Subtract with Carry. Produces a carry/borrow bit into a mask register.
-
-- **VNCLIP**: Vector Narrowing Fixed-Point Clip. Narrowing instruction with rounding and saturation.
-
-- **VDIV**: Vector Integer Divide Unit. A dedicated SIMD execution unit in the RVV backend (`doc/microarch/vector/vdiv.md`) that processes multi-lane integer division, handling variable latency and issuing completion signals to the vector retirement buffer.
-
-- **VFPU**: Vector Floating-Point Unit. A high-performance, multi-lane SIMD engine in the RVV backend (`doc/microarch/vfpu.md`) wrapping multiple `fpnew` instances to execute Zve32f vector floating-point instructions in parallel.
-
-- **VLEN**: Vector Length in bits. The fixed width of a single vector register in the hardware (128 bits for CoralNPU).
-
-- **volt_sel**: Voltage Selection. A hardware signal used to select between different operating voltages for SRAM bitcells, allowing for power-performance tradeoffs.
-
-- **VRF**: Vector Register File. The primary storage for vector operands (32 registers, 128-bit VLEN), providing high-bandwidth, multi-ported access for concurrent execution by multiple lanes and dispatch units.
-
-- **VSTART**: Vector Start Index. A CSR that tracks the starting element index for vector operations, used for resuming operations after an interrupt.
-
-- **vxsat**: Vector Fixed-Point Saturation flag. A CSR bit that indicates if a fixed-point operation resulted in saturation.
-
-- **vxrm**: Vector Fixed-Point Rounding Mode. A CSR that controls the rounding behavior of vector fixed-point instructions.
+It is exclusively software-driven via CSR writes. Software trap handlers and operating system contexts must manually manage the `vstart` state via explicit `vstart_write` operations if they intend to resume vector execution after resolving a memory fault. Relying on the hardware to automatically checkpoint the failing element position into `vstart` will result in incorrect execution state recovery.
 
 <!-- mdformat off -->
 <!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/soc/CoralNPUChiselSubsystem.scala:L92`, `hdl/chisel/src/coralnpu/L1DCache.scala:L38`, `hdl/chisel/src/coralnpu/L1ICache.scala:L30`, `hdl/chisel/src/coralnpu/scalar/Decode.scala:L29` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-07-16 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/rvv/RvvDecode.scala`, `hdl/chisel/src/coralnpu/scalar/Csr.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
 <!-- mdformat on -->
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 9a1e82634c2b0f3d42310f89cd1484d8f3302ec9.
