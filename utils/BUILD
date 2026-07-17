@@ -42,3 +42,11 @@ py_test(
     ],
     main = "check_macro_signatures.py",
 )
+
+exports_files(["run_mutation_pipeline.py"])
+
+py_test(
+    name = "test_run_mutation_pipeline",
+    srcs = ["run_mutation_pipeline.py", "//tests/utils:test_run_mutation_pipeline.py"],
+    main = "test_run_mutation_pipeline.py",
+)
