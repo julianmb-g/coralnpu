@@ -16,6 +16,11 @@ import unittest
 from unittest import mock
 import subprocess
 import os
+import sys
+
+# Add the project root to sys.path to import utils
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from utils.run_mutation_pipeline import run_mutation_pipeline
 
 # Mock the utils.run_mutation_pipeline module
 class MockArgs:
@@ -109,6 +114,26 @@ class RunMutationPipelineTests(unittest.TestCase):
         #     expected_bazel_part in call_args[0][0][-1]
         #     for call_args in mock_run.call_args_list
         # ))
+
+    @mock.patch('subprocess.run')
+    @mock.patch('builtins.open', new_callable=mock.mock_open)
+    def test_workspace_hard_reset(self, mock_file, mock_run):
+        mock_run.return_value = mock.Mock(returncode=0, stdout="pass", stderr="")
+        
+        test_target = "//hdl/chisel/src/common:library_test"
+        output_log = "/tmp/test.log"
+        
+        run_mutation_pipeline(test_target, False, output_log)
+
+        # Verify git reset --hard is called
+        reset_cmd_found = False
+        for call in mock_run.call_args_list:
+            cmd = call[0][0]
+            if cmd == ["git", "reset", "--hard"]:
+                reset_cmd_found = True
+                break
+        
+        self.assertTrue(reset_cmd_found, "git reset --hard was not called")
 
 if __name__ == '__main__':
     unittest.main()
