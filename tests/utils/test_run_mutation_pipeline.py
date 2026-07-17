@@ -135,5 +135,25 @@ class RunMutationPipelineTests(unittest.TestCase):
         
         self.assertTrue(reset_cmd_found, "git reset --hard was not called")
 
+    @mock.patch('subprocess.run')
+    @mock.patch('builtins.open', new_callable=mock.mock_open)
+    def test_workspace_clean(self, mock_file, mock_run):
+        mock_run.return_value = mock.Mock(returncode=0, stdout="pass", stderr="")
+        
+        test_target = "//hdl/chisel/src/common:library_test"
+        output_log = "/tmp/test.log"
+        
+        run_mutation_pipeline(test_target, False, output_log)
+
+        # Verify git clean -xfd is called
+        clean_cmd_found = False
+        for call in mock_run.call_args_list:
+            cmd = call[0][0]
+            if cmd == ["git", "clean", "-xfd"]:
+                clean_cmd_found = True
+                break
+        
+        self.assertTrue(clean_cmd_found, "git clean -xfd was not called")
+
 if __name__ == '__main__':
     unittest.main()
