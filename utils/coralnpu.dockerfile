@@ -120,5 +120,9 @@ EOF
 ENV CC=/usr/bin/clang
 ENV CXX=/usr/bin/clang++
 
+# Python package registry shim
+ENV PIP_INDEX_URL="https://pypi.org/simple"
+ENV PIP_TRUSTED_HOST="pypi.org"
+
 USER ${_USERNAME}
 WORKDIR /home/${_USERNAME}/

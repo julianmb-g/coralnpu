@@ -129,5 +129,11 @@ build --features=-supports_start_end_lib
 build --output_filter="^//(?!(third_party)(/|:|$))"
 
 
+# Hermetic build dependencies
+build --action_env=CC=/usr/bin/clang
+build --action_env=CXX=/usr/bin/clang++
+build --host_action_env=CC=/usr/bin/clang
+build --host_action_env=CXX=/usr/bin/clang++
+
 # Import user config, if it exists (gitignored).
 try-import %workspace%/.bazelrc.user
