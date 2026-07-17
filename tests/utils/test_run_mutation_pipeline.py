@@ -20,7 +20,12 @@ import sys
 
 # Add the project root to sys.path to import utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from utils.run_mutation_pipeline import run_mutation_pipeline
+from utils.run_mutation_pipeline import (
+    run_mutation_pipeline,
+    patch_file,
+    enforce_adr008_constraints,
+    commit_test_enhancements
+)
 
 # Mock the utils.run_mutation_pipeline module
 class MockArgs:
@@ -154,6 +159,152 @@ class RunMutationPipelineTests(unittest.TestCase):
                 break
         
         self.assertTrue(clean_cmd_found, "git clean -xfd was not called")
+
+    def test_code_change_injection_success(self):
+        import tempfile
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile("w+", delete=False) as f:
+            f.write("line 1\nline 2 to be mutated\nline 3\n")
+            temp_path = f.name
+
+        try:
+            # Patch the file
+            patch_file(temp_path, 2, "line 2", "line 2 mutated")
+
+            # Verify contents
+            with open(temp_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(content, "line 1\nline 2 mutated\nline 3\n")
+        finally:
+            os.remove(temp_path)
+
+    def test_code_change_injection_safety_fail(self):
+        import tempfile
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile("w+", delete=False) as f:
+            f.write("line 1\nline 2 to be mutated\nline 3\n")
+            temp_path = f.name
+
+        try:
+            # Try patching with non-matching original code
+            with self.assertRaises(ValueError):
+                patch_file(temp_path, 2, "incorrect original", "line 2 mutated")
+        finally:
+            os.remove(temp_path)
+
+    def test_code_change_injection_out_of_bounds(self):
+        import tempfile
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile("w+", delete=False) as f:
+            f.write("line 1\nline 2 to be mutated\nline 3\n")
+            temp_path = f.name
+
+        try:
+            # Try patching with out-of-bounds line number
+            with self.assertRaises(IndexError):
+                patch_file(temp_path, 10, None, "line 10")
+        finally:
+            os.remove(temp_path)
+
+    def test_adr008_formatting_and_license_new_file(self):
+        import tempfile
+        # Create a temporary file with trailing whitespace and no license
+        with tempfile.NamedTemporaryFile("w+", suffix=".scala", delete=False) as f:
+            f.write("class MyTest {   \n  val x = 1   \n}\n")
+            temp_path = f.name
+
+        try:
+            enforce_adr008_constraints(temp_path)
+
+            # Verify license header year 2026 was added and whitespaces stripped
+            with open(temp_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            # The first line should contain Copyright 2026 Google LLC
+            self.assertIn("Copyright 2026 Google LLC", lines[0])
+            # Check trailing whitespaces on the last few lines
+            self.assertEqual(lines[-3], "class MyTest {\n")
+            self.assertEqual(lines[-2], "  val x = 1\n")
+        finally:
+            os.remove(temp_path)
+
+    def test_adr008_formatting_and_license_update_year(self):
+        import tempfile
+        # Create a temporary file with a 2024 license
+        with tempfile.NamedTemporaryFile("w+", suffix=".py", delete=False) as f:
+            f.write("# Copyright 2024 Google LLC\n# Licensed under the Apache...\n\nprint('hello')   \n")
+            temp_path = f.name
+
+        try:
+            enforce_adr008_constraints(temp_path)
+
+            # Verify year was updated to 2026 and whitespaces stripped
+            with open(temp_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            self.assertIn("Copyright 2026 Google LLC", lines[0])
+            self.assertEqual(lines[-1], "print('hello')\n")
+        finally:
+            os.remove(temp_path)
+
+    @mock.patch('subprocess.run')
+    @mock.patch('utils.run_mutation_pipeline.enforce_adr008_constraints')
+    def test_adr008_commit_enhancements_execution(self, mock_enforce, mock_run):
+        mock_run.return_value = mock.Mock(returncode=0)
+        
+        commit_test_enhancements("Add new ALU tests", ["hdl/chisel/src/coralnpu/scalar/DispatchAluTest.scala"])
+
+        mock_enforce.assert_called_once_with("hdl/chisel/src/coralnpu/scalar/DispatchAluTest.scala")
+
+        add_call = mock_run.call_args_list[0][0][0]
+        self.assertEqual(add_call, ["git", "add", "hdl/chisel/src/coralnpu/scalar/DispatchAluTest.scala"])
+
+        commit_call_args = mock_run.call_args_list[1]
+        commit_cmd = commit_call_args[0][0]
+        commit_env = commit_call_args[1].get("env", {})
+
+        self.assertEqual(commit_cmd, ["git", "commit", "--author=Gemini <gemini@google.com>", "-m", "Add new ALU tests"])
+        self.assertEqual(commit_env.get("GIT_COMMITTER_NAME"), "Gemini")
+        self.assertEqual(commit_env.get("GIT_COMMITTER_EMAIL"), "gemini@google.com")
+
+    def test_shebang_preservation(self):
+        import tempfile
+        # Create a python script with a shebang and no license
+        with tempfile.NamedTemporaryFile("w+", suffix=".py", delete=False) as f:
+            f.write("#!/usr/bin/env python3\n\nprint('hello')\n")
+            temp_path = f.name
+
+        try:
+            enforce_adr008_constraints(temp_path)
+
+            with open(temp_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            # The first line must be the shebang line
+            self.assertEqual(lines[0], "#!/usr/bin/env python3\n")
+            # The second line must contain Copyright 2026 Google LLC
+            self.assertIn("Copyright 2026 Google LLC", lines[1])
+        finally:
+            os.remove(temp_path)
+
+    def test_extensionless_script_comment_style(self):
+        import tempfile
+        # Create an extension-less shell script with a shebang and no license
+        with tempfile.NamedTemporaryFile("w+", delete=False) as f:
+            f.write("#!/bin/bash\n\necho 'hello'\n")
+            temp_path = f.name
+
+        try:
+            enforce_adr008_constraints(temp_path)
+
+            with open(temp_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            # Since it has a shebang starting with #, it should default to '#' comment style instead of '//'
+            self.assertEqual(lines[0], "#!/bin/bash\n")
+            self.assertIn("# Copyright 2026 Google LLC", lines[1])
+        finally:
+            os.remove(temp_path)
 
 if __name__ == '__main__':
     unittest.main()
