@@ -25,6 +25,15 @@ def run_mutation_pipeline(test_target, no_revert, output_log):
             print(f"An error occurred during git reset: {e}")
             sys.exit(1)
 
+        try:
+            clean_process = subprocess.run(["git", "clean", "-xfd"], capture_output=True, text=True)
+            if clean_process.returncode != 0:
+                print(f"Error: git clean failed with code {clean_process.returncode}\n{clean_process.stderr}")
+                sys.exit(1)
+        except Exception as e:
+            print(f"An error occurred during git clean: {e}")
+            sys.exit(1)
+
     podman_command = [
         "podman", "run", "--userns=keep-id:uid=1000,gid=1000", "--pids-limit=30000", "--rm",
         "-v", f"{workspace_path}:/workspace",
