@@ -12,26 +12,35 @@ def run_mutation_pipeline(test_target, no_revert, output_log):
     bazel_cache_path = get_absolute_path("~/.cache/bazel")
     container_name = "coralnpu"
 
+    if not no_revert:
+        try:
+            reset_process = subprocess.run(["git", "reset", "--hard"], capture_output=True, text=True)
+            if reset_process.returncode != 0:
+                print(f"Error: git reset failed with code {reset_process.returncode}\n{reset_process.stderr}")
+                sys.exit(1)
+        except FileNotFoundError:
+            print("Error: git command not found. Ensure Git is installed and in your PATH.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"An error occurred during git reset: {e}")
+            sys.exit(1)
+
     podman_command = [
         "podman", "run", "--userns=keep-id:uid=1000,gid=1000", "--pids-limit=30000", "--rm",
         "-v", f"{workspace_path}:/workspace",
-        "-v", f"{bazel_cache_path}:/home/builder/.cache/bazel",
+        "-v", f"{bazel_cache_path}:{bazel_cache_path}",
         "-w", "/workspace",
         container_name,
         "/bin/bash", "-c",
-        f"set -x; bazel test -j 16 {test_target}"
+        f"set -x; bazel --output_user_root={bazel_cache_path} --output_base={bazel_cache_path}/container_base test -j 16 {test_target}"
     ]
 
-    print("DEBUG: Running command: " + " ".join(podman_command))
     try:
         with open(output_log, "w") as log_file:
-            print(f"DEBUG: Opened log file: {output_log}")
             process = subprocess.run(podman_command, capture_output=True, text=True, timeout=900)
-            print(f"DEBUG: subprocess.run returned with exit code: {process.returncode}")
             log_file.write("STDOUT:\n" + process.stdout + "\n\n")
             log_file.write("STDERR:\n" + process.stderr + "\n\n")
             log_file.write(f"Exit Code: {process.returncode}\n")
-            print(f"DEBUG: Log file written.")
 
             if process.returncode == 0:
                 print(f"Test for {test_target} PASSED.")
