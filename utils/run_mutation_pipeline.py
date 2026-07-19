@@ -4,6 +4,16 @@ import os
 import subprocess
 import sys
 import json
+import re
+from enum import Enum
+
+class MutationStatus(Enum):
+    SURVIVED = "SURVIVED"
+    KILLED = "KILLED"
+    INVALID = "INVALID"
+
+    def __str__(self):
+        return self.value
 
 def get_absolute_path(path):
     return os.path.abspath(os.path.expanduser(path))
@@ -37,21 +47,7 @@ def patch_file(file_path, line_number, original_code, mutated_code):
     
     print(f"Injected mutation at {file_path}:{line_number}")
 
-def enforce_adr008_constraints(file_path):
-    file_path = os.path.abspath(file_path)
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
-
-    with open(file_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-
-    has_shebang = False
-    shebang_line = ""
-    if lines and lines[0].startswith("#!"):
-        has_shebang = True
-        shebang_line = lines[0]
-        lines = lines[1:]
-
+def _remove_trailing_whitespace(lines):
     updated_lines = []
     for line in lines:
         has_newline = line.endswith("\n")
@@ -60,14 +56,17 @@ def enforce_adr008_constraints(file_path):
         if has_newline:
             stripped += "\n"
         updated_lines.append(stripped)
+    return updated_lines
 
+def _get_comment_character(file_path, has_shebang, shebang_line):
     ext = os.path.splitext(file_path)[1]
     is_hash_style = ext in [".py", ".sh", ".bzl", "BUILD"] or os.path.basename(file_path) == "BUILD"
     if has_shebang and shebang_line.startswith("#!"):
         is_hash_style = True
-    comment_char = "#" if is_hash_style else "//"
+    return "#" if is_hash_style else "//"
 
-    full_license_header = [
+def _generate_license_header(comment_char):
+    return [
         f"{comment_char} Copyright 2026 Google LLC\n",
         f"{comment_char}\n",
         f"{comment_char} Licensed under the Apache License, Version 2.0 (the \"License\");\n",
@@ -84,9 +83,10 @@ def enforce_adr008_constraints(file_path):
         "\n"
     ]
 
-    has_license = False
+def _update_license_year(lines):
     copyright_index = -1
-    for idx, line in enumerate(updated_lines[:15]):
+    has_license = False
+    for idx, line in enumerate(lines[:15]):
         if "Copyright" in line and "Google" in line:
             copyright_index = idx
             has_license = True
@@ -97,24 +97,46 @@ def enforce_adr008_constraints(file_path):
 
     if has_license:
         if copyright_index != -1:
-            line = updated_lines[copyright_index]
-            import re
+            line = lines[copyright_index]
             updated_line = re.sub(r"Copyright\s+\d{4}(-\d{4})?", "Copyright 2026", line)
-            updated_lines[copyright_index] = updated_line
-    else:
-        updated_lines = full_license_header + updated_lines
+            lines[copyright_index] = updated_line
+        return lines, True
+    return lines, False
+
+def enforce_adr008_constraints(file_path):
+    file_path = os.path.abspath(file_path)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    has_shebang = False
+    shebang_line = ""
+    if lines and lines[0].startswith("#!"):
+        has_shebang = True
+        shebang_line = lines[0]
+        lines = lines[1:]
+
+    lines = _remove_trailing_whitespace(lines)
+    lines, has_license = _update_license_year(lines)
+
+    if not has_license:
+        comment_char = _get_comment_character(file_path, has_shebang, shebang_line)
+        lines = _generate_license_header(comment_char) + lines
 
     if has_shebang:
-        updated_lines.insert(0, shebang_line)
+        lines.insert(0, shebang_line)
 
     with open(file_path, "w", encoding="utf-8") as f:
-        f.writelines(updated_lines)
+        f.writelines(lines)
 
     try:
+        ext = os.path.splitext(file_path)[1]
         if ext == ".py":
-            process = subprocess.run(["yapf3", "-i", file_path], capture_output=True, text=True)
+            subprocess.run(["yapf3", "-i", file_path], capture_output=True, text=True)
         elif ext == ".scala":
-            process = subprocess.run(["scalafmt", "--config", ".scalafmt", file_path], capture_output=True, text=True)
+            subprocess.run(["scalafmt", "--config", ".scalafmt", file_path], capture_output=True, text=True)
     except Exception as e:
         print(f"Warning: automatic formatter failed for {file_path}: {e}")
 
@@ -147,11 +169,34 @@ def evaluate_status(returncode):
     Anything else (build error, etc.) is INVALID.
     """
     if returncode == 0:
-        return "SURVIVED"
+        return MutationStatus.SURVIVED
     elif returncode in [3, 4]:
-        return "KILLED"
+        return MutationStatus.KILLED
     else:
-        return "INVALID"
+        return MutationStatus.INVALID
+
+def _build_podman_command(workspace_path, bazel_cache_path, container_name, target):
+    return [
+        "podman", "run", "--userns=keep-id:uid=1000,gid=1000", "--pids-limit=30000", "--rm",
+        "-v", f"{workspace_path}:/workspace",
+        "-v", f"{bazel_cache_path}:{bazel_cache_path}",
+        "-w", "/workspace",
+        container_name,
+        "/bin/bash", "-c",
+        f"set -x; bazel --output_user_root={bazel_cache_path} --output_base={bazel_cache_path}/container_base test -j 16 {target}"
+    ]
+
+def _get_test_targets(test_target):
+    if test_target:
+        return [test_target]
+    
+    pending_path = os.path.join(os.path.dirname(__file__), "pending_mutations.json")
+    if os.path.exists(pending_path):
+        with open(pending_path, "r") as f:
+            return json.load(f)
+    
+    print("No test_target specified and pending_mutations.json not found.")
+    sys.exit(1)
 
 def run_mutation_pipeline(test_target, no_revert, output_log, mutation_file=None, mutation_line=None, original_code=None, mutated_code=None):
     workspace_path = get_absolute_path(".")
@@ -162,7 +207,7 @@ def run_mutation_pipeline(test_target, no_revert, output_log, mutation_file=None
         try:
             subprocess.run(["git", "reset", "--hard"], capture_output=True, text=True, check=True)
             subprocess.run(["git", "clean", "-xfd"], capture_output=True, text=True, check=True)
-        except Exception as e:
+        except subprocess.CalledProcessError as e:
             print(f"An error occurred during git reset/clean: {e}")
             sys.exit(1)
 
@@ -173,29 +218,11 @@ def run_mutation_pipeline(test_target, no_revert, output_log, mutation_file=None
             print(f"Error injecting mutation: {e}")
             sys.exit(1)
 
-    targets = []
-    if test_target:
-        targets.append(test_target)
-    else:
-        pending_path = os.path.join(os.path.dirname(__file__), "pending_mutations.json")
-        if os.path.exists(pending_path):
-            with open(pending_path, "r") as f:
-                targets = json.load(f)
-        else:
-            print("No test_target specified and pending_mutations.json not found.")
-            sys.exit(1)
+    targets = _get_test_targets(test_target)
 
     with open(output_log, "w") as log_file:
         for current_target in targets:
-            podman_command = [
-                "podman", "run", "--userns=keep-id:uid=1000,gid=1000", "--pids-limit=30000", "--rm",
-                "-v", f"{workspace_path}:/workspace",
-                "-v", f"{bazel_cache_path}:{bazel_cache_path}",
-                "-w", "/workspace",
-                container_name,
-                "/bin/bash", "-c",
-                f"set -x; bazel --output_user_root={bazel_cache_path} --output_base={bazel_cache_path}/container_base test -j 16 {current_target}"
-            ]
+            podman_command = _build_podman_command(workspace_path, bazel_cache_path, container_name, current_target)
 
             try:
                 process = subprocess.run(podman_command, capture_output=True, text=True, timeout=900)
@@ -219,7 +246,7 @@ def run_mutation_pipeline(test_target, no_revert, output_log, mutation_file=None
         try:
             subprocess.run(["git", "checkout", "--", mutation_file], check=True)
             print(f"Reverted file {mutation_file}")
-        except Exception as e:
+        except subprocess.CalledProcessError as e:
             print(f"Failed to revert {mutation_file}: {e}")
             sys.exit(1)
 
