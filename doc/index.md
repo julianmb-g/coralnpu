@@ -1,5 +1,3 @@
-# CoralNPU Architecture Wiki
-
 <!--
  Copyright 2026 Google LLC
 
@@ -16,16 +14,22 @@
  limitations under the License.
 -->
 
-> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+# CoralNPU Architecture Wiki
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model.
+> While every effort is made to ensure technical accuracy, the underlying source
+> code and hardware RTL implementation remain the absolute source of truth. Use
+> at your own risk.
 
 > **Intended Audience:** System Integrators, Hardware Developers
 
-
-Welcome to the Coral NPU microarchitecture and hardware documentation. This wiki serves as the definitive reference for the standalone IP block.
+Welcome to the Coral NPU microarchitecture and hardware documentation. This wiki
+serves as the definitive reference for the standalone IP block.
 
 ## Getting Started
 
-If you are new to the CoralNPU project, begin your journey by reviewing the core architectural documentation:
+If you are new to the CoralNPU project, begin your journey by reviewing the core
+architectural documentation:
 
 - [System Architecture Overview](#system-architecture-overview)
 - [Hardware/Software Interface](hardware_software_interface.md)
@@ -34,20 +38,25 @@ If you are new to the CoralNPU project, begin your journey by reviewing the core
 
 ## Role-Based Navigation
 
-To find the information most relevant to your work, please follow the links tailored to your persona:
+To find the information most relevant to your work, please follow the links
+tailored to your persona:
 
-| Persona                 | Primary Focus Areas                                                                          | Key Documents                                                                                                                                        |
-| :---------------------- | :------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Hardware Developers** | RTL implementation, microarchitecture, cycle-level timing, pipeline hazards.                 | [Core Execution pipeline](microarch/microarch.md), [Interfaces & Buses](microarch/interfaces_and_buses.md)                                           |
-| **SW/Compiler Devs**    | Instruction encoding, CSR programming, memory map, exception handling, dataflow constraints. | [Hardware/Software Interface](hardware_software_interface.md), [Verification](verification.md), [FlashAttention Kernel](sw/flash_attention.md)       |
-| **HW Integrators**      | IP integration, AXI4 bus boundaries, reset sequencing, memory parameters.                    | [Interfaces & Buses](microarch/interfaces_and_buses.md), [Top-Level Subsystem](top_level_subsystem.md)                                               |
-| **Software Folks**      | High-level data movement (DMA), software configuration, ring buffers, interrupts.            | [Software DMA](microarch/infrastructure/dma.md), [Command Ring Buffer](sw/command_ring.md), [Synchronization Primitives](sw/synchronization.md), [FlashAttention Kernel](sw/flash_attention.md) |
+| Persona | Primary Focus Areas | Key Documents |
+| :--- | :--- | :--- |
+| **Hardware Developers** | RTL implementation, microarchitecture, cycle-level timing, pipeline hazards. | [Core Execution pipeline](microarch/microarch.md), [Interfaces & Buses](microarch/interfaces_and_buses.md) |
+| **SW/Compiler Devs** | Instruction encoding, CSR programming, memory map, exception handling, dataflow constraints. | [Hardware/Software Interface](hardware_software_interface.md), [Verification](verification.md), [FlashAttention Kernel](sw/flash_attention.md) |
+| **HW Integrators** | IP integration, AXI4 bus boundaries, reset sequencing, memory parameters. | [Interfaces & Buses](microarch/interfaces_and_buses.md), [Top-Level Subsystem](top_level_subsystem.md) |
+| **Software Folks** | High-level data movement (DMA), software configuration, ring buffers, interrupts. | [Software DMA](microarch/infrastructure/dma.md), [Command Ring Buffer](sw/command_ring.md), [Synchronization Primitives](sw/synchronization.md), [FlashAttention Kernel](sw/flash_attention.md) |
 
 ## System Architecture Overview
 
-The following diagram illustrates the top-level CoralNPU SoC Subsystem architecture, highlighting the `CoreAxi` interfaces and internal IP boundaries (replacing legacy interfaces).
+The following diagram illustrates the top-level CoralNPU SoC Subsystem
+architecture, highlighting the `CoreAxi` interfaces and internal IP boundaries
+(replacing legacy interfaces).
 
-_For the top-level CoralNPU SoC Subsystem architecture diagram, please refer to the [Top-Level Subsystem](top_level_subsystem.md#top-level-system-architecture-diagram) documentation._
+_For the top-level CoralNPU SoC Subsystem architecture diagram, please refer to
+the [Top-Level Subsystem](top_level_subsystem.md#top-level-system-architecture-diagram)
+documentation._
 
 ## Architectural Domains
 
@@ -88,7 +97,6 @@ _For the top-level CoralNPU SoC Subsystem architecture diagram, please refer to 
 - [Memory Hierarchy](microarch/memory_hierarchy.md)
 - [Load Store Unit](microarch/memory/lsu.md)
 - [Tightly Coupled Memory (TCM128)](microarch/memory/tcm.md)
-- [Cache Architecture](microarch/memory/cache_architecture.md)
 - [SRAM Wrappers](microarch/memory/sram.md)
 - [CircularBufferMulti](microarch/common/circular_buffer_multi.md)
 - [Fifo Hardware Primitive](microarch/common/fifo.md)
@@ -157,11 +165,7 @@ _For the top-level CoralNPU SoC Subsystem architecture diagram, please refer to 
 
 - [Verification Architecture](verification.md)
 
-<!-- mdformat off -->
-<!-- prettier-ignore -->
-> **Traceability:** Generated by Gemini. Derived from upstream commit f5f6c88d3dff8cb198cd89420919b6863667f3e0.
-<!-- mdformat on -->
+--------------------------------------------------------------------------------
 
----
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-16 - **Upstream Commit:** N/A - **Primary Source(s):** RTL - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+> **Traceability:** Generated by Gemini. Derived from upstream commit 28fdd2f4b80b1db06a4025b828807fcdc0e76f88. AI-generated/assisted; RTL is the source of truth.

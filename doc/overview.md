@@ -1,5 +1,3 @@
-# CoralNPU
-
 <!--
  Copyright 2026 Google LLC
 
@@ -16,14 +14,17 @@
  limitations under the License.
 -->
 
-> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+# CoralNPU
 
-> **Intended Audience:** Hardware Developers
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model.
+> While every effort is made to ensure technical accuracy, the underlying
+> source code and hardware RTL implementation remain the absolute source of
+> truth. Use at your own risk.
 
-CoralNPU is a RISCV CPU built with custom SIMD instructions and microarchitectural
-decisions that align with the dataplane properties of an ML accelerator. The design
-of CoralNPU starts with domain and matrix capabilities; vector and scalar
-capabilities are then added for a fused design.
+CoralNPU is a RISCV CPU built with custom SIMD instructions and
+microarchitectural decisions that align with the dataplane properties of an ML
+accelerator. The design of CoralNPU starts with domain and matrix capabilities;
+vector and scalar capabilities are then added for a fused design.
 
 ## Block Diagram
 
@@ -38,7 +39,7 @@ CoralNPU utilizes a custom RISC-V frontend (rv32im) that runs the minimal set of
 instructions to support an executor run-to-completion model (eg. no OS, no
 interrupts), with all control tasks onloaded to the SMC . The C extension
 encoding is reclaimed (as per the risc-v specification) to provide the necessary
-encoding space for the SIMD registers (5b indices), and to allow flexible type
+encoding space for the SIMD registers (6b indices), and to allow flexible type
 encodings and instruction compression (stripmining) for the SIMD instruction
 set. The scalar core is an in order machine with no speculation.
 
@@ -46,10 +47,10 @@ The branch policy in the fetch stage is backwards branches are taken and forward
 branches are not-taken, incurring a penalty cycle if the execute result does not
 match the decision in the fetch unit.
 
-| Registers        | Names         | Width   |
-| ---------------- | ------------- | ------- |
-| Scalar (31)      | zero, x1..x31 | 32 bits |
-| Control & Status | CSRx          | Various |
+| Registers        | Names         | Width                   |
+| ---------------- | ------------- | ----------------------- |
+| Scalar (31)      | zero, x1..x31 | 32 bits                 |
+| Control & Status | CSRx          | Various                 |
 
 ## Vector Core
 
@@ -57,12 +58,13 @@ We use SIMD and vector interchangeably, referring to a simple and practical SIMD
 instruction definition devoid of variable length behaviors. The scalar frontend
 is decoupled from the backend by a FIFO structure that buffers vector
 instructions, posting only to the relevant command queues when dependencies are
-resolved in the vector regfile. The vector core supports data widths of 8, 16, and 32 bits.
+resolved in the vector regfile. The vector core supports data widths of 8, 16,
+and 32 bits.
 
-| Registers   | Names     | Width                   |
-| ----------- | --------- | ----------------------- |
-| Vector (32) | v0..v31   | 128 bits (eg. int32 x4) |
-| Accumulator | acc<8><8> | 8x8x 32 bits            |
+| Registers        | Names         | Width                   |
+| ---------------- | ------------- | ----------------------- |
+| Vector (64)      | v0..v63       | 128 bits (eg. int32 x4) |
+| Accumulator      | acc<8><8>     | 8x8x 32 bits            |
 
 ### MAC
 
@@ -75,9 +77,9 @@ weights), and the other axis the transpose shifted inputs of a number of batches
 
 ![CoralNPU MAC](images/coralnpu_aconv.png)
 
-The outer-product construction is a vertical arrangement of multiple VDOT
-opcodes which utilize 4x 8bit multiplies reduced into 32 bit accumulators and
-performing 256 MACs per cycle.
+The outer-product construction is a vertical arrangement of multiple
+dot-product operations which utilize 4x 8bit multiplies reduced into 32 bit
+accumulators and performing 256 MACs per cycle.
 
 ### Stripmining
 
@@ -90,15 +92,26 @@ command queue into four serialized issue events into the SIMD units. For
 instance a “vadd v0” in Dispatch will produce “vadd v0 : vadd v1 : vadd v2 :
 vadd v3” at Issue. These will be processed as four discrete events.
 
-## Memory System
+## Cache
 
-The core utilizes an AXI4-native interface and relies primarily on Tightly Coupled Memories (TCMs) and an integrated L0 Fetch cache. The memory architecture is heavily TCM-centric, bypassing traditional L1 caches to provide deterministic latency for ML workloads and direct AXI4 integration for external memory accesses. AXI4 is the exclusive interface.
+Caches exists as a single layer between the core and the first level of shared
+SRAM. The L1 cache and scalar core frontend are an overhead to the rest of the
+backend compute pipeline and ideally are as small as possible.
 
-<!-- mdformat off -->
-<!-- prettier-ignore -->
-> **Traceability:** Generated by Gemini. Derived from upstream commit f5f6c88d3dff8cb198cd89420919b6863667f3e0.
-<!-- mdformat on -->
+The L1Icache is 8KB (256b blocks * 256 slots) with 4-way set associativity.
 
----
+The L1Dcache sizing is towards the scalar core requirements to perform loop
+management and address generation. The L1Dcache is 16KB (SIMD256b) with low set
+associativity of 4-way. The L1Dcache is implemented with a dual bank
+architecture where each bank is 8KB (similar to L1Icache). This property allows
+for a degree of next line prefetch. The L1Dcache also serves as an alignment
+buffer for the scalar and SIMD instructions to assist development and to
+simplify software support. In an embedded setting, the L1Dcache provides half of
+the memory bandwidth to the ML outer-product engine when only a single external
+memory port is provided. Line and all entry flushing is supported where the core
+stalls until completion to simplify the contract.
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-16 - **Upstream Commit:** N/A - **Primary Source(s):** RTL - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+--------------------------------------------------------------------------------
+
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit 28fdd2f4b80b1db06a4025b828807fcdc0e76f88. AI-generated/assisted; RTL is the source of truth.
