@@ -12,20 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import subprocess
-import os
-import csv
-import sys
-import re
+>>>>>>> upstream/main
 import argparse
-import shutil
-import stat
+import csv
 import datetime
-import xml.etree.ElementTree as ET
-import signal
-import tempfile
+import fnmatch
 import logging
-from typing import List, Tuple, Optional, Dict
+import os
+import re
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import xml.etree.ElementTree as ET
+from typing import Dict, List, Optional, Tuple
+
 from elftools.elf.elffile import ELFFile
 
 # Configure logging
@@ -105,10 +108,28 @@ SPIKE_DENYLIST = [
 
 # Map of targets to custom timeouts (in nanoseconds)
 TIMEOUT_MAP = {
+    "//tests/cocotb:nop_test": 5000000,
+    "//tests/cocotb/rvv/ml_ops:rvv_float_matmul": 100000000,
     "//tests/cocotb/rvv/ml_ops:rvv_matmul": 100000000,
     "//tests/cocotb/rvv/ml_ops:rvv_matmul_assembly": 100000000,
     "//examples:coralnpu_v2_rvv_add_intrinsic": 200000,
 }
+
+
+def format_batch_entry(
+    elf: str, tohost: int, entry: int, timeout: int, spike_log: str,
+    target: str
+) -> str:
+    return "%s %08x %08x %d %s %s\n" % (
+        elf, tohost, entry, timeout, spike_log, target
+    )
+
+
+def is_riscv_test_file(fname: str) -> bool:
+    # heuristic: riscv-tests binaries start with rv32, dump files are
+    # objdump output sitting alongside them, not test binaries
+    return not fname.endswith('.dump') and fname.startswith('rv32')
+
 
 # Spike simulation parameters
 SPIKE_MEMORY_REGIONS = [
@@ -432,10 +453,7 @@ def get_riscv_test_artifacts() -> List[Tuple[str, str]]:
 
         for root, _, files in os.walk(d):
             for f in files:
-                if f.endswith('.dump'):
-                    continue
-                # heuristic: starts with rv32
-                if f.startswith('rv32'):
+                if is_riscv_test_file(f):
                     full_path = os.path.join(root, f)
                     # Construct a pseudo-target name
                     # e.g. //third_party/riscv-tests:rv32ui-p-add
@@ -547,6 +565,293 @@ def resolve_default_mpact_root() -> str:
         sys.exit(1)
 
 
+<<<<<<< HEAD
+=======
+def resolve_verilator_root(verilator_bin: str) -> str:
+    # verilator_bin is at .../bazel-bin/external/verilator/verilator_bin
+    # runfiles are at .../bazel-bin/external/verilator/verilator_bin.runfiles/verilator
+    runfiles_dir = verilator_bin + ".runfiles"
+    verilator_root = os.path.join(runfiles_dir, "verilator")
+    if os.path.isdir(verilator_root):
+        return verilator_root
+    try:
+        logging.info("Dynamically resolving @verilator path via Bazel...")
+        output_base = subprocess.check_output(["bazel", "info", "output_base"]
+                                              ).decode("utf-8").strip()
+        default_path = os.path.join(output_base, "external", "verilator")
+        if os.path.isdir(default_path):
+            return default_path
+
+        external_dir = os.path.join(output_base, "external")
+        if os.path.isdir(external_dir):
+            for entry in os.listdir(external_dir):
+                if entry.startswith("verilator"):
+                    candidate = os.path.join(external_dir, entry)
+                    if os.path.isdir(candidate):
+                        return candidate
+        return default_path
+    except Exception as e:
+        logging.warning(f"Failed to resolve VERILATOR_ROOT dynamically: {e}")
+        return ""
+
+
+def resolve_uvm_root() -> str:
+    # 1. If UVM is already in environment, use it as override
+    if "UVM" in os.environ:
+        resolved_path = os.environ["UVM"]
+        logging.info(f"Using UVM override from environment: {resolved_path}")
+        return resolved_path
+
+    # 2. Try to resolve via Bazel query
+    try:
+        logging.info("Dynamically resolving @uvm path via Bazel...")
+        output = subprocess.check_output(
+            ["bazel", "query", "--output=location", "@uvm//:uvm_src"],
+            stderr=subprocess.DEVNULL
+        ).decode("utf-8").strip()
+        if ":" in output:
+            build_file_path = output.split(":")[0]
+            uvm_root = os.path.dirname(build_file_path)
+            if os.path.isdir(uvm_root):
+                logging.info(f"Resolved @uvm path: {uvm_root}")
+                return uvm_root
+    except Exception as e:
+        logging.warning(f"Failed to resolve @uvm path via Bazel: {e}")
+
+    return ""
+
+
+def get_mpact_configs(args) -> Tuple[str, Optional[str]]:
+    if args.mpact_root:
+        mpact_root = os.path.abspath(args.mpact_root)
+    else:
+        mpact_root = resolve_default_mpact_root()
+
+    mpact_riscv_root = None
+    if args.mpact_riscv_root:
+        mpact_riscv_root = os.path.abspath(args.mpact_riscv_root)
+    elif "CORALNPU_MPACT_RISCV" in os.environ:
+        mpact_riscv_root = os.environ["CORALNPU_MPACT_RISCV"]
+
+    return mpact_root, mpact_riscv_root
+
+
+def prepare_tests(args, standard_targets: List[str]) -> List[Tuple[str, str]]:
+    # Build targets
+    # Filter out pseudo-targets from standard_targets if they match riscv-tests pattern
+    real_targets = [
+        t for t in standard_targets
+        if not t.startswith("//third_party/riscv-tests:")
+    ]
+    targets_to_build = real_targets
+    if not args.skip_riscv_tests:
+        targets_to_build.append("//third_party/riscv-tests:all_files")
+
+    if not build_targets(targets_to_build):
+        logging.warning(
+            "WARNING: Some targets failed to build. Continuing with available artifacts."
+        )
+
+    # Now populate tests_to_run with valid ELFs
+    tests_to_run = []
+
+    # 1. RISC-V Tests
+    if not args.skip_riscv_tests:
+        riscv_tests = get_riscv_test_artifacts()
+        for t, elf in riscv_tests:
+            if args.target and args.target != t:
+                continue
+            tests_to_run.append((t, elf))
+
+    # 2. Standard Targets
+    if standard_targets:
+        logging.info("Resolving standard target artifacts...")
+    for t in standard_targets:
+        if args.target and args.target != t:
+            continue
+        elf = get_elf_source_path(t)
+        if elf:
+            tests_to_run.append((t, elf))
+
+    # Apply global limit if set
+    if args.limit:
+        tests_to_run = tests_to_run[:args.limit]
+
+    return tests_to_run
+
+
+def run_spike_timeout_check(
+    tests_to_run: List[Tuple[str, str]], spike_bin: str, temp_elf_dir: str
+):
+    logging.info("--- Checking Spike Timeouts ---")
+    failed_targets = []
+    for i, (target, src_elf) in enumerate(tests_to_run):
+        logging.info(f"[{i+1}/{len(tests_to_run)}] Checking {target}")
+
+        if src_elf and os.path.exists(src_elf):
+            safe_name = target.replace('//', '').replace(':', '_').replace(
+                '/', '_'
+            ) + ".elf"
+            dest_elf = os.path.join(temp_elf_dir, safe_name)
+            try:
+                if os.path.exists(dest_elf): os.remove(dest_elf)
+                shutil.copy2(src_elf, dest_elf)
+                # Permissions: 755 / -rwxr-xr-x / u=rwx,go=rx
+                os.chmod(
+                    dest_elf, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
+                    | stat.S_IRGRP
+                    | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH
+                )
+
+                entry_point = get_entry_point(dest_elf)
+                temp_spike_log = os.path.join(
+                    temp_elf_dir, safe_name + ".spike.log"
+                )
+
+                if not generate_spike_log(
+                        spike_bin, dest_elf, temp_spike_log, entry_point,
+                        timeout=10):  # Short timeout for check
+                    logging.error(f"  FAIL: {target}")
+                    failed_targets.append(target)
+                else:
+                    logging.info(f"  PASS: {target}")
+            except Exception as e:
+                logging.error(f"  ERROR: {target} - {e}")
+                failed_targets.append(target)
+        else:
+            logging.warning(f"  SKIP: {target} (ELF not found)")
+
+    logging.info("\n--- Suggested SPIKE_DENYLIST ---")
+    logging.info("SPIKE_DENYLIST = [")
+    for t in failed_targets:
+        logging.info(f'    "{t}",')
+    logging.info("]")
+
+
+def run_uvm_batch(
+    cmd: List[str], env: os._Environ, regression_log_path: str, logs_dir: str,
+    test_info_map: Dict
+):
+    current_target = None
+    current_test_log = None
+    current_reason = "None"
+    results = []
+    completed_targets = set()
+    with open(regression_log_path, 'a') as f_log:
+        process = subprocess.Popen(
+            cmd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+
+        for line in process.stdout:
+            f_log.write(line)
+            if current_test_log: current_test_log.write(line)
+
+            # Detect start of test
+            start_match = re.search(r'--- STARTING TEST: (.*?) ---', line)
+            if start_match:
+                current_target = start_match.group(1)
+                logging.info(f"Running UVM for {current_target}...")
+
+                log_path = os.path.join(
+                    logs_dir, test_info_map[current_target]['safe_log']
+                )
+                if current_test_log: current_test_log.close()
+                current_test_log = open(log_path, 'w')
+                current_test_log.write(line)
+                current_reason = "None"
+                continue
+
+            # Parse for failure reasons
+            if current_target:
+                # Prioritize the first error found for the summary
+                err_match = re.search(
+                    r"^\s*(UVM_(?:FATAL|ERROR)(?!.*:\s+0\s*$).*)$", line,
+                    re.MULTILINE
+                )
+                if err_match:
+                    err_msg = err_match.group(1).strip()
+                    logging.error(f"    {err_msg}")
+                    if current_reason == "None":
+                        current_reason = err_msg.replace(',', ';')
+                else:
+                    # Match standard Verilog Error/Fatal/Assertion
+                    verilog_err = re.search(
+                        r"^(Error|Fatal|Runtime Error|Assertion failed):? (.*)$",
+                        line, re.MULTILINE
+                    )
+                    if verilog_err:
+                        err_msg = verilog_err.group(0).strip()
+                        logging.error(f"    {err_msg}")
+                        if current_reason == "None":
+                            current_reason = err_msg.replace(',', ';')
+
+                if "** UVM TEST PASSED **" in line:
+                    logging.info(f"  Result: PASS - {current_reason}")
+                    results.append({
+                        "Target":
+                        current_target,
+                        "Status":
+                        "PASS",
+                        "Reason":
+                        current_reason,
+                        "Log Path":
+                        os.path.join(
+                            "logs", test_info_map[current_target]['safe_log']
+                        )
+                    })
+                    completed_targets.add(current_target)
+                    current_test_log.close()
+                    current_test_log = None
+                    current_target = None
+                elif "** UVM TEST FAILED **" in line:
+                    logging.info(f"  Result: FAIL - {current_reason}")
+                    results.append({
+                        "Target":
+                        current_target,
+                        "Status":
+                        "FAIL",
+                        "Reason":
+                        current_reason,
+                        "Log Path":
+                        os.path.join(
+                            "logs", test_info_map[current_target]['safe_log']
+                        )
+                    })
+                    completed_targets.add(current_target)
+                    current_test_log.close()
+                    current_test_log = None
+                    current_target = None
+
+        process.wait()
+        if current_test_log: current_test_log.close()
+
+        # If process ended while a test was running, mark it as a crash
+        if current_target:
+            status = "FAIL"
+            if current_reason == "None":
+                current_reason = "Simulator exited early or crashed"
+            logging.error(f"  Result: {status} - {current_reason}")
+            results.append({
+                "Target":
+                current_target,
+                "Status":
+                status,
+                "Reason":
+                current_reason,
+                "Log Path":
+                os.path.join(
+                    "logs", test_info_map[current_target]['safe_log']
+                )
+            })
+            completed_targets.add(current_target)
+            current_target = None
+    return results, completed_targets
+
+
 def run_full_regression(
     tests_to_run: List[Tuple[str, str]],
     spike_bin: str,
@@ -641,133 +946,51 @@ def run_full_regression(
 
     env = os.environ.copy()
     env["CORALNPU_MPACT"] = mpact_root
+<<<<<<< HEAD
+=======
+    if verilator_bin:
+        env["VERILATOR"] = verilator_bin
+    if verilator_root:
+        env["VERILATOR_ROOT"] = verilator_root
+        env["VERILATOR_CXX"] = os.environ.get("VERILATOR_CXX", "g++")
+        env["VERILATOR_AR"] = os.environ.get("VERILATOR_AR", "ar")
+        env["VERILATOR_PYTHON3"] = os.environ.get(
+            "VERILATOR_PYTHON3", "python3"
+        )
+    if uvm_root:
+        env["UVM"] = uvm_root
+
+    regression_log_path = os.path.join(logs_dir, "regression.log")
+
+    logging.info("--- Starting Batch UVM Regression ---")
+
+    while pending_targets:
+        # Create REGRESSION_LIST for current batch
+        batch_list_path = os.path.join(output_dir, "current_batch.txt")
+        with open(batch_list_path, 'w') as f_list:
+            for t in pending_targets:
+                info = test_info_map[t]
+                f_list.write(
+                    format_batch_entry(
+                        info['elf'], info['tohost'], info['entry'],
+                        info['timeout'], info['spike'], t
+                    )
+                )
+
+        cmd = [
+>>>>>>> upstream/main
             "make", "-C", "tests/uvm", "run", "UVM_VERBOSITY=UVM_LOW",
             "UVM_TESTNAME=coralnpu_regression_test", f"SIMULATOR={simulator}",
             f"EXTRA_PLUSARGS=+REGRESSION_LIST={os.path.abspath(batch_list_path)}"
         ]
-
-        current_target = None
-        current_test_log = None
-        current_reason = "None"
-
         try:
-            with open(regression_log_path, 'a') as f_log:
-                process = subprocess.Popen(
-                    cmd,
-                    env=env,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True
-                )
-
-                for line in process.stdout:
-                    f_log.write(line)
-                    if current_test_log: current_test_log.write(line)
-
-                    # Detect start of test
-                    start_match = re.search(
-                        r'--- STARTING TEST: (.*?) ---', line
-                    )
-                    if start_match:
-                        current_target = start_match.group(1)
-                        logging.info(f"Running UVM for {current_target}...")
-
-                        log_path = os.path.join(
-                            logs_dir, test_info_map[current_target]['safe_log']
-                        )
-                        if current_test_log: current_test_log.close()
-                        current_test_log = open(log_path, 'w')
-                        current_test_log.write(line)
-                        current_reason = "None"
-                        continue
-
-                    # Parse for failure reasons
-                    if current_target:
-                        # Prioritize the first error found for the summary
-                        err_match = re.search(
-                            r"^\s*(UVM_(?:FATAL|ERROR)(?!.*:\s+0\s*$).*)$",
-                            line, re.MULTILINE
-                        )
-                        if err_match:
-                            err_msg = err_match.group(1).strip()
-                            logging.error(f"    {err_msg}")
-                            if current_reason == "None":
-                                current_reason = err_msg.replace(',', ';')
-                        else:
-                            # Match standard Verilog Error/Fatal/Assertion
-                            verilog_err = re.search(
-                                r"^(Error|Fatal|Runtime Error|Assertion failed):? (.*)$",
-                                line, re.MULTILINE
-                            )
-                            if verilog_err:
-                                err_msg = verilog_err.group(0).strip()
-                                logging.error(f"    {err_msg}")
-                                if current_reason == "None":
-                                    current_reason = err_msg.replace(',', ';')
-
-                        if "** UVM TEST PASSED **" in line:
-                            logging.info(f"  Result: PASS - {current_reason}")
-                            results.append({
-                                "Target":
-                                current_target,
-                                "Status":
-                                "PASS",
-                                "Reason":
-                                current_reason,
-                                "Log Path":
-                                os.path.join(
-                                    "logs",
-                                    test_info_map[current_target]['safe_log']
-                                )
-                            })
-                            completed_targets.add(current_target)
-                            current_test_log.close()
-                            current_test_log = None
-                            current_target = None
-                        elif "** UVM TEST FAILED **" in line:
-                            logging.info(f"  Result: FAIL - {current_reason}")
-                            results.append({
-                                "Target":
-                                current_target,
-                                "Status":
-                                "FAIL",
-                                "Reason":
-                                current_reason,
-                                "Log Path":
-                                os.path.join(
-                                    "logs",
-                                    test_info_map[current_target]['safe_log']
-                                )
-                            })
-                            completed_targets.add(current_target)
-                            current_test_log.close()
-                            current_test_log = None
-                            current_target = None
-
-                process.wait()
-                if current_test_log: current_test_log.close()
-
-                # If process ended while a test was running, mark it as a crash
-                if current_target:
-                    status = "FAIL"
-                    if current_reason == "None":
-                        current_reason = "Simulator exited early or crashed"
-                    logging.error(f"  Result: {status} - {current_reason}")
-                    results.append({
-                        "Target":
-                        current_target,
-                        "Status":
-                        status,
-                        "Reason":
-                        current_reason,
-                        "Log Path":
-                        os.path.join(
-                            "logs", test_info_map[current_target]['safe_log']
-                        )
-                    })
-                    completed_targets.add(current_target)
-                    current_target = None
-
+            results_batch, completed_targets_batch = run_uvm_batch(
+                cmd, env, regression_log_path, logs_dir, test_info_map
+            )
+            results.extend(results_batch)
+            completed_targets = completed_targets.union(
+                completed_targets_batch
+            )
         except Exception as e:
             logging.error(f"Batch execution failed: {e}")
             break  # Avoid infinite loop if prepare/launch fails fundamentally

@@ -17,6 +17,62 @@ load("//rules:vcs.bzl", "vcs_testbench_test")
 
 exports_files(
     srcs = [
+        "Aligner.sv",
+        "FPnew/C910_DivSqrt/ct_vfdsu_ctrl.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_double.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_ff1.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_pack.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_prepare.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_round.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_scalar_dp.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_srt.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_srt_radix16_bound_table.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_srt_radix16_with_sqrt.v",  # New
+        "FPnew/C910_DivSqrt/ct_vfdsu_top.v",  # New
+        "FPnew/C910_DivSqrt/gated_clk_cell.v",  # New
+        "FPnew/common_cells/inc/assertions.svh",  # New
+        "FPnew/common_cells/inc/registers.svh",  # New
+        "FPnew/common_cells/src/cf_math_pkg.sv",  # New
+        "FPnew/common_cells/src/lzc.sv",  # New
+        "FPnew/common_cells/src/rr_arb_tree.sv",  # New
+        "FPnew/fpnew_cast_multi.sv",  # New
+        "FPnew/fpnew_classifier.sv",  # New
+        "FPnew/fpnew_divsqrt_multi.sv",  # New
+        "FPnew/fpnew_divsqrt_th_64_multi.sv",  # New
+        "FPnew/fpnew_fma_multi.sv",  # New
+        "FPnew/fpnew_noncomp.sv",  # New
+        "FPnew/fpnew_pkg.sv",  # New
+        "FPnew/fpnew_rounding.sv",  # New
+        "FPnew/fpu_div_sqrt_mvp/control_mvp.sv",  # New
+        "FPnew/fpu_div_sqrt_mvp/defs_div_sqrt_mvp.sv",  # New
+        "FPnew/fpu_div_sqrt_mvp/div_sqrt_top_mvp.sv",  # New
+        "FPnew/fpu_div_sqrt_mvp/iteration_div_sqrt_mvp.sv",  # New
+        "FPnew/fpu_div_sqrt_mvp/norm_div_sqrt_mvp.sv",  # New
+        "FPnew/fpu_div_sqrt_mvp/nrbd_nrsc_mvp.sv",  # New
+        "FPnew/fpu_div_sqrt_mvp/preprocess_mvp.sv",  # New
+        "MultiFifo.sv",
+        "RvvCore.sv",
+        "RvvFrontEnd.sv",
+        "Zvt/fp_absaddsub.sv",
+        "Zvt/fp_addfront.sv",
+        "Zvt/fp_align.sv",
+        "Zvt/fp_classifier.sv",
+        "Zvt/fp_mulfront.sv",
+        "Zvt/fp_rounding.sv",
+        "Zvt/zvt.sv",
+        "Zvt/zvt_acc.sv",
+        "Zvt/zvt_acc_reg.sv",
+        "Zvt/zvt_ctrl.sv",
+        "Zvt/zvt_pe_adder.sv",
+        "Zvt/zvt_pe_adder_fp_lane.sv",
+        "Zvt/zvt_pe_adder_int_lane.sv",
+        "Zvt/zvt_pe_array.sv",
+        "Zvt/zvt_pe_block.sv",
+        "Zvt/zvt_pe_mulbulk.sv",
+        "Zvt/zvt_pe_mulbulk_fp_lane.sv",
+        "Zvt/zvt_pe_mulbulk_int_lane.sv",
+        "rvv.svh",
+>>>>>>> upstream/main
         "rvv_backend.sv",
         "rvv_backend_arb.sv",  # New
         "rvv_backend_alu.sv",

@@ -14,7 +14,7 @@
 
 package(default_visibility = ["//visibility:public"])
 
-load("//rules:coralnpu_v2.bzl", "coralnpu_v2_binary")
+load("//rules:coralnpu_v2.bzl", "collect_coralnpu_elfs", "coralnpu_v2_binary")
 
 coralnpu_v2_binary(
     name = "coralnpu_v2_hello_world_add_floats",
@@ -33,3 +33,4 @@ coralnpu_v2_binary(
     linkopts = ["-nostartfiles", "-nostdlib"],
 )
 
+collect_coralnpu_elfs()

@@ -12,6 +12,7 @@ startup --output_user_root=/tmp/bazel_cache
 common --noincompatible_disallow_empty_glob
 
 build --action_env=BAZEL_CXXOPTS="-std=c++17"
+build --action_env=CC="clang"
 build --cxxopt='-std=c++17'
 build --conlyopt='-std=gnu11'
 
