@@ -176,8 +176,10 @@ def evaluate_status(returncode):
         return MutationStatus.INVALID
 
 def _build_podman_command(workspace_path, bazel_cache_path, container_name, target):
+    uid = os.getuid()
+    gid = os.getgid()
     return [
-        "podman", "run", "--userns=keep-id:uid=1000,gid=1000", "--pids-limit=30000", "--rm",
+        "podman", "run", f"--userns=keep-id:uid={uid},gid={gid}", "--pids-limit=30000", "--rm",
         "-v", f"{workspace_path}:/workspace",
         "-v", f"{bazel_cache_path}:{bazel_cache_path}",
         "-w", "/workspace",
