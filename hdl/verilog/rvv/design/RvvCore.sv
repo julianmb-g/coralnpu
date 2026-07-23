@@ -233,6 +233,14 @@ module RvvCore #(parameter N = 4,
     trap_valid_rvs2rvv = 0;
   end
 
+  // Tie-off VME LSU interfaces
+  // TODO: Support these
+`ifdef ZVT_ON
+  logic                 uop_vme2lsu_vld_dummy;
+  UOP_VME2LSU_t         uop_vme2lsu_dummy;
+  logic                 uop_lsu2vme_rdy_dummy;
+`endif
+
   logic   [`ISSUE_LANE-1:0] insts_ready_cq2rvs;
   logic rvv_backend_idle;
   assign rvv_idle = rvv_backend_idle && (frontend_cmd_valid == 0);
@@ -280,6 +288,14 @@ module RvvCore #(parameter N = 4,
       .rd_valid_rob2rt_o(rd_valid_rob2rt_o),
       .rvv_idle(rvv_backend_idle),
       .rd_rob2rt_o(rd_rob2rt_o)
+`ifdef ZVT_ON
+      ,.uop_vme2lsu_vld(uop_vme2lsu_vld_dummy),
+      .uop_vme2lsu(uop_vme2lsu_dummy),
+      .uop_vme2lsu_rdy(1'b0),
+      .uop_lsu2vme_vld(1'b0),
+      .uop_lsu2vme('0),
+      .uop_lsu2vme_rdy(uop_lsu2vme_rdy_dummy)
+`endif
   );
 
   // Connect vxsat signals to outputs (fixes C3 bug)
