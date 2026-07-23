@@ -16,9 +16,8 @@ ARG _GID=1000
 ARG _USERNAME=builder
 ENV HOME=/home/${_USERNAME}
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked <<EOF
+RUN <<EOF
     set -e
-    mkdir -p /var/lib/apt/lists/partial
     ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime
     echo "${TZ}" > /etc/timezone
     echo "APT::Get::Assume-Yes \"true\";" > /etc/apt/apt.conf.d/90assumeyes
