@@ -17,6 +17,8 @@ ARG _USERNAME=builder
 ENV HOME=/home/${_USERNAME}
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked <<EOF
+    set -e
+    mkdir -p /var/lib/apt/lists/partial
     ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime
     echo "${TZ}" > /etc/timezone
     echo "APT::Get::Assume-Yes \"true\";" > /etc/apt/apt.conf.d/90assumeyes
@@ -53,6 +55,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
         zip
     update-ca-certificates
     # Install clang-19 and configure
+    curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor > /tmp/llvm-snapshot.gpg.key
+    mv /tmp/llvm-snapshot.gpg.key /usr/share/keyrings/
+    echo "deb [signed-by=/usr/share/keyrings/llvm-snapshot.gpg.key] http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-19 main" > /etc/apt/sources.list.d/llvm.list
+    apt-get update
     apt-get install -y -qq \
         clang-19 \
         clang-tools-19 \
@@ -70,8 +76,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > /tmp/bazel-archive-keyring.gpg
     mv /tmp/bazel-archive-keyring.gpg /usr/share/keyrings/
     echo "deb [arch=$(dpkg-architecture -q DEB_HOST_ARCH) signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-    apt update
-    apt install bazel bazel-8.6.0 bazel-9.1.0
+    apt-get update
+    apt-get install -y -qq bazel bazel-8.6.0 bazel-9.1.0
     echo "${_USERNAME} ALL=(ALL) NOPASSWD:/usr/bin/apt" >> /etc/sudoers.d/${_USERNAME}
     echo "${_USERNAME} ALL=(ALL) NOPASSWD:/bin/mkdir" >> /etc/sudoers.d/${_USERNAME}
     echo "${_USERNAME} ALL=(ALL) NOPASSWD:/bin/chown" >> /etc/sudoers.d/${_USERNAME}
