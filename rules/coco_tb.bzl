@@ -520,15 +520,6 @@ def _verilator_cocotb_test_suite(
         **meta_target_kwargs
     )
 
-VcsSimulationInfo = provider(
-    doc = "Information about a VCS simulation run.",
-    fields = {
-        "log_file": "The log file produced by the simulation.",
-        "status_file": "The status file containing the exit code.",
-        "fsdb_file": "The FSDB waveform file.",
-    },
-)
-
 def _vcs_simulation_run_impl(ctx):
     log_file = ctx.actions.declare_file(ctx.attr.name + ".log")
     fsdb_file = ctx.actions.declare_file(ctx.attr.name + ".fsdb")

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
->>>>>>> upstream/main
 import argparse
 import csv
 import datetime
@@ -565,8 +564,6 @@ def resolve_default_mpact_root() -> str:
         sys.exit(1)
 
 
-<<<<<<< HEAD
-=======
 def resolve_verilator_root(verilator_bin: str) -> str:
     # verilator_bin is at .../bazel-bin/external/verilator/verilator_bin
     # runfiles are at .../bazel-bin/external/verilator/verilator_bin.runfiles/verilator
@@ -946,8 +943,6 @@ def run_full_regression(
 
     env = os.environ.copy()
     env["CORALNPU_MPACT"] = mpact_root
-<<<<<<< HEAD
-=======
     if verilator_bin:
         env["VERILATOR"] = verilator_bin
     if verilator_root:
@@ -978,7 +973,6 @@ def run_full_regression(
                 )
 
         cmd = [
->>>>>>> upstream/main
             "make", "-C", "tests/uvm", "run", "UVM_VERBOSITY=UVM_LOW",
             "UVM_TESTNAME=coralnpu_regression_test", f"SIMULATOR={simulator}",
             f"EXTRA_PLUSARGS=+REGRESSION_LIST={os.path.abspath(batch_list_path)}"

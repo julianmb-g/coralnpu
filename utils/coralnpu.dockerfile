@@ -7,7 +7,7 @@
 # Run command:
 # docker run -it coralnpu /bin/bash
 
-FROM debian:bookworm AS base
+FROM docker.io/library/debian:bookworm AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC

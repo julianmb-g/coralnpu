@@ -72,7 +72,6 @@ exports_files(
         "Zvt/zvt_pe_mulbulk_fp_lane.sv",
         "Zvt/zvt_pe_mulbulk_int_lane.sv",
         "rvv.svh",
->>>>>>> upstream/main
         "rvv_backend.sv",
         "rvv_backend_arb.sv",  # New
         "rvv_backend_alu.sv",

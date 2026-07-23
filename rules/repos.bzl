@@ -395,4 +395,3 @@ filegroup(
         patches = ["@coralnpu_hw//third_party/coralnpu_mpact:0001-expose-all-sources.patch"],
         patch_args = ["-p1"],
     )
->>>>>>> upstream/main
