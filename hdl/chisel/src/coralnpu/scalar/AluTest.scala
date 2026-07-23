@@ -436,4 +436,24 @@ class AluSpec extends AnyFreeSpec with ChiselSim {
     }
     simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.ROR, test_cases))
   }
+
+  "ADD" in {
+    val inputs = Seq(
+      (0x00000000L, 0x00000000L),
+      (0x00000001L, 0x00000001L),
+      (0x00000001L, 0xffffffffL),
+      (0x12345678L, 0x11111111L),
+      (0x7fffffffL, 0x00000001L),
+      (0x80000000L, 0xffffffffL),
+      (0xdeadbeefL, 0x00000001L)
+    )
+    val mask       = (BigInt(1) << p.xlen) - 1
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val u1  = BigInt(rs1) & mask
+      val u2  = BigInt(rs2) & mask
+      val exp = (u1 + u2) & mask
+      (rs1, rs2, exp)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.ADD, test_cases))
+  }
 }
