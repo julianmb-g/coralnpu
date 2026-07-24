@@ -561,3 +561,106 @@ cocotb_test_suite(
     },
     verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_highmem_testharness_model",
 )
+
+# BEGIN_TESTCASES_FOR_tlul_to_sram_cocotb_test
+TLUL_TO_SRAM_TESTCASES = [
+    "test_tlul_to_sram_crv_balanced",
+    "test_tlul_to_sram_crv_random_backpressure",
+    "test_sram_read_write",
+    "test_sram_masking",
+    "test_sram_pipelining",
+]
+# END_TESTCASES_FOR_tlul_to_sram_cocotb_test
+
+cocotb_test_suite(
+    name = "tlul_to_sram_cocotb_test",
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
+    testcases = TLUL_TO_SRAM_TESTCASES,
+    testcases_vname = "TLUL_TO_SRAM_TESTCASES",
+    tests_kwargs = {
+        "hdl_toplevel": "TlulToSram",
+        "test_module": ["test_tlul_to_sram.py"],
+        "deps": [
+            "//coralnpu_test_utils:TileLinkULInterface",
+        ],
+        "waves": True,
+        "size": "small",
+    },
+    vcs_build_args = VCS_BUILD_ARGS,
+    vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_to_sram_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:tlul_to_sram_model",
+)
+
+# BEGIN_TESTCASES_FOR_tlul_local_xbar_cocotb_test
+TLUL_LOCAL_XBAR_TESTCASES = [
+    "test_concurrent_access",
+    "test_mixed_arbitration",
+    "test_random_backpressure",
+]
+# END_TESTCASES_FOR_tlul_local_xbar_cocotb_test
+
+cocotb_test_suite(
+    name = "tlul_local_xbar_cocotb_test",
+    simulators = [
+        "verilator",
+    ],
+    testcases = TLUL_LOCAL_XBAR_TESTCASES,
+    testcases_vname = "TLUL_LOCAL_XBAR_TESTCASES",
+    tests_kwargs = {
+        "hdl_toplevel": "TlulLocalXbar",
+        "test_module": ["test_tlul_local_xbar.py"],
+        "deps": [
+            "//coralnpu_test_utils:TileLinkULInterface",
+            "//coralnpu_test_utils:TlulVerificationEnv",
+        ],
+        "waves": True,
+        "size": "small",
+    },
+    verilator_model = "//hdl/chisel/src/bus:tlul_local_xbar_model",
+)
+
+# --- Rules for BankedDtcm cocotb test ---
+
+verilator_cocotb_model(
+    name = "banked_dtcm_model",
+    cflags = ["-Wno-fatal"],
+    hdl_toplevel = "BankedDtcm",
+    trace = True,
+    verilog_source = "//hdl/chisel/src/coralnpu:BankedDtcm.sv",
+    deps = ["//hdl/verilog:sram_backdoor"],
+)
+
+# BEGIN_TESTCASES_FOR_banked_dtcm_cocotb_test
+BANKED_DTCM_TESTCASES = [
+    "test_basic_read_write",
+    "test_isolation",
+    "test_concurrency",
+    "test_address_aliasing",
+]
+# END_TESTCASES_FOR_banked_dtcm_cocotb_test
+
+cocotb_test_suite(
+    name = "banked_dtcm_cocotb_test",
+    simulators = [
+        "verilator",
+    ],
+    testcases = BANKED_DTCM_TESTCASES,
+    testcases_vname = "BANKED_DTCM_TESTCASES",
+    tests_kwargs = {
+        "hdl_toplevel": "BankedDtcm",
+        "test_module": ["test_banked_dtcm.py"],
+        "deps": [
+            "//coralnpu_test_utils:TileLinkULInterface",
+            "//coralnpu_test_utils:TlulVerificationEnv",
+        ],
+        "waves": True,
+        "size": "small",
+    },
+    verilator_model = ":banked_dtcm_model",
+)
