@@ -247,6 +247,149 @@ class AluSpec extends AnyFreeSpec with ChiselSim {
     simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.SUB, test_cases))
   }
 
+  "SLT" in {
+    val inputs = Seq(
+      (0x00000000L, 0x00000000L),
+      (0x00000001L, 0x00000002L),
+      (0x00000002L, 0x00000001L),
+      (0xffffffffL, 0x00000001L), // -1 < 1 -> true
+      (0x00000001L, 0xffffffffL), // 1 < -1 -> false
+      (0x7fffffffL, 0x80000000L), // Int.Max < Int.Min -> false
+      (0x80000000L, 0x7fffffffL)  // Int.Min < Int.Max -> true
+    )
+    def toSignedXlen(v: Long): Long = {
+      if (p.xlen == 32) v.toInt.toLong else v
+    }
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val s1 = toSignedXlen(rs1)
+      val s2 = toSignedXlen(rs2)
+      val exp = if (s1 < s2) BigInt(1) else BigInt(0)
+      (rs1, rs2, exp)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.SLT, test_cases))
+  }
+
+  "SLTU" in {
+    val inputs = Seq(
+      (0x00000000L, 0x00000000L),
+      (0x00000001L, 0x00000002L),
+      (0x00000002L, 0x00000001L),
+      (0xffffffffL, 0x00000001L), // MaxUnsigned < 1 -> false
+      (0x00000001L, 0xffffffffL), // 1 < MaxUnsigned -> true
+      (0x7fffffffL, 0x80000000L), // 0x7f.. < 0x80.. -> true
+      (0x80000000L, 0x7fffffffL)  // 0x80.. < 0x7f.. -> false
+    )
+    val mask = (BigInt(1) << p.xlen) - 1
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val u1 = BigInt(rs1) & mask
+      val u2 = BigInt(rs2) & mask
+      val exp = if (u1 < u2) BigInt(1) else BigInt(0)
+      (rs1, rs2, exp)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.SLTU, test_cases))
+  }
+
+  "XOR" in {
+    val inputs = Seq(
+      (0x00000000L, 0x00000000L),
+      (0x12345678L, 0x12345678L),
+      (0x12345678L, 0x00000000L),
+      (0x12345678L, 0xffffffffL)
+    )
+    val mask = (BigInt(1) << p.xlen) - 1
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val exp = rs1 ^ rs2
+      (rs1, rs2, BigInt(exp) & mask)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.XOR, test_cases))
+  }
+
+  "OR" in {
+    val inputs = Seq(
+      (0x00000000L, 0x00000000L),
+      (0x12345678L, 0x12345678L),
+      (0x12345678L, 0x00000000L),
+      (0x12345678L, 0xffffffffL)
+    )
+    val mask = (BigInt(1) << p.xlen) - 1
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val exp = rs1 | rs2
+      (rs1, rs2, BigInt(exp) & mask)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.OR, test_cases))
+  }
+
+  "AND" in {
+    val inputs = Seq(
+      (0x00000000L, 0x00000000L),
+      (0x12345678L, 0x12345678L),
+      (0x12345678L, 0x00000000L),
+      (0x12345678L, 0xffffffffL)
+    )
+    val mask = (BigInt(1) << p.xlen) - 1
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val exp = rs1 & rs2
+      (rs1, rs2, BigInt(exp) & mask)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.AND, test_cases))
+  }
+
+  "SLL" in {
+    val inputs = Seq(
+      (0x00000001L, 0x00000000L),
+      (0x00000001L, 0x00000001L),
+      (0x00000001L, 0x00000007L),
+      (0x00000001L, 0x0000001fL),
+      (0xffffffffL, 0x00000001L),
+      (0x12345678L, 0x00000004L)
+    )
+    val mask = (BigInt(1) << p.xlen) - 1
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val shamt = (rs2 & (p.xlen - 1)).toInt
+      val exp = (BigInt(rs1) << shamt) & mask
+      (rs1, rs2, exp)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.SLL, test_cases))
+  }
+
+  "SRL" in {
+    val inputs = Seq(
+      (0x00000001L, 0x00000000L),
+      (0x00000001L, 0x00000001L),
+      (0x80000000L, 0x00000001L),
+      (0xffffffffL, 0x00000001L),
+      (0x12345678L, 0x00000004L)
+    )
+    val mask = (BigInt(1) << p.xlen) - 1
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val shamt = (rs2 & (p.xlen - 1)).toInt
+      val exp = (BigInt(rs1) & mask) >> shamt
+      (rs1, rs2, exp)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.SRL, test_cases))
+  }
+
+  "SRA" in {
+    val inputs = Seq(
+      (0x00000001L, 0x00000000L),
+      (0x00000001L, 0x00000001L),
+      (0x80000000L, 0x00000001L),
+      (0xffffffffL, 0x00000001L),
+      (0x12345678L, 0x00000004L)
+    )
+    def toSignedXlen(v: Long): Long = {
+      if (p.xlen == 32) v.toInt.toLong else v
+    }
+    val mask = (BigInt(1) << p.xlen) - 1
+    val test_cases = inputs.map { case (rs1, rs2) =>
+      val shamt = (rs2 & (p.xlen - 1)).toInt
+      val s1 = toSignedXlen(rs1)
+      val exp = s1 >> shamt
+      (rs1, rs2, BigInt(exp) & mask)
+    }
+    simulate(new Alu(p))(testBinaryOp(_, 13.U, AluOp.SRA, test_cases))
+  }
+
   "XNOR(Not XOR)" in {
     val inputs = Seq(
       (0x00000000L, 0x00000000L),
