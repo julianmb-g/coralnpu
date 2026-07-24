@@ -1,9 +1,6 @@
 # Disable bzlmod and enable workspace while we migrate
 common --noenable_bzlmod --enable_workspace
 
-# Bazel cache path for hermetic builds in containerized environments (ADR-020)
-startup --output_user_root=/tmp/bazel_cache
-
 
 # Bazel 8 default-flipped --incompatible_disallow_empty_glob. Several BUILD
 # files (notably third_party/* with mixed .v/.sv source trees) rely on the
