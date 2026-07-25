@@ -22,6 +22,13 @@ py_binary(
     srcs = ["scm_info.py"],
 )
 
+py_library(
+    name = "run_uvm_regression",
+    srcs = ["run_uvm_regression.py"],
+    imports = ["."],
+    deps = [requirement("pyelftools")],
+)
+
 py_test(
     name = "run_uvm_regression_test",
     srcs = [
@@ -49,4 +56,13 @@ py_test(
     name = "test_run_mutation_pipeline",
     srcs = ["run_mutation_pipeline.py", "//tests/utils:test_run_mutation_pipeline.py"],
     main = "test_run_mutation_pipeline.py",
+)
+
+py_binary(
+    name = "uvm_batch_runner",
+    srcs = ["uvm_batch_runner.py"],
+    deps = [
+        ":run_uvm_regression",
+        "@bazel_tools//tools/python/runfiles",
+    ],
 )

@@ -9,17 +9,15 @@ filegroup(
 
 cmake(
     name = "srecord",
-    lib_source = ":all_srcs",
-    out_binaries = ["srec_cat"],
     cache_entries = {
         "CMAKE_CXX_STANDARD": "17",
-    },
-    env = {
-        "LDFLAGS": "-lstdc++",
+        "CMAKE_CXX_STANDARD_LIBRARIES": "-lstdc++",
     },
     generate_args = [
         "-G Ninja",
     ],
     install = True,
+    lib_source = ":all_srcs",
+    out_binaries = ["srec_cat"],
     visibility = ["//visibility:public"],
 )

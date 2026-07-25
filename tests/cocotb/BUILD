@@ -16,7 +16,7 @@ load("@coralnpu_hw//third_party/python:requirements.bzl", "requirement")
 load("@gemma_deps//:requirements.bzl", gemma_requirement = "requirement")
 load("@rules_pkg//:pkg.bzl", "pkg_zip")
 load("//rules:coco_tb.bzl", "cocotb_test_suite", "vcs_test_macro_smoke_test", "verilator_cocotb_model")
-load("//rules:coralnpu_v2.bzl", "coralnpu_v2_binary")
+load("//rules:coralnpu_v2.bzl", "collect_coralnpu_elfs", "coralnpu_v2_binary")
 load("//rules:utils.bzl", "template_rule")
 load(
     "//tests/cocotb:build_defs.bzl",
@@ -251,12 +251,12 @@ RVV_ASSEMBLY_TESTCASES = [
     "core_mini_vmsif_test",
     "core_mini_vill_test",
     "core_mini_vl_test",
+    "vgather_test",
     "vsetvl_test",
     "vslideup_test",
     "vslidedown_test",
     "vslide1up_test",
     "vslide1down_test",
-    "vgather_test",
 ]
 # END_TESTCASES_FOR_rvv_assembly_cocotb_test
 
@@ -327,6 +327,7 @@ RVV_ARITHMETIC_TESTCASES = [
     "reduction_m1_vanilla_ops",
     "float32_reduction_m1_vanilla_ops",
     "reduction_m1_failure_ops",
+    "float32_reduction_m1_failure_ops",
     "widen_math_ops_test_impl",
     "vnclip_test",
     "vnclip_vxsat_test",
@@ -1032,3 +1033,5 @@ vcs_test_macro_smoke_test(
         "//coralnpu_test_utils:core_mini_axi_sim_interface",
     ],
 )
+
+collect_coralnpu_elfs()

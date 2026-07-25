@@ -20,7 +20,7 @@ load(
     "chisel_test",
 )
 load("@coralnpu_hw//rules:lint.bzl", "vcstatic_lint")
-load("@coralnpu_hw//rules:utils.bzl", "template_rule")
+load("@coralnpu_hw//rules:utils.bzl", "filter_files_by_extension", "template_rule")
 load("@coralnpu_hw//rules:verilog.bzl", "verilog_zip_bundle")
 load("//hdl/chisel/src/coralnpu:flags.bzl", "RVV_CORE_MINI_AXI_COMMON_GEN_FLAGS")
 
@@ -454,6 +454,7 @@ chisel_library(
     name = "coralnpu",
     srcs = [
         "AxiSlave.scala",
+        "BankedDtcm.scala",
         "Core.scala",
         "CoreAxi.scala",
         "CoreAxiCSR.scala",
@@ -473,6 +474,7 @@ chisel_library(
         "//hdl/chisel/src/bus",
         "//hdl/chisel/src/common",
         "//hdl/chisel/src/common:instruction_buffer",
+        "//hdl/chisel/src/soc:crossbar_config_lib",
     ],
 )
 
@@ -778,6 +780,12 @@ template_rule(
     ],
 )
 
+filter_files_by_extension(
+    name = "rvv_core_mini_verification_axi_cc_library_emit_verilog_single_sv",
+    src = ":rvv_core_mini_verification_axi_cc_library_emit_verilog",
+    extensions = ["sv"],
+)
+
 filegroup(
     name = "rvv_core_mini_tlul_verilog",
     srcs = [":rvv_core_mini_tlul_cc_library_verilog"],
@@ -855,6 +863,16 @@ chisel_cc_library(
     chisel_lib = ":coralnpu",
     emit_class = "coralnpu.EmitDBus2Axi",
     module_name = "DBus2AxiV2",
+)
+
+chisel_cc_library(
+    name = "banked_dtcm_cc_library",
+    chisel_lib = ":coralnpu",
+    emit_class = "coralnpu.BankedDtcmEmitter",
+    gen_flags = [
+        "--lsuDataBits=128",
+    ],
+    module_name = "BankedDtcm",
 )
 
 chisel_cc_library(
