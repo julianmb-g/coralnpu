@@ -1,9 +1,6 @@
 # Disable bzlmod and enable workspace while we migrate
 common --noenable_bzlmod --enable_workspace
 
-# Bazel cache path for hermetic builds in containerized environments (ADR-020)
-startup --output_user_root=/tmp/bazel_cache
-
 
 # Bazel 8 default-flipped --incompatible_disallow_empty_glob. Several BUILD
 # files (notably third_party/* with mixed .v/.sv source trees) rely on the
@@ -135,3 +132,8 @@ build --output_filter="^//(?!(third_party)(/|:|$))"
 
 # Import user config, if it exists (gitignored).
 try-import %workspace%/.bazelrc.user
+
+# Hermetic Podman caching configuration
+build --disk_cache=/tmp/coralnpu_bazel_cache
+test --disk_cache=/tmp/coralnpu_bazel_cache
+run --disk_cache=/tmp/coralnpu_bazel_cache

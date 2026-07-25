@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+[[ -f /.dockerenv ]] || exit 1
+
 # Cleanup trap
 trap 'rm -f ./test.elf ./float_test.elf' EXIT
 

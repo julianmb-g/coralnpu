@@ -26,6 +26,7 @@ chisel_library(
     name = "crossbar_config_lib",
     srcs = [
         "CrossbarConfig.scala",
+        "RawTlulSram.scala",
         "SoCRecords.scala",
         "SoCChiselConfig.scala",
         "TlulSram.scala",
