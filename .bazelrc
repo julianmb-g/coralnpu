@@ -132,3 +132,8 @@ build --output_filter="^//(?!(third_party)(/|:|$))"
 
 # Import user config, if it exists (gitignored).
 try-import %workspace%/.bazelrc.user
+
+# Hermetic Podman caching configuration
+build --disk_cache=/tmp/coralnpu_bazel_cache
+test --disk_cache=/tmp/coralnpu_bazel_cache
+run --disk_cache=/tmp/coralnpu_bazel_cache
