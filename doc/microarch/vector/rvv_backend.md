@@ -18,7 +18,7 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers
+> **Intended Audience:** HW Devs
 
 
 The `rvv_backend` module is the top-level structural wrapper for the vector execution backend of the CoralNPU. It coordinates the entire lifecycle of vector instructions—from command queueing and decoding, to dispatch, execution, and in-order retirement.
@@ -78,51 +78,15 @@ Each execution unit is preceded by a dedicated Reservation Station (RS) implemen
 ## Interfaces
 
 | Signal                   | Direction | Width                                      | Description                                               |
-| :----------------------- | :-------- | :----------------------------------------- | :-------------------------------------------------------- |
-| `clk`                    | Input     | 1-bit                                      | Global clock signal.                                      |
-| `rst_n`                  | Input     | 1-bit                                      | Global active-low asynchronous reset signal.              |
-| `insts_valid_rvs2cq`     | Input     | `ISSUE_LANE` bits                          | Valid bitmask for incoming vector instructions from RVS.  |
-| `insts_rvs2cq`           | Input     | `ISSUE_LANE` `RVVCmd` packets              | Incoming vector instruction payloads from RVS.            |
-| `insts_ready_cq2rvs`     | Output    | `ISSUE_LANE` bits                          | Ready signals back to RVS indicating command queue space. |
-| `remaining_count_cq2rvs` | Output    | `$clog2(CQ_DEPTH)+1` bits                  | Remaining entries in Command Queue available for RVS.     |
-| `uop_lsu_valid_rvv2lsu`  | Output    | `NUM_LSU` bits                             | Valid bitmask for LSU uops sent to LSU.                   |
-| `uop_lsu_rvv2lsu`        | Output    | `NUM_LSU` `UOP_RVV2LSU_t` packets          | LSU uop payloads sent to LSU.                             |
-| `uop_lsu_ready_lsu2rvv`  | Input     | `NUM_LSU` bits                             | Ready signals from LSU indicating space for uops.         |
-| `uop_lsu_valid_lsu2rvv`  | Input     | `NUM_LSU` bits                             | Valid bitmask for LSU feedback/data.                      |
-| `uop_lsu_lsu2rvv`        | Input     | `NUM_LSU` `UOP_LSU2RVV_t` packets          | LSU feedback/data payloads.                               |
-| `uop_lsu_ready_rvv2lsu`  | Output    | `NUM_LSU` bits                             | Ready signals back to LSU.                                |
-| `rt_xrf_valid_rvv2rvs`   | Output    | `NUM_RT_UOP` bits                          | Valid bitmask for retirement updates to XRF.              |
-| `rt_rvs_rvv2rvs`         | Output    | `NUM_RT_UOP` `RT2RVS_t` packets            | Retirement update payloads to RVS.                        |
-| `rt_rvs_ready_rvs2rvv`   | Input     | `NUM_RT_UOP` bits                          | Ready signals from RVS for retirement updates.            |
-| `async_frd_valid`        | Output    | `NUM_RT_UOP` bits                          | Valid bitmask for async FRD (Conditional `ZVE32F_ON`).    |
-| `async_frd_addr`         | Output    | `NUM_RT_UOP` `REGFILE_INDEX_WIDTH` packets | Async FRD address (Conditional `ZVE32F_ON`).              |
-| `async_frd_data`         | Output    | `NUM_RT_UOP` `XLEN` packets                | Async FRD data (Conditional `ZVE32F_ON`).                 |
-| `async_frd_ready`        | Input     | `NUM_RT_UOP` bits                          | Ready signals for async FRD (Conditional `ZVE32F_ON`).    |
-| `wr_vxsat_valid`         | Output    | 1-bit                                      | Valid bit for vxsat CSR write.                            |
-| `wr_vxsat`               | Output    | `VCSR_VXSAT_WIDTH` bits                    | vxsat write data payload.                                 |
-| `wr_vxsat_ready`         | Input     | 1-bit                                      | Ready signal for vxsat CSR write.                         |
-| `rt2fcsr_write_valid`    | Output    | 1-bit                                      | Valid bit for FCSR write (Conditional `ZVE32F_ON`).       |
-| `rt2fcsr_write_data`     | Output    | `RVFEXP_t`                                 | FCSR write data payload (Conditional `ZVE32F_ON`).        |
-| `fcsr2rt_write_ready`    | Input     | 1-bit                                      | Ready signal for FCSR write (Conditional `ZVE32F_ON`).    |
-| `trap_valid_rvs2rvv`     | Input     | 1-bit                                      | Valid bit for trap signal from RVS.                       |
-| `trap_ready_rvv2rvs`     | Output    | 1-bit                                      | Ready signal for trap signal.                             |
-| `vcsr_valid`             | Output    | 1-bit                                      | Valid bit for vcsr output.                                |
-| `vector_csr`             | Output    | `RVVConfigState`                           | Vector CSR state of last retired uop.                     |
-| `vcsr_ready`             | Input     | 1-bit                                      | Ready signal for vcsr output.                             |
-| `rd_valid_rob2rt_o`      | Output    | `NUM_RT_UOP` bits                          | Valid bitmask for retire information to RT.               |
-| `rd_rob2rt_o`            | Output    | `NUM_RT_UOP` `ROB2RT_t` packets            | Retire information payloads.                              |
-| `rvv_idle`               | Output    | 1-bit                                      | Idle status of rvv_backend.                               |
+| :----------------------- | :-------- | :
 
-<!-- mdformat off -->
-
-<!-- prettier-ignore-start -->
 
 --------------------------------------------------------------------------------
 
-<!-- prettier-ignore-end -->
+**Provenance & Traceability**
+- **Verified As Of:** 2026-07-24
+- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
+- **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-22 - **Upstream Commit:** 5c2647afd951f70d6244ea06b5a8b7fa1fdf2918 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-<!-- mdformat on -->
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit f05a63aa421b1c7880e6fb2309e5e2c0e35607c3.
+> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.

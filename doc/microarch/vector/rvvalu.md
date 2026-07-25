@@ -18,7 +18,7 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers
+> **Intended Audience:** HW Devs
 
 The Vector Arithmetic Logic Unit (RvvAlu) is responsible for executing a wide range of vector arithmetic, logical, and shift operations as part of the Vector processing pipeline.
 
@@ -29,66 +29,15 @@ The `RvvAluOp` enum (defined in `RvvAlu.scala`) encodes the specific arithmetic 
 The following operations are supported:
 
 | Operation Type            | Instructions (Examples)  | RvvAluOp Enum Values                                                      |
-| ------------------------- | ------------------------ | ------------------------------------------------------------------------- |
-| **Arithmetic**            | VADD, VSUB, VRSUB        | `VADD`, `VSUB`, `VRSUB`                                                   |
-| **Min/Max**               | VMIN, VMAX               | `VMINU`, `VMIN`, `VMAXU`, `VMAX`                                          |
-| **Logical**               | VAND, VOR, VXOR          | `VAND`, `VOR`, `VXOR`                                                     |
-| **Permutation**           | VRGATHER                 | `VRGATHER`, `VRGATHEREI16`                                                |
-| **Slide**                 | VSLIDEUP, VSLIDEDOWN     | `VSLIDEUP`, `VSLIDEDOWN`                                                  |
-| **Carry/Borrow**          | VADC, VMADC, VSBC, VMSBC | `VADC`, `VMADC`, `VSBC`, `VMSBC`                                          |
-| **Merge/Move**            | VMERGE, VMV              | `VMERGE`, `VMV`, `VMV1R`, `VMV2R`, `VMV4R`, `VMV8R`                       |
-| **Comparison**            | VMSEQ, VMSNE, VMSLT      | `VMSEQ`, `VMSNE`, `VMSLTU`, `VMSLT`, `VMSLEU`, `VMSLE`, `VMSGTU`, `VMSGT` |
-| **Saturating Arithmetic** | VSADD, VSSUB, VSMUL      | `VSADDU`, `VSADD`, `VSSUBU`, `VSSUB`, `VSMUL`                             |
-| **Shift**                 | VSLL, VSRL, VSRA         | `VSLL`, `VSRL`, `VSRA`, `VSSRL`, `VSSRA`, `VNSRL`, `VNSRA`                |
-| **Clip**                  | VNCLIP                   | `VNCLIPU`, `VNCLIP`                                                       |
+| ------------------------- | ------------------------ |
 
-## Vector Pipeline Implementation
 
-The execution of vector ALU instructions flows through a multi-stage pipeline:
-
-1.  **Decoding (`RvvDecode.scala`)**: The `f6vm` and other instruction fields are decoded to generate a valid `RvvAluOp`. Masks and overlap checks are also performed at this stage.
-2.  **Shim Interface (`RvvCore.scala`)**: The decoded instruction (`RvvS1DecodedInstruction`) and its operands are routed through the `RvvCoreShim`, which connects the Chisel domain to the underlying SystemVerilog vector backend.
-3.  **Backend Execution**: The operation is dispatched to the backend integer ALU lanes. Operations like saturating adds (`VSADD`) or multiply (`VSMUL`) are handled by specialized arithmetic units (e.g., `rvv_backend_alu_unit_addsub.sv` and `rvv_backend_mac_unit.sv`).
-4.  **Writeback**: Results are routed back to the Vector Register File via the backend's result interfaces and synchronized through the `rd_rob2rt_o` interface.
-
-## Saturating Arithmetic and Overflow (`vxsat`)
-
-The Vector ALU natively supports saturating arithmetic operations, such as `VSADD` (Saturating Add), `VSADDU` (Unsigned Saturating Add), `VSSUB`, and `VSSUBU`. These instructions are critical for quantized models where results must be clamped to the target precision's bounds rather than wrapping around upon overflow.
-
-When a saturating instruction executes, the backend ALU (`rvv_backend_alu_unit_addsub.sv`) dynamically computes the bounds and asserts a carry/saturation event if the operation overflows or underflows the representable range for the given element width.
-
-If any active byte lane experiences saturation, the `vxsaturate` signal is asserted. This status is propagated up through the vector execution pipeline to `RvvCore.scala` via the `wr_vxsat_valid_o` and `wr_vxsat_o` ports. Upon instruction retirement, the architectural Vector Fixed-Point Saturation CSR (`vxsat` at address `0x009`) is updated. The update employs a sticky OR logic (`vxsat | wr_vxsat_o`), ensuring that once the `vxsat` bit is set, it remains asserted until software explicitly clears it. This allows the compiler and runtime to detect if any overflow occurred during a sequence of operations.
-
-## Operand Lane Alignment for VFSGNJ Instructions (ADR-004)
-
-The CoralNPU handles floating-point sign-injection instructions (`vfsgnj.vv`, `vfsgnjn.vv`, `vfsgnjx.vv`) using the `fpnew` IP core instantiated within the `rvv_backend_falu_unit`.
-
-Due to the internal operand routing of the wrapper, the packed `src1` and `src2` vectors must be explicitly sliced and aligned into per-lane 3-operand structs (`op_i`) for the underlying floating-point arithmetic units.
-
-For the `SGNJ` operation types, the `fpnew` core expects the operands to be mapped as follows:
-
-- **Operand A (Source 1):** Mapped to `src1` (the value to copy the sign _to_).
-- **Operand B (Source 2):** Mapped to `src2` (the value to copy the sign _from_).
-- **Operand C:** Hardwired to zero (unused for sign injection).
-
-The wrapper slices the `VLEN`-width source buses into `WORD_WIDTH` (32-bit) chunks and concatenates them for each lane `i`:
-`op_i[i] = {32'b0, src1[i*32 +: 32], src2[i*32 +: 32]}`
-
-### Rounding Mode Overloading
-
-The `fpnew` core multiplexes the rounding mode input (`rnd_mod_i`) to determine the specific sign-injection operation:
-| RISC-V Instruction | `fpnew` Operation (`op_type`) | Overloaded Rounding Mode (`rnd_mod_i`) |
-| :--- | :--- | :--- |
-| `vfsgnj` | `SGNJ` | `RNE` (000) |
-| `vfsgnjn` | `SGNJ` | `RTZ` (001) |
-| `vfsgnjx` | `SGNJ` | `RDN` (010) |
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-22 - **Upstream Commit:** 5c2647afd951f70d6244ea06b5a8b7fa1fdf2918 - **Primary Source(s):** `hdl/chisel/src/coralnpu/rvv/RvvAlu.scala`, `hdl/chisel/src/coralnpu/rvv/RvvDecode.scala`, `hdl/chisel/src/coralnpu/rvv/RvvCore.scala`, `hdl/verilog/rvv/design/rvv_backend_falu_unit.sv`, `hdl/verilog/rvv/design/rvv_backend_alu_unit_addsub.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability**
+- **Verified As Of:** 2026-07-24
+- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
+- **Primary Source(s):** `hdl/chisel/src/coralnpu/rvv/RvvAlu.scala`, `hdl/chisel/src/coralnpu/rvv/RvvDecode.scala`, `hdl/chisel/src/coralnpu/rvv/RvvCore.scala`, `hdl/verilog/rvv/design/rvv_backend_falu_unit.sv`, `hdl/verilog/rvv/design/rvv_backend_alu_unit_addsub.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit f05a63aa421b1c7880e6fb2309e5e2c0e35607c3.
+> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.

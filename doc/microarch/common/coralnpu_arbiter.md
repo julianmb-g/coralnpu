@@ -1,30 +1,14 @@
 # Simulation-Safe Round-Robin Arbiter (CoralNPUArbiter)
 
-<!--
- Copyright 2026 Google LLC
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers
+**Intended Audience:** HW Devs
 
-## Overview (ADR-082)
+## Overview
 
-The CoralNPU IP block implements a custom Round-Robin Arbiter (`InitedLockingRRArbiter` and its wrapper `CoralNPURRArbiter`) defined in `CoralNPUArbiter.scala`.
+The CoralNPU IP block implements a custom Round-Robin Arbiter (`InitedLockingRRArbiter` and its wrapper `CoralNPURRArbiter`) defined in `hdl/chisel/src/common/CoralNPUArbiter.scala`.
 
-This module is a modified version of the standard Chisel `LockingRRArbiter` and `RRArbiter`. It features an explicit initialization of the `lastGrant` register.
+This module is a forked version of the standard Chisel `LockingRRArbiter`. It features an explicit initialization of the `lastGrant` register to prevent X-propagation issues in simulation, ensuring deterministic behavior during arbiter power-on.
 
 ## Interfaces
 
@@ -32,38 +16,20 @@ This module is a modified version of the standard Chisel `LockingRRArbiter` and 
 
 | Signal Name | Direction | Type                   | Description                                                        |
 | :---------- | :-------- | :--------------------- | :----------------------------------------------------------------- |
-| `io.in`     | Input     | `Vec(n, Decoupled(T))` | Array of `n` independent Decoupled input streams to be arbitrated. |
-| `io.out`    | Output    | `Decoupled(T)`         | The arbitrated Decoupled output stream.                            |
-| `io.chosen` | Output    | `UInt(log2Ceil(n).W)`  | The index of the input stream currently granted access.            |
+| `io.in`     | Input     | `DecoupledIO[T]` (Array) | Input requests for arbitration. Each request is a decoupled channel. |
+| `io.out`    | Output    | `DecoupledIO[T]`       | The granted request forwarded to the output channel.               |
+| `io.chosen` | Output    | `UInt`                 | Index of the chosen request.                                       |
 
-> [!NOTE]
-> `T` is the data type of the arbitrated signals, and `n` is the number of input ports.
+## Arbitration Policy
 
-## State Initialization
+The arbiter implements a **Round-Robin** policy. It tracks the last grant index (`lastGrant`) and masks requests accordingly to ensure fair access across all input ports. The `InitedLockingRRArbiter` provides locking capabilities for multi-beat transactions, ensuring that a granted request maintains control of the output until the transaction completes.
 
-`InitedLockingRRArbiter` explicitly initializes the state:
-`lazy val lastGrant = RegInit(0.U(log2Ceil(n).W))`
-
-## Module Instantiations
-
-The `CoralNPURRArbiter` is used in critical paths across the IP block where round-robin fairness is required:
-
-1. **AxiSlave Read/Write Arbitration (`AxiSlave.scala`)**: Arbitrates access between the incoming AXI4 read address channel (`axi.read.addr`) and write address channel (`axi.write.addr`).
-2. **Debug Module Request Arbitration (`CoreAxi.scala`)**: Arbitrates debug access requests between the external debug port (`io.dm.req`) and internal CSR debug requests (`csr.io.debug.req`).
-3. **Master Read Address Arbitration (`CoreAxi.scala`)**: Arbitrates the outbound AXI4 master read address channel (`axi_master.read.addr`) between the execution bus (`ebus2axi`) and instruction fetch bus (`ibus2axi`).
-
-## Verification
-
-This hardware block is validated using standalone tests.
-
-- [CoralNPUArbiter Chisel Testbench](hdl/chisel/src/common/CoralNPUArbiterTest.scala)
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-22 - **Upstream Commit:** 5c2647afd951f70d6244ea06b5a8b7fa1fdf2918 - **Primary Source(s):** `hdl/chisel/src/common/CoralNPUArbiter.scala:L15-52`, `hdl/chisel/src/coralnpu/CoreAxi.scala:L71-73,L248-251`, `hdl/chisel/src/coralnpu/AxiSlave.scala:L52-56` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-07-24 - **Upstream
+Commit:**
+[2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7) -
+**Primary Source(s):** `hdl/chisel/src/common/CoralNPUArbiter.scala` - **Disclaimer:**
+AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit f05a63aa421b1c7880e6fb2309e5e2c0e35607c3.
+> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.

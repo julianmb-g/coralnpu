@@ -1,3 +1,21 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
 # Load Store Unit
 
 ![image](../images/lsu.svg)
@@ -60,86 +78,15 @@ added to allow multiple operations to partake in the same transaction.
 The LSU has a command interface coming from the dispatch unit and register file.
 
 | Signal Name   | Type          | Description                                                   |
-| ------------- | ------------- | ------------------------------------------------------------- |
-| req.valid     | Bool          | If the LSU command is valid.                                  |
-| req.op        |               | The LSU operation to execute.                                 |
-| req.addr      | UInt(5)       | The RegFile address to write the result to for loads.         |
-| req.pc        | UInt(32)      | The PC of the LSU instruction. Use for fault reporting.       |
-| req.elemWidth | UInt(32)      | Used in the RVV only. The EEW for strided loads.              |
-| req.ready     | Bool (output) | If the command is accepted. Used in a ready-valid hand-shake. |
+| ------------- | ------------- |
 
-### Bus Interfaces
 
-| Signal Name | Type              | Description                                                       |
-| ----------- | ----------------- | ----------------------------------------------------------------- |
-| ibus.valid  | Bool              | If the ibus transaction is valid.                                 |
-| ibus.addr   | UInt(32)          | The address of the ibus transaction.                              |
-| ibus.rdata  | UInt(128) (input) | The data read from the ibus. Arrives one cycle after hand-shake.  |
-| ibus.ready  | Bool (input)      | If the transaction is accepted. Used in a ready-valid hand-shake. |
+--------------------------------------------------------------------------------
 
-| Signal Name | Type              | Description                                                       |
-| ----------- | ----------------- | ----------------------------------------------------------------- |
-| dbus.valid  | Bool              | If the dbus transaction is valid.                                 |
-| dbus.addr   | UInt(32)          | The address of the dbus transaction.                              |
-| dbus.size   | UInt(5)           | The size of this transaction in bytes.                            |
-| dbus.pc     | UInt(32)          | The PC of the LSU instruction. Use for fault reporting.           |
-| dbus.rdata  | UInt(128) (input) | The data read from the dbus. Arrives one cycle after hand-shake.  |
-| dbus.wdata  | UInt(128)         | The data to write from the dbus.                                  |
-| dbus.wmask  | UInt(16)          | A byte write mask for this transaction.                           |
-| dbus.ready  | Bool (input)      | If the transaction is accepted. Used in a ready-valid hand-shake. |
+**Provenance & Traceability**
+- **Verified As Of:** 2026-07-24
+- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
+- **Primary Source(s):** N/A
+- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-| Signal Name      | Type              | Description                                                       |
-| ---------------- | ----------------- | ----------------------------------------------------------------- |
-| ebus.valid       | Bool              | If the ebus transaction is valid.                                 |
-| ebus.addr        | UInt(32)          | The address of the ebus transaction.                              |
-| ebus.size        | UInt(5)           | The size of this transaction in bytes.                            |
-| ebus.pc          | UInt(32)          | The PC of the LSU instruction. Use for fault reporting.           |
-| ebus.rdata       | UInt(128) (input) | The data read from the ebus. Arrives one cycle after hand-shake.  |
-| ebus.wdata       | UInt(128)         | The data to write from the ebus.                                  |
-| ebus.wmask       | UInt(16)          | A byte write mask for this transaction.                           |
-| ebus.ready       | Bool (input)      | If the transaction is accepted. Used in a ready-valid hand-shake. |
-| ebus.fault.valid | Bool (input)      | Raised if a fault occurs on the external bus.                     |
-| ebus.fault.write | Bool (input)      | If the fault occured on a write operation.                        |
-| ebus.fault.addr  | Bool (input)      | The address of the memory transaction when the fault occurred.    |
-| ebus.fault.epc   | Bool (input)      | The PC of the instruction that triggered the fault.               |
-| ebus.internal    | Bool              | Not used.                                                         |
-
-### Writeback Interfaces
-
-| Signal Name | Type     | Description                                              |
-| ----------- | -------- | -------------------------------------------------------- |
-| rd.valid    | Bool     | If the writeback to the scalar regfile is valid.         |
-| rd.addr     | UInt(5)  | The address of the scalar register file to writeback to. |
-| rd.data     | UInt(32) | The data to write to the scalar register file.           |
-
-| Signal Name     | Type     | Description                                                      |
-| --------------- | -------- | ---------------------------------------------------------------- |
-| rd_flt.valid    | Bool     | If the writeback to the floating point regfile is valid.         |
-| rd_flt.addr     | UInt(5)  | The address of the floating point register file to writeback to. |
-| rd_flt.data     | UInt(32) | The data to write to the floating point register file.           |
-
-### RVV Interfaces
-
-For the RVVCore, the LSU contains the following interfaces:
-
-| Signal Name            | Type              | Description                                                       |
-| ---------------------- | ----------------- | ----------------------------------------------------------------- |
-| rvv2lsu.valid          | Bool              | If the rvv2lsu transaction is valid.                              |
-| rvv2lsu.idx.valid      | Bool              | If there is valid index data from the vector register file.       |
-| rvv2lsu.idx.addr       | UInt(5)           | The address of the indices from the vector register file.         |
-| rvv2lsu.idx.data       | UInt(128)         | The indices from the vector register file index.                  |
-| rvv2lsu.vregfile.valid | UInt(128)         | If there is valid data from the vector register file.             |
-| rvv2lsu.vregfile.addr  | UInt(5)           | The address of the data from the vector register file.            |
-| rvv2lsu.vregfile.data  | UInt(128)         | The vector data to write back for this operation.                 |
-| rvv2lsu.mask           | UInt(16)          | A byte activity mask for this transaction.                        |
-| rvv2lsu.ready          | Bool (input)      | If the transaction is accepted. Used in a ready-valid hand-shake. |
-
-| Signal Name    | Type              | Description                                                       |
-| -------------- | ----------------- | ----------------------------------------------------------------- |
-| lsu2rvv.valid  | Bool              | If the lsu2rvv transaction is valid.                              |
-| lsu2rvv.addr   | UInt(5)           | The destination vector register file index.                       |
-| lsu2rvv.data   | UInt(128)         | The vector data to write back for load operations.                |
-| lsu2rvv.last   | Bool              | If this transaction is a store or not.                            |
-| lsu2rvv.ready  | Bool (input)      | If the transaction is accepted. Used in a ready-valid hand-shake. |
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit f05a63aa421b1c7880e6fb2309e5e2c0e35607c3.
+> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.

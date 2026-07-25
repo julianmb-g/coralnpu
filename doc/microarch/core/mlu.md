@@ -18,13 +18,13 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers
+> **Intended Audience:** HW Devs
 
 The Multiplier Unit (MLU) is responsible for executing integer multiplication instructions within the CoralNPU scalar core. It supports standard RISC-V M-extension 32-bit multiplication operations, providing both lower and upper half products with various sign-extension semantics.
 
 ## Supported Operations
 
-The MLU handles the following operations, defined in the `MluOp` Chisel Enum:
+The MLU handles the following operations, defined in the `MluOp` Chisel Enum ([Source](hdl/chisel/src/coralnpu/scalar/Mlu.scala)):
 
 - `MUL`: 32-bit $\times$ 32-bit multiplication, returning the lower 32 bits.
 - `MULH`: Signed 32-bit $\times$ Signed 32-bit multiplication, returning the upper 32 bits.
@@ -35,43 +35,27 @@ The MLU handles the following operations, defined in the `MluOp` Chisel Enum:
 
 The MLU is integrated into the scalar execution pipeline with parameterized multi-lane issue capabilities (`p.instructionLanes`).
 
-| Interface Group | Port  | Type               | Width / Format                | Description                                                                                                                          |
-| --------------- | ----- | ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Decode          | `req` | Input (Decoupled)  | Vector of `MluCmd`            | Decoded multiplication requests, one per instruction lane. Contains destination register address (`addr`) and operation type (`op`). |
-| Execute         | `rs1` | Input              | Vector of `RegfileReadDataIO` | Read data from source register 1, per instruction lane.                                                                              |
-| Execute         | `rs2` | Input              | Vector of `RegfileReadDataIO` | Read data from source register 2, per instruction lane.                                                                              |
-| Execute         | `rd`  | Output (Decoupled) | `RegfileWriteDataIO`          | Output result and destination address sent to the register file.                                                                     |
+| Interface Group | Port  | Type               | Description |
+| --------------- | ----- | ------------------ | ----------- |
+| Decode | `req` | `Flipped(Decoupled)` | Issue request containing target register address and `MluOp` per lane. |
+| Execute | `rs1` | `Flipped(RegfileReadDataIO)` | Register file read data for source operand 1. |
+| Execute | `rs2` | `Flipped(RegfileReadDataIO)` | Register file read data for source operand 2. |
+| Execute | `rd` | `Decoupled(Flipped(RegfileWriteDataIO))` | Result output to register file write port. |
 
-## Pipeline Architecture
+## Pipeline Stages
 
-The MLU is internally organized into three logical stages. Flow control between stages is managed using 1-entry Chisel `Queue`s with flow-through enabled (`pipe = true`), allowing back-to-back processing.
+The MLU is a pipelined unit that processes instructions over three logical stages:
 
-### Stage 1: Request Arbitration and Selection
+1. **Stage 1 (Select & Decode)**: An `Arbiter` selects an incoming request from the multiple instruction lanes. The target register, operation, and one-hot lane selection mask are registered in a 1-entry `Queue` buffer (`stage2Input`).
+2. **Stage 2 (Multiplication)**: Source operands `rs1` and `rs2` are multiplexed from the active lane. Depending on the `MluOp`, the operands are appropriately sign-extended to 33-bits. The core hardware multiplier computes the full 66-bit signed product (`prod = rs1s * rs2s`), which is then buffered into a 1-entry `Queue` (`stage3Input`).
+3. **Stage 3 (Output)**: A multiplexer extracts either the lower 32 bits (`MUL`) or the upper 32 bits (`MULH`, `MULHSU`, `MULHU`) of the product and drives it to the `rd` port with a registered valid signal.
 
-- The MLU uses an `Arbiter` to select exactly one valid multiplication request from the incoming `instructionLanes`.
-- The chosen request's operation (`op`), destination address (`rd`), and a one-hot encoded lane selector (`sel`) are advanced to Stage 2.
-
-### Stage 2: Multiplication Execution
-
-- The operands `rs1` and `rs2` are multiplexed from the input arrays based on the one-hot lane selector (`sel2in`).
-- **Sign-Extension Logic**:
-  - `rs2` is treated as signed if the operation is `MULH`.
-  - `rs1` is treated as signed if the operation is `MULH` or `MULHSU`.
-- The core multiplication calculates a 66-bit signed product (`prod = rs1s * rs2s`).
-
-### Stage 3: Result Formatting and Output
-
-- A multiplexer selects the appropriate 32-bit slice from the 66-bit product based on the operation type:
-  - For `MUL`, the lower 32 bits (`prod3in(31, 0)`) are selected.
-  - For `MULH`, `MULHSU`, and `MULHU`, the upper 32 bits (`prod3in(63, 32)`) are selected.
-- The formatted result is asserted on `io.rd` along with the destination register address.
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-22 - **Upstream Commit:** 5c2647afd951f70d6244ea06b5a8b7fa1fdf2918 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Mlu.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability**
+- **Verified As Of:** 2026-07-24
+- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
+- **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Mlu.scala`
+- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit f05a63aa421b1c7880e6fb2309e5e2c0e35607c3.
+> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.

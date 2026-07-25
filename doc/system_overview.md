@@ -1,66 +1,52 @@
-<!--
- Copyright 2026 Google LLC
+<!-- Copyright 2026 Google LLC -->
+<!-- Licensed under the Apache License, Version 2.0 (the "License"); -->
+<!-- you may not use this file except in compliance with the License. -->
+<!-- You may obtain a copy of the License at -->
+<!-- http://www.apache.org/licenses/LICENSE-2.0 -->
+<!-- Unless required by applicable law or agreed to in writing, software -->
+<!-- distributed under the License is distributed on an "AS IS" BASIS, -->
+<!-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. -->
+<!-- See the License for the specific language governing permissions and -->
+<!-- limitations under the License. -->
 
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-     http://www.apache.org/licenses/LICENSE-2.0
+# System overview
 
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
+The CoralNPU is a standalone IP block designed for high-performance tensor processing. It utilizes a scalar control core paired with a high-throughput vector processing engine.
 
-# System Overview
+## Architecture overview
 
-> ⚠️ **Disclaimer:** This document was generated or modified by an AI model.
-> While every effort is made to ensure technical accuracy, the underlying source
-> code and hardware RTL implementation remain the absolute source of truth. Use
-> at your own risk.
->
-> **Intended Audience:** HW Integrators, HW Devs
+The CoralNPU IP consists of several interconnected modules providing scalar and vector processing capabilities, coupled with dedicated local memory.
 
-This document provides a high-level overview of the CoralNPU system architecture, host interfaces, memory hierarchy, and hardware capability boundaries.
-
-## Top-level architecture
-
-The CoralNPU IP is designed as a standalone accelerator block for SoC integration. It features a scalar frontend driving a decoupled vector backend, optimized for ML workloads.
-
-For a detailed block diagram and subsystem relationships, refer to the [Top-Level Subsystem](top_level_subsystem.md) documentation.
-
-## Host interface boundaries
-
-The CoralNPU IP interacts with the host system through standardized **AXI4** interfaces, retaining **TLUL** ports in the RTL implementation to maintain implementation reality.
-
-- **AXI4 Host (Master)**: Used by the NPU to access external shared SRAM or DRAM for instruction/data fetching when internal TCMs miss.
-- **AXI4 Device (Slave)**: Used by the host CPU to access the NPU's Control and Status Registers (CSRs) for configuration and control.
+- **Core**: Scalar control logic (`hdl/chisel/src/coralnpu/scalar/SCore.scala`) and Vector processing (`hdl/chisel/src/coralnpu/rvv/RvvCore.scala`).
+- **Memory Hierarchy**: ITCM/DTCM local SRAMs.
+- **Interfaces**: AXI4 host bus interface and TLUL bridges for peripheral integration.
 
 ## Memory hierarchy
 
-The CoralNPU features a deterministic memory hierarchy optimized for real-time inference.
+CoralNPU utilizes Tightly Coupled Memory (TCM) for low-latency access:
+- **ITCM**: `0x00000000` (Instruction Tightly Coupled Memory).
+- **DTCM**: `0x00010000` (Data Tightly Coupled Memory).
+- **Shared SRAM**: Accessed via the `CoralNPUXbar` crossbar interconnect.
 
-- **Tightly Coupled Memory (TCM)**:
-  - **DTCM**: Data TCM, multi-banked SRAM for vector and scalar data access.
-- **Shared SRAM/DRAM**: Accessed via the external AXI4 bus.
-- **CSR Space**: Dedicated memory-mapped region for controlling the IP.
+## Interfaces
 
-## Clocking, reset, and power
+The CoralNPU IP interfaces with the SoC fabric:
 
-### Clock management
+| Interface | Protocol | Description |
+| :--- | :--- | :--- |
+| Host Bus | AXI4 | Full AXI4 host master/slave with multi-beat burst support. |
+| Peripheral | TLUL | TileLink-UL interface for peripheral access. |
 
-The CoralNPU IP block receives an external source clock (`aclk`). Internal clock distribution is managed via coarse-grained clock gating (`ClockGate`) to minimize dynamic power consumption.
-The clock is enabled only when active work is pending, interrupts are registered, or debug mode is active. Fine-grained clock gating is explicitly **not** supported within functional modules.
+Note: The IP natively supports full AXI4 burst capabilities. TLUL ports are exposed via `CoreTlul.scala` bridges to maintain "Implementation Reality."
 
-### Reset sequencing
+## Clocking and reset
 
-Reset synchronization is handled by the `RstSync` module, which synchronizes external asynchronous resets into internal synchronous de-assertion.
-To ensure clean startup transitions, the internal clock is actively held disabled during reset and for a fixed delay post-deassertion.
+Reset sequencing and clock management are handled by the `RstSync` module (`hdl/chisel/src/coralnpu/RstSync.scala`), ensuring proper propagation and initialization delay.
 
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-23 - **Upstream Commit:** 5c2647afd951f70d6244ea06b5a8b7fa1fdf2918 - **Primary Source(s):** `doc/system_overview.md` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-07-24 - **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
 
-> **Traceability:** Generated by Gemini. Derived from upstream commit f05a63aa421b1c7880e6fb2309e5e2c0e35607c3.
+> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.

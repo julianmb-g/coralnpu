@@ -18,7 +18,7 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers
+> **Intended Audience:** HW Devs
 
 The Vector Backend FALU Array (`rvv_backend_falu.sv`) decodes and dispatches floating-point micro-operations to the underlying execution units. It acts as a multi-lane routing and arbitration wrapper over multiple `rvv_backend_falu_unit.sv` instantiations.
 
@@ -27,48 +27,15 @@ The Vector Backend FALU Array (`rvv_backend_falu.sv`) decodes and dispatches flo
 Each FALU unit encapsulates four distinct execution sub-units to handle specific classes of floating-point operations. The pipeline depth is parameterized by `PIPEREGS` (default: 3).
 
 | Sub-unit              | Underlying IP / Module   | Supported Operations                                                                                                                 |
-| --------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Add/Mul/FMA**       | `fpnew_fma_multi`        | `VFADD`, `VFSUB`, `VFMUL`, `VFRSUB`, `VFMAC`, `VFNMAC`, `VFMSAC`, `VFNMSAC`, `VFMADD`, `VFNMADD`, `VFMSUB`, `VFNMSUB`, `VFWMACCBF16` |
-| **Compare/Non-comp**  | `fpnew_noncomp`          | `VMFEQ`, `VMFNE`, `VMFLT`, `VMFLE`, `VMFGT`, `VMFGE`, `VFSGNJ`, `VFSGNJN`, `VFSGNJX`, `VFMIN`, `VFMAX`, `VFCLASS`                    |
-| **Convert**           | `fpnew_cast_multi`       | `VFCVT_XUFV`, `VFCVT_XFV`, `VFCVT_FXUV`, `VFCVT_FXV`, `VFNCVTBF16`, `VFWCVTBF16`, `VFCVT_RTZXUFV`, `VFCVT_RTZXFV`                    |
-| **Table (Estimates)** | `rvv_backend_sqrt7_rec7` | `VFRECE7`, `VFRSQRT7` (7-bit reciprocal and square-root estimates via lookup tables)                                                 |
+| --------------------- | ------------------------ |
 
-## Lane Arbitration and Routing
 
-The `rvv_backend_falu.sv` wrapper supports dynamic cross-lane routing for up to two micro-operations (`NUM_FMA`).
-
-If `unit0` is unavailable for `uop0`, the logic attempts to dynamically route `uop0` to `unit1`. If successful, it simultaneously attempts to route `uop1` to `unit0`.
-
-## Result Writeback Arbitration
-
-Inside each `rvv_backend_falu_unit.sv`, the results from the four sub-units are arbitrated back to the Reorder Buffer (ROB) using a 4-request Round-Robin Arbiter (`arb_round_robin`). The arbitrated results (`falu_result_vld`, `falu_result`) are passed directly back to the ROB.
-
-## `VFSGNJ` Operand Lane Alignment
-
-The `VFSGNJ` instructions (Sign-Injection) are routed to the `fpnew_noncomp` unit. The operand lane routing specifically maps the inputs to correctly align the sign, exponent, and mantissa fields for the underlying IP's execution path:
-
-`op_i[i] = {src3, src1, src2}`
-
-## Interfaces
-
-| Signal           | Direction | Width                         | Description                                               |
-| :--------------- | :-------- | :---------------------------- | :-------------------------------------------------------- |
-| `clk`            | Input     | 1-bit                         | Global clock signal.                                      |
-| `rst_n`          | Input     | 1-bit                         | Global active-low asynchronous reset signal.              |
-| `pop`            | Output    | ``NUM_FMA` bits               | Pop signals back to the instruction queue/FMA RS.         |
-| `uop_valid`      | Input     | ``NUM_FMA` bits               | Valid bitmask for incoming micro-operations.              |
-| `uop`            | Input     | ``NUM_FMA` `FMA_RS_t` packets | Micro-operation payloads.                                 |
-| `result_valid`   | Output    | ``NUM_FMA` bits               | Valid bitmask for result submission to ROB.               |
-| `result`         | Output    | ``NUM_FMA` `PU2ROB_t` packets | Result payloads.                                          |
-| `result_ready`   | Input     | ``NUM_FMA` bits               | Ready status signals from ROB indicating available space. |
-| `trap_flush_rvv` | Input     | 1-bit                         | Global flush signal to reset pipeline during traps.       |
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability** - **Verified As Of:** 2026-07-22 - **Upstream Commit:** 5c2647afd951f70d6244ea06b5a8b7fa1fdf2918 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_falu.sv`, `hdl/verilog/rvv/design/rvv_backend_falu_unit.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability**
+- **Verified As Of:** 2026-07-24
+- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
+- **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_falu.sv`, `hdl/verilog/rvv/design/rvv_backend_falu_unit.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit f05a63aa421b1c7880e6fb2309e5e2c0e35607c3.
+> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
