@@ -21,7 +21,7 @@ load(
     "chisel_test",
 )
 load("@coralnpu_hw//rules:lint.bzl", "vcstatic_lint")
-load("@coralnpu_hw//rules:utils.bzl", "template_rule")
+load("@coralnpu_hw//rules:utils.bzl", "filter_files_by_extension", "template_rule")
 load("@coralnpu_hw//rules:verilog.bzl", "verilog_zip_bundle")
 
 package(default_visibility = ["//visibility:public"])
@@ -118,6 +118,7 @@ chisel_library(
         "//hdl/verilog/rvv/common:arb_round_robin.sv",
         "//hdl/verilog/rvv/common:barrel_shifter.sv",
         "//hdl/verilog/rvv/common:handshake_ff.sv",
+        "//hdl/verilog/rvv/common:handshake_multistage_ctrl.sv",
         "//hdl/verilog/rvv/common:handshake_multi_fifo.sv",
         "//hdl/verilog/rvv/common:cdffr.sv",
         "//hdl/verilog/rvv/common:compressor_3to2.sv",
@@ -130,6 +131,24 @@ chisel_library(
         "//hdl/verilog/rvv/design:Aligner.sv",
         "//hdl/verilog/rvv/design:RvvCore.sv",
         "//hdl/verilog/rvv/design:RvvFrontEnd.sv",
+        "//hdl/verilog/rvv/design:Zvt/fp_absaddsub.sv",
+        "//hdl/verilog/rvv/design:Zvt/fp_addfront.sv",
+        "//hdl/verilog/rvv/design:Zvt/fp_align.sv",
+        "//hdl/verilog/rvv/design:Zvt/fp_classifier.sv",
+        "//hdl/verilog/rvv/design:Zvt/fp_mulfront.sv",
+        "//hdl/verilog/rvv/design:Zvt/fp_rounding.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_acc.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_acc_reg.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_ctrl.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_pe_adder.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_pe_adder_fp_lane.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_pe_adder_int_lane.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_pe_array.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_pe_block.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_pe_mulbulk.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_pe_mulbulk_fp_lane.sv",
+        "//hdl/verilog/rvv/design:Zvt/zvt_pe_mulbulk_int_lane.sv",
         "//hdl/verilog/rvv/design:rvv_backend_falu_unit.sv",
         "//hdl/verilog/rvv/design:rvv_backend_falu.sv",
         "//hdl/verilog/rvv/design:rvv_backend.sv",
@@ -448,6 +467,7 @@ chisel_library(
     name = "coralnpu",
     srcs = [
         "AxiSlave.scala",
+        "BankedDtcm.scala",
         "Core.scala",
         "CoreAxi.scala",
         "CoreAxiCSR.scala",
@@ -467,6 +487,7 @@ chisel_library(
         "//hdl/chisel/src/bus",
         "//hdl/chisel/src/common",
         "//hdl/chisel/src/common:instruction_buffer",
+        "//hdl/chisel/src/soc:crossbar_config_lib",
     ],
 )
 
@@ -781,9 +802,77 @@ template_rule(
     ],
 )
 
+filter_files_by_extension(
+    name = "rvv_core_mini_verification_axi_cc_library_emit_verilog_single_sv",
+    src = ":rvv_core_mini_verification_axi_cc_library_emit_verilog",
+    extensions = ["sv"],
+)
+
 filegroup(
     name = "rvv_core_mini_tlul_verilog",
     srcs = [":rvv_core_mini_tlul_cc_library_verilog"],
+)
+
+# VME (Zvt) variant. Adds the non-tile mset* CSR plumbing on top of the RVV
+# core. Kept as a separate template_rule call so the RVV-only targets above
+# remain byte-identical (the ZVT_ON define widens the RVVConfigState struct).
+VME_CORE_MINI_AXI_COMMON_GEN_FLAGS = RVV_CORE_MINI_AXI_COMMON_GEN_FLAGS + [
+    "--enableVme=True",
+]
+
+template_rule(
+    chisel_cc_library,
+    {
+        "vme_core_mini_axi_cc_library": {
+            "verilog_file_path": "VmeCoreMiniAxi.sv",
+            "extra_outs": [
+                "VVmeCoreMiniAxi_parameters.h",
+                "VmeCoreMiniAxi.zip",
+            ],
+            "gen_flags": [
+                "--moduleName=VmeCoreMini",
+                "--itcmSizeKBytes=8",
+                "--dtcmSizeKBytes=32",
+            ] + VME_CORE_MINI_AXI_COMMON_GEN_FLAGS,
+            "module_name": "VmeCoreMiniAxi",
+        },
+    },
+    chisel_lib = ":coralnpu",
+    emit_class = "coralnpu.EmitCore",
+    vopts = [
+        "-DUSE_GENERIC",
+        # RVV
+        "-DTB_SUPPORT",
+        "-DVLEN_128",
+        "-DZVE32F_ON",
+        # VME (Zvt) non-tile state and mset* instructions.
+        "-DZVT_ON",
+        "-Wno-WIDTH",
+        "-Wno-CASEINCOMPLETE",
+        "-Wno-LATCH",
+        "-Wno-SIDEEFFECT",
+        "-Wno-MULTIDRIVEN",
+        "-Wno-UNOPTFLAT",
+        "-Wno-BLKANDNBLK",
+        "-Wno-CASEX",
+        # FPNEW
+        "-Wno-ASCRANGE",
+        "-Wno-WIDTHEXPAND",
+        "-Wno-WIDTHTRUNC",
+        "-Wno-UNSIGNED",
+        "-Wno-WIDTHCONCAT",
+        "-Ihdl/verilog/rvv/design/FPnew/common_cells/inc",
+    ],
+)
+
+vcstatic_lint(
+    name = "vme_core_mini_axi_cc_library_lint",
+    blackbox_designs = CORE_MINI_AXI_BLACKBOX_DESIGNS,
+    goal = "lint_rtl",
+    lint_tags = CORE_MINI_AXI_LINT_TAGS,
+    module = "VmeCoreMiniAxi",
+    package = "vme_core_mini_axi_cc_library_verilog",
+    waive_tags = ["UndrivenInTerm-ML"],
 )
 
 verilog_zip_bundle(
@@ -796,6 +885,16 @@ chisel_cc_library(
     chisel_lib = ":coralnpu",
     emit_class = "coralnpu.EmitDBus2Axi",
     module_name = "DBus2AxiV2",
+)
+
+chisel_cc_library(
+    name = "banked_dtcm_cc_library",
+    chisel_lib = ":coralnpu",
+    emit_class = "coralnpu.BankedDtcmEmitter",
+    gen_flags = [
+        "--lsuDataBits=128",
+    ],
+    module_name = "BankedDtcm",
 )
 
 chisel_cc_library(

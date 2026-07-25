@@ -15,7 +15,7 @@
 load("@coralnpu_hw//third_party/python:requirements.bzl", "requirement")
 load("@rules_pkg//:pkg.bzl", "pkg_zip")
 load("//rules:coco_tb.bzl", "cocotb_test_suite", "vcs_test_macro_smoke_test", "verilator_cocotb_model")
-load("//rules:coralnpu_v2.bzl", "coralnpu_v2_binary")
+load("//rules:coralnpu_v2.bzl", "collect_coralnpu_elfs", "coralnpu_v2_binary")
 load("//rules:utils.bzl", "template_rule")
 load(
     "//tests/cocotb:build_defs.bzl",
@@ -95,6 +95,19 @@ verilator_cocotb_model(
     hdl_toplevel = "RvvCoreMini_ITCM512KB_DTCM512KBAxi",
     trace = False,
     verilog_source = "//hdl/chisel/src/coralnpu:RvvCoreMini_ITCM512KB_DTCM512KBAxi.sv",
+    deps = [
+        "//hdl/verilog:sram_backdoor",
+    ],
+)
+
+# VME (Zvt) variant. Adds -DZVT_ON so the SystemVerilog `RVVConfigState`
+# struct gets the matrix-extension fields it needs.
+verilator_cocotb_model(
+    name = "vme_core_mini_axi_model",
+    cflags = VERILATOR_BUILD_ARGS + ["-DZVT_ON"],
+    hdl_toplevel = "VmeCoreMiniAxi",
+    trace = False,
+    verilog_source = "//hdl/chisel/src/coralnpu:VmeCoreMiniAxi.sv",
     deps = [
         "//hdl/verilog:sram_backdoor",
     ],
@@ -204,6 +217,7 @@ template_rule(
 
 # BEGIN_TESTCASES_FOR_core_mini_axi_debug_cocotb
 CORE_MINI_AXI_DEBUG_TESTCASES = [
+    "core_mini_axi_debug_trigger_match",
     "core_mini_axi_debug_gdbserver",
     "core_mini_axi_debug_dmactive",
     "core_mini_axi_debug_probe_impl",
@@ -234,12 +248,12 @@ RVV_ASSEMBLY_TESTCASES = [
     "core_mini_vmsif_test",
     "core_mini_vill_test",
     "core_mini_vl_test",
+    "vgather_test",
     "vsetvl_test",
     "vslideup_test",
     "vslidedown_test",
     "vslide1up_test",
     "vslide1down_test",
-    "vgather_test",
 ]
 # END_TESTCASES_FOR_rvv_assembly_cocotb_test
 
@@ -310,6 +324,7 @@ RVV_ARITHMETIC_TESTCASES = [
     "reduction_m1_vanilla_ops",
     "float32_reduction_m1_vanilla_ops",
     "reduction_m1_failure_ops",
+    "float32_reduction_m1_failure_ops",
     "widen_math_ops_test_impl",
     "vnclip_test",
     "vnclip_vxsat_test",
@@ -340,6 +355,7 @@ HIGHMEM_TESTCASES = [
 # END_TESTCASES_FOR_highmem_test
 
 COCOTB_DEBUG_TEST_BINARY_TARGETS = [
+    ":debug_trigger_test.elf",
     ":fptr.elf",
     ":loop.elf",
     ":math.elf",
@@ -550,6 +566,13 @@ coralnpu_v2_binary(
     name = "plic_test",
     srcs = [
         "plic_test.cc",
+    ],
+)
+
+coralnpu_v2_binary(
+    name = "debug_trigger_test",
+    srcs = [
+        "debug_trigger_test.S",
     ],
 )
 
@@ -935,3 +958,5 @@ vcs_test_macro_smoke_test(
         "//coralnpu_test_utils:core_mini_axi_sim_interface",
     ],
 )
+
+collect_coralnpu_elfs()

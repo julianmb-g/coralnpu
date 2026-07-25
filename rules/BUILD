@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+
 exports_files(glob(["*.bzl"]))
 package(default_visibility = ["//visibility:public"])
 
@@ -20,3 +22,11 @@ exports_files([
     "chisel_test_runner.sh",
     "vcs_model_wrapper.sh.template",
 ])
+
+# Enable Spike co-simulation for UVM tests
+# specifying --//rules:uvm_run_spike_cosim=true
+bool_flag(
+    name = "uvm_run_spike_cosim",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//rules:coralnpu_v2.bzl", "coralnpu_v2_binary")
+load("//rules:coralnpu_v2.bzl", "collect_coralnpu_elfs", "coralnpu_v2_binary")
 load("//rules:utils.bzl", "template_rule")
 
 package(default_visibility = ["//visibility:public"])
@@ -209,8 +209,6 @@ filegroup(
         ":load8_stride2_m1.elf",
         ":load8_stride2_m1_partial.elf",
         ":load8_stride2_mf4.elf",
-        ":load_store16_unit_m2.elf",
-        ":load_store32_unit_m2.elf",
         ":load_store8_fault.elf",
         ":load_store8_test.elf",
         ":load_store8_unit_m2.elf",
@@ -249,3 +247,5 @@ filegroup(
         ":store_strided_vtype.elf",
     ],
 )
+
+collect_coralnpu_elfs()

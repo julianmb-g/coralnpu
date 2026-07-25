@@ -25,7 +25,7 @@ object RvvCore {
 }
 
 object GenerateCoreShimSource {
-  def apply(instructionLanes: Integer, vlen: Integer): String = {
+  def apply(instructionLanes: Integer, vlen: Integer, enableVme: Boolean = false): String = {
     var moduleInterface = """module RvvCoreWrapper(
         |    input clk,
         |    input rstn,
@@ -124,6 +124,7 @@ object GenerateCoreShimSource {
         |    output [2:0] configLmul,
         |    output [2:0] configLmulOrig,
         |    output configVill,
+        |    output [31:0] configMtype,
         |    output logic rvv_idle,
         |    output logic [3:0] queue_capacity,
         |""".stripMargin.replaceAll("VSTART_LEN", (log2Ceil(vlen) - 1).toString)
@@ -147,7 +148,15 @@ object GenerateCoreShimSource {
             |    output rd_rob2rt_o_GENI_vector_csr_lmul,
             |    output rd_rob2rt_o_GENI_vector_csr_lmul_orig,
             |    output rd_rob2rt_o_GENI_vector_csr_vill,
-            |    output [15:0] rd_rob2rt_o_GENI_vxsaturate,
+            |""".stripMargin.replaceAll("GENI", i.toString)
+      if (enableVme) {
+        moduleInterface += """    output [31:0] rd_rob2rt_o_GENI_vector_csr_mtype,
+            |    output [1:0]  rd_rob2rt_o_GENI_vector_csr_mtwiden,
+            |    output [13:0] rd_rob2rt_o_GENI_vector_csr_tm,
+            |    output [1:0]  rd_rob2rt_o_GENI_vector_csr_tk,
+            |""".stripMargin.replaceAll("GENI", i.toString)
+      }
+      moduleInterface += """    output [15:0] rd_rob2rt_o_GENI_vxsaturate,
             |    output [31:0] rd_rob2rt_o_GENI_uop_pc,
             |    output rd_rob2rt_o_GENI_last_uop_valid,
             """.stripMargin.replaceAll("GENI", i.toString)
@@ -379,6 +388,14 @@ object GenerateCoreShimSource {
       |  assign rd_rob2rt_o_GENI_last_uop_valid = 1'b0;
       |`endif
       |""".stripMargin.replaceAll("GENI", i.toString)
+      if (enableVme) {
+        // Rob2Rt does not carry the VME mtype state; tie off to 0.
+        coreInstantiation +=
+          ("  assign rd_rob2rt_o_GENI_vector_csr_mtype   = 32'd0;\n" +
+            "  assign rd_rob2rt_o_GENI_vector_csr_mtwiden = 2'd0;\n" +
+            "  assign rd_rob2rt_o_GENI_vector_csr_tm     = 14'd0;\n" +
+            "  assign rd_rob2rt_o_GENI_vector_csr_tk     = 2'd0;\n").replaceAll("GENI", i.toString)
+      }
     }
     coreInstantiation += """  assign trap_bits_pc = trap_data.pc;
       |  assign trap_bits_opcode = trap_data.opcode;
@@ -405,6 +422,17 @@ object GenerateCoreShimSource {
     coreInstantiation += "  assign configLmul = config_state.lmul;\n"
     coreInstantiation += "  assign configLmulOrig = config_state.lmul_orig;\n"
     coreInstantiation += "  assign configVill = config_state.vill;\n"
+
+    // VME (Zvt) packed mtype CSR view assembled from {tm, tk, mtwiden} per
+    // spec §15.1.1.2. Tied to 0 when ZVT_ON is not defined.
+    // Note: We use 2'd0 spacer before tk (instead of 3'd0) because tk is 3 bits
+    // (occupying 7:5 instead of spec's 6:5) to resolve spec discrepancy.
+    coreInstantiation +=
+      "`ifdef ZVT_ON\n" +
+        "  assign configMtype = {8'd0, config_state.tm, 2'd0, config_state.tk, 3'd0, config_state.mtwiden};\n" +
+        "`else\n" +
+        "  assign configMtype = 32'd0;\n" +
+        "`endif\n"
 
     moduleInterface + coreInstantiation + "endmodule\n"
   }
@@ -494,8 +522,11 @@ class RvvCoreWrapper(p: Parameters)
     val configLmul = Output(UInt(3.W))
     // This is the original one set in vset(i)vl(i)
     val configLmulOrig = Output(UInt(3.W))
-    val configVill     = Output(Bool())
-    val rvv_idle       = Output(Bool())
+
+    val configVill  = Output(Bool())
+    val configMtype = Output(UInt(32.W))
+    val rvv_idle    = Output(Bool())
+
     val queue_capacity = Output(UInt(4.W))
   })
   dontTouch(io.rd_rob2rt_o)
@@ -511,10 +542,11 @@ class RvvCoreWrapper(p: Parameters)
   addResource("hdl/verilog/rvv/inc/rvv_backend_dispatch.svh")
   addResource("hdl/verilog/rvv/inc/rvv_backend_div.svh")
   addResource("hdl/verilog/rvv/inc/rvv_backend_pmtrdt.svh")
-  addResource("hdl/verilog/rvv/common/adder.sv")                // New
-  addResource("hdl/verilog/rvv/common/arb_round_robin.sv")      // New
-  addResource("hdl/verilog/rvv/common/barrel_shifter.sv")       // New
-  addResource("hdl/verilog/rvv/common/handshake_ff.sv")         // New
+  addResource("hdl/verilog/rvv/common/adder.sv")           // New
+  addResource("hdl/verilog/rvv/common/arb_round_robin.sv") // New
+  addResource("hdl/verilog/rvv/common/barrel_shifter.sv")  // New
+  addResource("hdl/verilog/rvv/common/handshake_ff.sv")    // New
+  addResource("hdl/verilog/rvv/common/handshake_multistage_ctrl.sv")
   addResource("hdl/verilog/rvv/common/handshake_multi_fifo.sv") // New
   addResource("hdl/verilog/rvv/common/cdffr.sv")
   addResource("hdl/verilog/rvv/common/compressor_3to2.sv")
@@ -643,7 +675,27 @@ class RvvCoreWrapper(p: Parameters)
   addResource("hdl/verilog/rvv/design/rvv_backend_falu.sv")
   addResource("hdl/verilog/rvv/design/rvv_backend.sv")
   addResource("hdl/verilog/rvv/design/RvvCore.sv")
-  setInline("RvvCoreWrapper.sv", GenerateCoreShimSource(p.instructionLanes, p.rvvVlen))
+  if (p.enableVme) {
+    addResource("hdl/verilog/rvv/design/Zvt/fp_absaddsub.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/fp_addfront.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/fp_align.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/fp_classifier.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/fp_mulfront.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/fp_rounding.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_acc.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_acc_reg.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_ctrl.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_pe_adder.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_pe_adder_fp_lane.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_pe_adder_int_lane.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_pe_array.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_pe_block.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_pe_mulbulk.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_pe_mulbulk_fp_lane.sv")
+    addResource("hdl/verilog/rvv/design/Zvt/zvt_pe_mulbulk_int_lane.sv")
+  }
+  setInline("RvvCoreWrapper.sv", GenerateCoreShimSource(p.instructionLanes, p.rvvVlen, p.enableVme))
 }
 
 // Shim class for RVVCore, which translates the SV RVVCore interfaces with the
@@ -694,8 +746,15 @@ class RvvCoreShim(p: Parameters) extends Module {
   io.configState.bits.lmul      := rvvCoreWrapper.io.configLmul
   io.configState.bits.lmul_orig := rvvCoreWrapper.io.configLmulOrig
   io.configState.bits.vill      := rvvCoreWrapper.io.configVill
-  io.rvv_idle                   := rvvCoreWrapper.io.rvv_idle
-  io.queue_capacity             := rvvCoreWrapper.io.queue_capacity
+  if (p.enableVme) {
+    val mt = rvvCoreWrapper.io.configMtype
+    io.configState.bits.mtype.get   := mt
+    io.configState.bits.mtwiden.get := mt(1, 0)
+    io.configState.bits.tk.get      := mt(7, 5)
+    io.configState.bits.tm.get      := mt(23, 10)
+  }
+  io.rvv_idle       := rvvCoreWrapper.io.rvv_idle
+  io.queue_capacity := rvvCoreWrapper.io.queue_capacity
 
   val vstart_wdata = MuxCase(
     vstart,

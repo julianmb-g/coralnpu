@@ -100,6 +100,9 @@ class Parameters(var m: Seq[MemoryRegion] = Seq(), val hartId: Int = 0, val xlen
   // indexing a single byte within one vector register
   def rvvByteIndexWidth: Int = log2Ceil(rvvVlenb)
 
+  // Enable VME (Zvt) non-tile state and mset* instructions. Requires enableRvv.
+  var enableVme = false
+
   def useRetirementBuffer: Boolean = { enableVerification }
 
   // Scalar Floating point
@@ -188,6 +191,23 @@ class Parameters(var m: Seq[MemoryRegion] = Seq(), val hartId: Int = 0, val xlen
       addrBits = axi2AddrBits,
       idBits = axi2IdBits
     )
+  }
+
+  def augmentId(extraBits: Int): Parameters = {
+    val newP = new Parameters(m, hartId, xlen)
+    newP.enableVerification = this.enableVerification
+    newP.rawExposeDebugPorts = this.rawExposeDebugPorts
+    newP.enableRvv = this.enableRvv
+    newP.enableFloat = this.enableFloat
+    newP.enableZfbfmin = this.enableZfbfmin
+    newP.enableVectorBf16 = this.enableVectorBf16
+    newP.enableFetchL0 = this.enableFetchL0
+    newP.fetchDataBits = this.fetchDataBits
+    newP.lsuDataBits = this.lsuDataBits
+    newP.itcmSizeKBytes = this.itcmSizeKBytes
+    newP.dtcmSizeKBytes = this.dtcmSizeKBytes
+    newP.axi2IdBits = this.axi2IdBits + extraBits
+    newP
   }
 }
 

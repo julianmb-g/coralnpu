@@ -129,7 +129,7 @@ class SCore(p: Parameters) extends Module {
   // Decode
   // Decode/Dispatch
   dispatch.io.inst <> fetch.io.inst.lanes
-  dispatch.io.halted           := csr.io.halted || csr.io.wfi || csr.io.dm.debug_mode
+  dispatch.io.halted := csr.io.halted || csr.io.wfi || csr.io.dm.debug_mode || csr.io.dm.entering_debug_mode
   dispatch.io.mactive          := false.B
   dispatch.io.lsuActive        := lsu.io.active
   dispatch.io.lsuQueueCapacity := lsu.io.queueCapacity
@@ -494,6 +494,11 @@ class SCore(p: Parameters) extends Module {
     csr.io.rvv.get.vtype   := io.rvvcore.get.configState.bits.vtype
     csr.io.rvv.get.vxrm    := io.rvvcore.get.csr.vxrm
     csr.io.rvv.get.vxsat   := io.rvvcore.get.csr.vxsat
+    if (p.enableVme) {
+      csr.io.rvv.get.mtype := io.rvvcore.get.configState.bits.mtype.get
+    } else {
+      csr.io.rvv.get.mtype := 0.U
+    }
   }
   val isBranching            = bru.map(_.io.taken.valid).reduce(_ || _)
   val hasFetchedInstructions = fetch.io.inst.lanes.map(_.valid).reduce(_ || _)

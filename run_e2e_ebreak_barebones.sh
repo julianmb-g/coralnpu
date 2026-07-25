@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+[[ -f /.dockerenv ]] || exit 1
+
 # Cleanup trap
 trap 'rm -f ./ebreak.elf' EXIT
 

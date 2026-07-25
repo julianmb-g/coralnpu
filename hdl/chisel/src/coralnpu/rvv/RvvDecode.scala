@@ -63,36 +63,46 @@ class RvvCompressedInstruction(p: Parameters) extends Bundle {
   // These instructions need to trap when vstart is not zero. This includes
   // all reduction instructions.
   def requireZeroVstart(): Bool = {
-    (opcode === RvvCompressedOpcode.RVVALU) && (funct3() === "b010".U) &&
-    // OPMVV
-    MuxLookup(funct6(), false.B)(
-      Seq(
-        "b000000".U    -> true.B, // vredsum
-        "b000001".U    -> true.B, // vredand
-        "b000010".U    -> true.B, // vredor
-        "b000011".U    -> true.B, // vredxor
-        "b000100".U    -> true.B, // vredminu
-        "b000101".U    -> true.B, // vredmin
-        "b000110".U    -> true.B, // vredmaxu
-        "b000111".U    -> true.B, // vredmax
-        "b010000".U    -> MuxLookup(vs1(), false.B)(
-          Seq( // VWXUNARY0
-            "b10000".U -> true.B, // vcpop
-            "b10001".U -> true.B  // vfirst
+    (opcode === RvvCompressedOpcode.RVVALU) && (
+      ((funct3() === "b010".U) &&
+        MuxLookup(funct6(), false.B)(
+          Seq(
+            "b000000".U    -> true.B, // vredsum
+            "b000001".U    -> true.B, // vredand
+            "b000010".U    -> true.B, // vredor
+            "b000011".U    -> true.B, // vredxor
+            "b000100".U    -> true.B, // vredminu
+            "b000101".U    -> true.B, // vredmin
+            "b000110".U    -> true.B, // vredmaxu
+            "b000111".U    -> true.B, // vredmax
+            "b010000".U    -> MuxLookup(vs1(), false.B)(
+              Seq( // VWXUNARY0
+                "b10000".U -> true.B, // vcpop
+                "b10001".U -> true.B  // vfirst
+              )
+            ),
+            "b010100".U -> MuxLookup(vs1(), false.B)(
+              Seq( // VMUNARY0
+                "b00001".U -> true.B, // vmsbf
+                "b00010".U -> true.B, // vmsof
+                "b00011".U -> true.B, // vmsif
+                "b10000".U -> true.B  // viota
+              )
+            ),
+            "b010111".U -> true.B, // vcompress
+            "b110000".U -> true.B, // vwredsumu
+            "b110001".U -> true.B  // vwredsum
           )
-        ),
-        "b010100".U -> MuxLookup(vs1(), false.B)(
-          Seq( // VMUNARY0
-            "b00001".U -> true.B, // vmsbf
-            "b00010".U -> true.B, // vmsof
-            "b00011".U -> true.B, // vmsif
-            "b10000".U -> true.B  // viota
-          )
-        ),
-        "b010111".U -> true.B, // vcompress
-        "b110000".U -> true.B, // vwredsumu
-        "b110001".U -> true.B  // vwredsum
-      )
+        )) ||
+        ((funct3() === "b001".U) &&
+          MuxLookup(funct6(), false.B)(
+            Seq(
+              "b000001".U -> true.B, // vfredusum
+              "b000011".U -> true.B, // vfredosum
+              "b000101".U -> true.B, // vfredmin
+              "b000111".U -> true.B  // vfredmax
+            )
+          ))
     )
   }
 
@@ -106,20 +116,43 @@ class RvvCompressedInstruction(p: Parameters) extends Bundle {
     (opcode === RvvCompressedOpcode.RVVALU && funct3() === "b111".U)
   }
 
+  // VME (Zvt) mset* family. All share opcode 1010111 and funct3 111 with
+  // vset*vl*, distinguished by bit31=1 and the funct7 / sub-funct fields.
+  // In the 25-bit `bits` view (which is instr[31:7]):
+  //   bits(24,18)  = instr[31:25] = funct7
+  //   bits(15,13)  = instr[22:20] = sub-funct (for the 000010 family)
+  def isMsetmtype(): Bool =
+    isVset() && bits(24, 18) === "b1000001".U
+  def isMsettn(): Bool =
+    isVset() && bits(24, 18) === "b1000010".U && bits(15, 13) === "b000".U
+  def isMsettm(): Bool =
+    isVset() && bits(24, 18) === "b1000010".U && bits(15, 13) === "b001".U
+  def isMsettk(): Bool =
+    isVset() && bits(24, 18) === "b1000010".U && bits(15, 13) === "b010".U
+  def isMsetmtypei(): Bool =
+    isVset() && bits(24, 18) === "b1000010".U && bits(15, 13) === "b011".U
+  def isMsetAny(): Bool =
+    isMsetmtype() || isMsettn() || isMsettm() || isMsettk() || isMsetmtypei()
+
   def isLoadStore(): Bool = {
     opcode.isOneOf(RvvCompressedOpcode.RVVLOAD, RvvCompressedOpcode.RVVSTORE)
   }
 
   def readsRs1(): Bool = {
     isLoadStore() ||
-    (funct3() === "b100".U) ||                              // OPIVX
-    (funct3() === "b110".U) ||                              // OPMVX
-    ((funct3() === "b111".U) && (bits(24, 23) =/= "b11".U)) // vsetvl and vsetvli
+    (funct3() === "b100".U) ||                                 // OPIVX
+    (funct3() === "b110".U) ||                                 // OPMVX
+    ((funct3() === "b111".U) && (bits(24, 23) =/= "b11".U)) || // vsetvl(i)
+    // VME mset*: msetmtype/msettn/msettm/msettk all read rs1. Above clause
+    // already covers msettn/m/k (bits[24:23]=00) but not msetmtype (bits[24:23]
+    // is rs2 high bits, which can be 11).
+    isMsetmtype() || isMsettn() || isMsettm() || isMsettk()
   }
 
   def readsRs2(): Bool = {
     (isLoadStore() && (mop === RvvAddressingMode.STRIDED)) ||
-    ((funct3() === "b111".U) && (bits(24, 18) === "b1000000".U))
+    ((funct3() === "b111".U) && (bits(24, 18) === "b1000000".U)) ||
+    isMsetmtype()
   }
 
   def readsFloatRs1(): Bool = {
@@ -435,6 +468,10 @@ class RvvS1DecodeInstructionBase {
     val op = MuxUpTo1H(
       MakeInvalid(RvvAluOp()),
       Seq(
+        (f6vm === "b000001".U)                       -> MakeValid(RvvAluOp.VFREDUSUM),
+        (f6vm === "b000011".U)                       -> MakeValid(RvvAluOp.VFREDOSUM),
+        (f6vm === "b000101".U)                       -> MakeValid(RvvAluOp.VFREDMIN),
+        (f6vm === "b000111".U)                       -> MakeValid(RvvAluOp.VFREDMAX),
         (f6vm === "b010010".U && vs1 === "b01101".U) -> MakeValid(RvvAluOp.VFWCVTBF16),
         (f6vm === "b010010".U && vs1 === "b11101".U) -> MakeValid(RvvAluOp.VFNCVTBF16),
         (f6vm === "b111011".U)                       -> MakeValid(RvvAluOp.VFWMACCBF16)
