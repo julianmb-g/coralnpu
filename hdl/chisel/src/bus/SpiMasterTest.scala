@@ -398,4 +398,53 @@ class SpiMasterSpec extends AnyFreeSpec with ChiselSim with TLULTestUtils {
       assert((status & 2) != 0, "RX FIFO should be empty in HDTX mode")
     }
   }
+
+  "SpiMaster HDTX with RX Backpressure" in {
+    simulate(new SpiMasterCtrl(p)) { dut =>
+      dut.reset.poke(true.B)
+      dut.clock.step()
+      dut.reset.poke(false.B)
+
+      println("DEBUG: Starting initial full-duplex transfers")
+      // First, saturate the RX FIFO by sending 4 bytes in normal full-duplex mode
+      tlWrite(dut.io.tl, dut.clock, 0x04.U, 0x01.U) // Normal mode, Enable=1
+      for (i <- 0 until 4) {
+        tlWrite(dut.io.tl, dut.clock, 0x08.U, i.U)
+        for (_ <- 0 until 100) {
+          dut.io.spi.miso.poke(dut.io.spi.mosi.peek())
+          dut.clock.step()
+        }
+      }
+
+      println("DEBUG: Initial transfers complete. Checking RX FIFO status")
+      // Check that RX FIFO is no longer empty (not empty bit should be clear)
+      val statusFull = tlReadData(dut.io.tl, dut.clock, 0x00.U)
+      assert((statusFull & 2) == 0, "RX FIFO should not be empty")
+
+      println("DEBUG: Enabling HDTX mode")
+      // Enable SPI with HDTX (bit 4)
+      // Div=2, HDTX=1, Enable=1 -> 0x0211
+      tlWrite(dut.io.tl, dut.clock, 0x04.U, 0x0211.U)
+
+      println("DEBUG: Sending HDTX byte")
+      // Write a byte to TXDATA. In HDTX mode, it should ignore RX backpressure.
+      tlWrite(dut.io.tl, dut.clock, 0x08.U, 0x55.U)
+
+      println("DEBUG: Waiting for HDTX byte to finish")
+      // Wait for byte to finish (busy bit in status)
+      // Instead of polling aggressively, we step and then poll occasionally
+      var steps = 0
+      var isBusy = true
+      while (isBusy && steps < 1000) {
+        for (_ <- 0 until 10) dut.clock.step()
+        steps += 10
+        val statusHdtx = tlReadData(dut.io.tl, dut.clock, 0x00.U)
+        isBusy = (statusHdtx & 1) != 0
+      }
+
+      if (steps >= 1000) println("DEBUG: HDTX transfer stalled due to full RX FIFO backpressure")
+      assert(steps < 1000, "HDTX transfer stalled due to full RX FIFO backpressure")
+      println("DEBUG: HDTX test completed successfully")
+    }
+  }
 }

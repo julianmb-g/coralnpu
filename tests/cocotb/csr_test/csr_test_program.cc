@@ -23,6 +23,8 @@ struct CsrTestResults {
   uint32_t test_3_read_value;
   uint32_t test_4_write_value;
   uint32_t test_4_read_value;
+  uint32_t test_mepc_before;
+  uint32_t test_mepc_after;
   uint32_t test_status;
 };
 
@@ -50,6 +52,13 @@ int main(int argc, char** argv) {
   csr_results.test_3_write_value = test3_write;
   csr_results.test_3_read_value = test3_read;
 
+  uint32_t mepc_init = 0x12345678;
+  asm volatile("csrw mepc, %0" : : "r"(mepc_init));
+
+  uint32_t mepc_before = 0;
+  asm volatile("csrr %0, mepc" : "=r"(mepc_before));
+  csr_results.test_mepc_before = mepc_before;
+
   uint32_t test4_write = 0x0000cafe;
   asm volatile("csrw mstatush, %0" : : "r"(test4_write));
   uint32_t test4_read = 0;
@@ -57,10 +66,16 @@ int main(int argc, char** argv) {
   csr_results.test_4_write_value = test4_write;
   csr_results.test_4_read_value = test4_read;
 
+  uint32_t mepc_after = 0;
+  asm volatile("csrr %0, mepc" : "=r"(mepc_after));
+  csr_results.test_mepc_after = mepc_after;
+
   if ((test1_read & test1_write) == test1_write &&
       (test2_read & test2_write) == test2_write &&
       (test3_read & test3_write) == test3_write &&
-      (test4_read == 0x00000000)) {
+      (test4_read == 0x00000000) &&
+      (mepc_before == mepc_init) &&
+      (mepc_after == mepc_before)) {
     csr_results.test_status = 0;
   } else {
     csr_results.test_status = 1;

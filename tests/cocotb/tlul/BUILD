@@ -155,12 +155,19 @@ cocotb_test_suite(
 TLUL_SOCKET_1N_TESTCASES = [
     "test_steering",
     "test_error_response",
+    "test_random_backpressure",
+    "test_arbitration_and_ordering",
+    "test_source_id_augmentation",
 ]
 # END_TESTCASES_FOR_tlul_socket_1n_128_cocotb_test
 
 cocotb_test_suite(
     name = "tlul_socket_1n_128_cocotb_test",
-    simulators = ["verilator", "vcs"],
+    timeout = "moderate",
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = TLUL_SOCKET_1N_TESTCASES,
     testcases_vname = "TLUL_SOCKET_1N_TESTCASES",
     tests_kwargs = {
@@ -182,13 +189,20 @@ cocotb_test_suite(
 
 # BEGIN_TESTCASES_FOR_tlul_socket_m1_2_128_cocotb_test
 TLUL_SOCKET_M1_2_TESTCASES = [
-    "test_arbitration",
+    "test_arbitration_and_ordering",
+    "test_directed_backpressure",
+    "test_random_backpressure",
+    "test_source_id_width",
 ]
 # END_TESTCASES_FOR_tlul_socket_m1_2_128_cocotb_test
 
 cocotb_test_suite(
     name = "tlul_socket_m1_2_128_cocotb_test",
-    simulators = ["verilator", "vcs"],
+    timeout = "moderate",
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = TLUL_SOCKET_M1_2_TESTCASES,
     testcases_vname = "TLUL_SOCKET_M1_2_TESTCASES",
     tests_kwargs = {

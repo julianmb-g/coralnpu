@@ -1,10 +1,10 @@
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,26 +14,26 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ClockCycles, with_timeout
-import math
+from cocotb.triggers import RisingEdge, ClockCycles, Combine, with_timeout
 import random
 
-from coralnpu_test_utils.TileLinkULInterface import TileLinkULInterface, create_a_channel_req
+from coralnpu_test_utils.TileLinkULInterface import create_a_channel_req
+from coralnpu_test_utils.TlulVerificationEnv import TlulVerificationEnv
 
 
 async def setup_dut(dut):
     """Common setup for all tests."""
-    clock = Clock(dut.clock, 10)
+    clock = Clock(dut.clock, 10, unit="ns")
     cocotb.start_soon(clock.start())
     dut.reset.value = 1
-    await ClockCycles(dut.clock, 2)
+    await ClockCycles(dut.clock, 5)
     dut.reset.value = 0
     await RisingEdge(dut.clock)
 
 
 @cocotb.test()
-async def test_arbitration(dut):
-    """Verify requests are arbitrated and responses are routed correctly."""
+async def test_arbitration_and_ordering(dut):
+    """Verify fixed-priority arbitration and strict in-order response routing using TlulVerificationEnv."""
     await setup_dut(dut)
 
     def get_master_from_source(source_id):
@@ -61,7 +61,20 @@ async def test_arbitration(dut):
             cocotb.start_soon(device_responder(j)) for j in range(env.N)
         ]
 
-    StIdW = math.ceil(math.log2(M))
+        # 2. Host Traffic Generators
+        async def send_master_traffic(master_idx):
+            host = env.hosts[master_idx]
+            for j in range(num_txns_per_master):
+                source = (master_idx * 16) + j
+                req = create_a_channel_req(
+                    address=0x1000 + master_idx * 0x100 + j * 4,
+                    data=0x11223344 + source,
+                    mask=0xF,
+                    source=source
+                )
+                await host.host_put(req)
+                if random.random() < 0.3:
+                    await ClockCycles(dut.clock, random.randint(1, 3))
 
         traffic_tasks = [
             cocotb.start_soon(send_master_traffic(i)) for i in range(M)
@@ -87,14 +100,14 @@ async def test_arbitration(dut):
         )
         assert first_req_master == 0, f"Priority failure: Master {first_req_master} won over Master 0 at startup"
 
-    device_task = cocotb.start_soon(device_responder())
+        # Verify no scoreboard errors
+        assert env.scoreboard.errors == 0, f"Scoreboard detected {env.scoreboard.errors} errors during execution"
 
-    for i in range(M):
-        await host_ifs[i].host_put(reqs[i])
+    finally:
+        for r_task in responder_tasks:
+            r_task.cancel()
+        await env.stop()
 
-    for i in range(M):
-        response = await host_ifs[i].host_get_response()
-        assert response["source"] == reqs[i]["source"]
 
 @cocotb.test()
 async def test_directed_backpressure(dut):
@@ -208,6 +221,46 @@ async def test_directed_backpressure(dut):
         assert env.scoreboard.errors == 0, f"Scoreboard detected errors: {env.scoreboard.errors}"
 
     finally:
+        await env.stop()
+
+
+@cocotb.test()
+async def test_source_id_width(dut):
+    """Verify that source IDs are not truncated unexpectedly."""
+    await setup_dut(dut)
+    env = TlulVerificationEnv(dut, lambda src: 0)
+    StIdW = (env.M - 1).bit_length()
+    env.scoreboard.device_to_host_source_cb = lambda src: src >> StIdW
+    await env.start()
+    
+    # Start Device Responder
+    responder_tasks = []
+    async def device_responder(dev_idx):
+        device = env.devices[dev_idx]
+        while True:
+            req = await device.device_get_request()
+            await device.device_respond(
+                opcode=0, param=0, size=req["size"], source=req["source"]
+            )
+
+    responder_tasks = [
+        cocotb.start_soon(device_responder(j)) for j in range(env.N)
+    ]
+
+    try:
+        # Use a source ID that should fit in the configured width but would be
+        # impacted if idBits is mutated/reduced.
+        # Assuming standard config has at least 6 bits (idBits is 6 in TlulSocketM1_2_128).
+        high_source = 63
+        req = create_a_channel_req(address=0x1000, data=0xAAA, source=high_source)
+        await env.hosts[0].host_put(req)
+        
+        resp = await env.hosts[0].host_get_response()
+        assert resp["source"] == high_source, f"Source ID truncated: expected {high_source}, got {resp['source']}"
+        assert env.scoreboard.errors == 0, f"Scoreboard detected errors: {env.scoreboard.errors}"
+    finally:
+        for r_task in responder_tasks:
+            r_task.cancel()
         await env.stop()
 
 

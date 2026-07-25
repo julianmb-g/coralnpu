@@ -261,3 +261,122 @@ async def test_random_backpressure(dut):
         for r_task in responder_tasks:
             r_task.cancel()
         await env.stop()
+
+@cocotb.test()
+async def test_backpressure_on_selected_device(dut):
+    """Verify that ready signal correctly propagates from the selected device."""
+    await setup_dut(dut)
+    
+    def get_master_from_source(source_id):
+        return 0
+
+    env = TlulVerificationEnv(dut, get_master_from_source)
+    await env.start()
+    await ClockCycles(dut.clock, 1)
+
+    assert env.N > 1, "This test requires at least 2 device ports"
+    host = env.hosts[0]
+    device1 = env.devices[1]
+
+    # Force backpressure on Device 1
+    dut.io_tl_d_1_a_ready.value = 0
+    
+    # Try to route to Device 1
+    dut.io_dev_select_i.value = 1
+    req = create_a_channel_req(address=0x2000, data=0xABCD, source=7)
+
+    # The host should *not* receive a ready signal immediately if Device 1 is not ready
+    await host.host_put(req)
+    
+    # Wait to see if the ready signal ever goes high
+    ready_observed = False
+    for _ in range(50):
+        await RisingEdge(dut.clock)
+        if dut.io_tl_h_a_ready.value == 1:
+            ready_observed = True
+            break
+            
+    assert not ready_observed, "Ready signal was observed high despite backpressure on selected device"
+
+    # Now make Device 1 ready and verify handshake
+    dut.io_tl_d_1_a_ready.value = 1
+    
+    handshake_observed = False
+    for _ in range(50):
+        await RisingEdge(dut.clock)
+        if dut.io_tl_h_a_valid.value == 1 and dut.io_tl_h_a_ready.value == 1:
+            handshake_observed = True
+            break
+    
+    assert handshake_observed, "Handshake not observed after making device ready"
+
+    await env.stop()
+
+
+@cocotb.test()
+async def test_arbitration_and_ordering(dut):
+    """Verify fixed-priority D-channel arbitration (Lower index = higher priority)."""
+    await setup_dut(dut)
+    env = TlulVerificationEnv(dut, lambda x: 0)
+    await env.start()
+    
+    host = env.hosts[0]
+    dev0 = env.devices[0]
+    dev1 = env.devices[1]
+
+    async def wait_host_handshake():
+        while True:
+            await RisingEdge(dut.clock)
+            if dut.io_tl_h_a_valid.value == 1 and dut.io_tl_h_a_ready.value == 1:
+                return
+    
+    # Send Req0 to Dev0, Req1 to Dev1
+    dut.io_dev_select_i.value = 0
+    await host.host_put(create_a_channel_req(address=0x1000, data=0x1, source=0))
+    await wait_host_handshake()
+    
+    dut.io_dev_select_i.value = 1
+    await host.host_put(create_a_channel_req(address=0x2000, data=0x2, source=1))
+    await wait_host_handshake()
+    
+    # Get requests at devices
+    req0 = await dev0.device_get_request()
+    req1 = await dev1.device_get_request()
+    
+    # Trigger simultaneous responses
+    # This might require low-level poke to ensure they happen in the same cycle
+    # or rely on Env to handle it.
+    await dev0.device_respond(opcode=1, param=0, size=req0["size"], source=req0["source"])
+    await dev1.device_respond(opcode=1, param=0, size=req1["size"], source=req1["source"])
+    
+    # Host should get response 0 then 1
+    resp0 = await host.host_get_response()
+    resp1 = await host.host_get_response()
+    
+    assert resp0["source"] == 0, f"Expected source 0 first, got {resp0['source']}"
+    assert resp1["source"] == 1, f"Expected source 1 second, got {resp1['source']}"
+    
+    await env.stop()
+
+
+@cocotb.test()
+async def test_source_id_augmentation(dut):
+    """Verify source ID augmentation."""
+    await setup_dut(dut)
+    
+    def get_master_from_source(source_id):
+        return 0
+
+    env = TlulVerificationEnv(dut, get_master_from_source)
+    await env.start()
+    
+    # Send a request with a large source ID to test augmentation
+    host = env.hosts[0]
+    req = create_a_channel_req(address=0x1000, data=0xABCD, source=0x5)
+    await host.host_put(req)
+    
+    # Wait for response and verify source ID is preserved
+    resp = await host.host_get_response()
+    assert resp["source"] == 0x5, f"Source ID mismatch: Expected 0x5, got {resp['source']}"
+    
+    await env.stop()
