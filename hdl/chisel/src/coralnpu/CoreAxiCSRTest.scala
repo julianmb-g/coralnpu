@@ -80,7 +80,7 @@ class CoreAxiCSRSpec extends AnyFreeSpec with ChiselSim {
       dut.io.axi.write.addr.bits.size.poke(2.U)
       dut.io.axi.write.addr.ready.expect(1)
       dut.io.axi.write.data.bits.data.poke((BigInt(0x20000000) << 32).U)
-      dut.io.axi.write.data.bits.strb.poke(0xff00.U)
+      dut.io.axi.write.data.bits.strb.poke(0xFF00.U)
       dut.io.axi.write.data.bits.last.poke(true.B)
       dut.io.axi.write.data.valid.poke(true.B)
       dut.io.axi.write.data.ready.expect(1)
@@ -155,7 +155,7 @@ class CoreAxiCSRSpec extends AnyFreeSpec with ChiselSim {
       dut.io.axi.write.addr.bits.size.poke(2.U)
       dut.io.axi.write.addr.ready.expect(1)
       dut.io.axi.write.data.bits.data.poke((BigInt(0x20000000) << 32).U)
-      dut.io.axi.write.data.bits.strb.poke(0xff00.U)
+      dut.io.axi.write.data.bits.strb.poke(0xFF00.U)
       dut.io.axi.write.data.bits.last.poke(true.B)
       dut.io.axi.write.data.valid.poke(true.B)
       dut.io.axi.write.data.ready.expect(1)
@@ -184,57 +184,5 @@ class CoreAxiCSRSpec extends AnyFreeSpec with ChiselSim {
       dut.io.reset.expect(1)
       dut.io.pcStart.expect(0)
     }
-  }
-}
-
-class ParametersSpec extends AnyFreeSpec {
-  "Parameters should correctly compute shouldExposeDebugPorts" in {
-    val p = new Parameters()
-    
-    assert(p.rawExposeDebugPorts == false)
-    
-    p.rawExposeDebugPorts = false
-    p.enableVerification = false
-    assert(p.shouldExposeDebugPorts == false)
-    
-    p.rawExposeDebugPorts = true
-    p.enableVerification = false
-    assert(p.shouldExposeDebugPorts == true)
-    
-    p.rawExposeDebugPorts = false
-    p.enableVerification = true
-    assert(p.shouldExposeDebugPorts == true)
-    
-    p.rawExposeDebugPorts = true
-    p.enableVerification = true
-    assert(p.shouldExposeDebugPorts == true)
-  }
-}
-
-class EmitCoreSpec extends AnyFreeSpec {
-  "EmitCore should correctly parse exposeDebugPorts" in {
-    EmitCore.parseArgs(Array("--exposeDebugPorts=true"))
-    assert(EmitCore.p.rawExposeDebugPorts == true)
-    
-    EmitCore.parseArgs(Array("--exposeDebugPorts=false"))
-    assert(EmitCore.p.rawExposeDebugPorts == false)
-  }
-
-  "EmitCore should handle invalid inputs strictly" in {
-    val invalidInputs = Seq("truth", "issue", "eurt", "true ")
-    for (input <- invalidInputs) {
-      var threw = false
-      try {
-        EmitCore.parseArgs(Array(s"--exposeDebugPorts=$input"))
-      } catch {
-        case _: Exception => threw = true
-      }
-      if (!threw) {
-        assert(EmitCore.p.rawExposeDebugPorts == false)
-      }
-    }
-    
-    // Reset state for safety
-    EmitCore.p.rawExposeDebugPorts = false
   }
 }

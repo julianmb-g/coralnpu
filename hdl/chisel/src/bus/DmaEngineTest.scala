@@ -22,12 +22,10 @@ import coralnpu.Parameters
 class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
   val hostP = new Parameters
   hostP.lsuDataBits = 128
-  val hostTlulP = hostP.toTLUL()
 
   val deviceP = new Parameters
   deviceP.lsuDataBits = 32
   deviceP.axi2IdBits = 10
-  val deviceTlulP = deviceP.toTLUL()
 
   // --- Device-port (CSR) TL-UL helpers ---
 
@@ -79,19 +77,19 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
 
   /** Build a 32-byte descriptor in memory. */
   def buildDescriptor(
-    mem: scala.collection.mutable.Map[Long, Byte],
-    descAddr: Long,
-    srcAddr: Long,
-    dstAddr: Long,
-    xferLen: Int,
-    xferWidth: Int = 2,
-    srcFixed: Boolean = false,
-    dstFixed: Boolean = false,
-    pollEn: Boolean = false,
-    nextDesc: Long = 0,
-    pollAddr: Long = 0,
-    pollMask: Long = 0,
-    pollValue: Long = 0
+      mem: scala.collection.mutable.Map[Long, Byte],
+      descAddr: Long,
+      srcAddr: Long,
+      dstAddr: Long,
+      xferLen: Int,
+      xferWidth: Int = 2,
+      srcFixed: Boolean = false,
+      dstFixed: Boolean = false,
+      pollEn: Boolean = false,
+      nextDesc: Long = 0,
+      pollAddr: Long = 0,
+      pollMask: Long = 0,
+      pollValue: Long = 0
   ): Unit = {
     memWrite32(mem, descAddr + 0x00, srcAddr)
     memWrite32(mem, descAddr + 0x04, dstAddr)
@@ -117,9 +115,9 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
     * (D fire happens).
     */
   def runDmaWithMemory(
-    dut: DmaEngine,
-    mem: scala.collection.mutable.Map[Long, Byte],
-    maxCycles: Int = 2000
+      dut: DmaEngine,
+      mem: scala.collection.mutable.Map[Long, Byte],
+      maxCycles: Int = 2000
   ): Int = {
     val host     = dut.io.tl_host
     var txnCount = 0
@@ -193,7 +191,7 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
   // --- Tests ---
 
   "CSR Register Access" in {
-    simulate(new DmaEngine(hostTlulP, deviceTlulP)) { dut =>
+    simulate(new DmaEngine(hostP, deviceP)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)
@@ -211,7 +209,7 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
   }
 
   "CSR Error on Invalid Address" in {
-    simulate(new DmaEngine(hostTlulP, deviceTlulP)) { dut =>
+    simulate(new DmaEngine(hostP, deviceP)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)
@@ -222,7 +220,7 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
   }
 
   "CSR Error on Write to Read-Only Register" in {
-    simulate(new DmaEngine(hostTlulP, deviceTlulP)) { dut =>
+    simulate(new DmaEngine(hostP, deviceP)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)
@@ -241,7 +239,7 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
   }
 
   "Simple Mem-to-Mem Transfer" in {
-    simulate(new DmaEngine(hostTlulP, deviceTlulP)) { dut =>
+    simulate(new DmaEngine(hostP, deviceP)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)
@@ -278,7 +276,7 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
   }
 
   "Descriptor Chaining" in {
-    simulate(new DmaEngine(hostTlulP, deviceTlulP)) { dut =>
+    simulate(new DmaEngine(hostP, deviceP)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)
@@ -323,7 +321,7 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
   }
 
   "Fixed Destination Address (Mem to Periph)" in {
-    simulate(new DmaEngine(hostTlulP, deviceTlulP)) { dut =>
+    simulate(new DmaEngine(hostP, deviceP)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)
@@ -352,7 +350,7 @@ class DmaEngineSpec extends AnyFreeSpec with ChiselSim {
   }
 
   "Abort Transfer" in {
-    simulate(new DmaEngine(hostTlulP, deviceTlulP)) { dut =>
+    simulate(new DmaEngine(hostP, deviceP)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)

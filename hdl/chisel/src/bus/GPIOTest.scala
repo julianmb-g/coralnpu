@@ -17,14 +17,13 @@ package bus
 import chisel3._
 import chisel3.simulator.scalatest.ChiselSim
 import org.scalatest.freespec.AnyFreeSpec
-import coralnpu.Parameters
+import bus.TLULParameters
 class GPIOSpec extends AnyFreeSpec with ChiselSim with TLULTestUtils {
-  val p      = new Parameters
-  val tlul_p = p.toTLUL()
-  val gp     = GPIOParameters(width = 8)
+  val p  = new TLULParameters(dataBits = 32, addrBits = 32, idBits = 10, sinkBits = 1)
+  val gp = GPIOParameters(width = 8)
 
   "GPIO Output Control" in {
-    simulate(new GPIO(tlul_p, gp)) { dut =>
+    simulate(new GPIO(p, gp)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)
@@ -44,7 +43,7 @@ class GPIOSpec extends AnyFreeSpec with ChiselSim with TLULTestUtils {
   }
 
   "GPIO Input Read" in {
-    simulate(new GPIO(tlul_p, gp)) { dut =>
+    simulate(new GPIO(p, gp)) { dut =>
       dut.reset.poke(true.B)
       dut.clock.step()
       dut.reset.poke(false.B)

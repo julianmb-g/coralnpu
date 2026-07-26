@@ -186,3 +186,14 @@ cc_library(
     hdrs = [":rvv_cpp_util.h"],
     visibility = ["//visibility:public"],
 )
+
+py_library(
+    name = "TlulVerificationEnv",
+    srcs = ["TlulVerificationEnv.py"],
+    deps = [
+        requirement("cocotb"),
+        ":TileLinkULInterface",
+        ":axi_slave",
+    ],
+    visibility = ["//visibility:public"],
+)
