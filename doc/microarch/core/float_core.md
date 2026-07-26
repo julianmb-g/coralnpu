@@ -1,7 +1,5 @@
-# FloatCore
-
 <!--
- Copyright 2026 Google LLC
+ Copyright 2025 Google LLC
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -16,48 +14,76 @@
  limitations under the License.
 -->
 
+# Vector Float Core
+
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
 > **Intended Audience:** HW Devs
 
-## Overview
+The Vector Float Core (FloatCore) provides hardware support for IEEE 754-2008 compliant single-precision floating-point operations (RV32F) and Bfloat16 conversions (Zfbfmin). It utilizes the `fpnew` execution engine as its primary computational unit.
 
-The `FloatCore` module provides floating-point execution capabilities for the CoralNPU. It serves as the primary Chisel integration layer for the underlying `fpnew` (PULP FPU) SystemVerilog implementation.
+## Architectural function
 
-## Instantiation
+The Float Core is responsible for decoding and executing floating-point instructions dispatched from the main processor pipeline. It manages operand routing between the scalar and floating-point register files and handles floating-point status and control registers.
 
-The `FloatCore` is instantiated as a standard Chisel `Module` configured by the system `Parameters`.
-
-Internally, `FloatCore` instantiates the underlying `fpnew_top` SystemVerilog module as a Chisel `BlackBox`. This blackbox handles the inline generation and instantiation of `fpnew_top` along with its required parameters and sub-modules. The generation logic (`GenerateCoreShimSource`) dynamically outputs the source code that bridges the Chisel interface to the SystemVerilog `fpnew_top` ports.
-
-## `fpnew` Configuration Mapping
-
-The `fpnew_top` module is parameterized exclusively for 32-bit operations to match the RISC-V `RV32F` specification. The local parameter `impl` controls the pipeline configuration:
-
-- **Pipeline Stages**: Hardcoded to 3 stages across all sub-units.
-- **Unit Types**:
-  - `ADDMUL` (Addition/Multiplication): `PARALLEL`
-  - `DIVSQRT` (Division/Square Root): `MERGED`
-  - `NONCOMP` (Non-computational): `PARALLEL`
-  - `CONV` (Conversions): `MERGED`
-- **Pipeline Config**: Configured as `DISTRIBUTED`.
-- **Formats**: Fixed to `FP32` for source and destination, and `INT32` for integer formats.
-- **DivSqrt Selection**: Controlled dynamically based on the system `Parameters` (`p.floatPulpDivsqrt`).
+### Key features
+- **RV32F Support**: Full implementation of the RISC-V single-precision floating-point extension.
+- **Zfbfmin Support**: Support for `FCVT.S.BF16` and `FCVT.BF16.S` instructions for Bfloat16 integration.
+- **Fused Multiply-Add**: High-performance FMADD, FMSUB, NMADD, and NMSUB operations.
+- **Exceptions & Rounding**: Hardware management of `fflags` and `frm` fields.
 
 ## Interfaces
 
-`FloatCore` connects to the rest of the pipeline via the following interfaces:
+The Float Core interfaces with the instruction queue, register files, and the Load/Store Unit (LSU).
 
-| Interface     | Type                             | Direction (rel. FloatCore)         | Description                                                              |
-| :------------ | :------------------------------- | :--------------------------------- | :
+### Primary interfaces
 
+| Port Group | Type | Description |
+| :--- | :--- | :--- |
+| `inst` | Flipped(Decoupled) | Input instruction stream from the dispatcher. |
+| `read_ports` | Flipped(Vec(3)) | Read interfaces to the Floating-Point Register File (FRF). |
+| `write_ports` | Flipped(Vec(2)) | Write interfaces to the FRF. |
+| `rs1`, `rs2` | Flipped | Read interfaces to the Scalar Register File. |
+| `scalar_rd` | Decoupled | Write interface to the Scalar Register File for F->X moves and comparisons. |
+| `csr` | Bundle | Interface to `fflags` and `frm` status and control registers. |
+| `lsu_rd` | Flipped(Valid) | Direct write path for floating-point load data from the LSU. |
+
+[Source: `hdl/chisel/src/coralnpu/float/FloatCoreInterface.scala`]
+
+## Execution pipeline
+
+The Float Core uses a `BlackBox` wrapper (`FloatCoreWrapper`) for the `fpnew_top` module. It manages the handshaking and operand preparation required for the FPU.
+
+### Operand routing
+Instructions can source operands from either the floating-point register file or the scalar register file (e.g., `FMV.W.X`, `FCVT.S.W`).
+
+| Opcode | RS1 Source | RS2 Source | RS3 Source |
+| :--- | :--- | :--- | :--- |
+| `LOADFP` / `STOREFP` | Scalar | FRF (Store only) | N/A |
+| `OPFP` | FRF / Scalar | FRF | N/A |
+| `MADD` / `MSUB` | FRF | FRF | FRF |
+
+[Source: `hdl/chisel/src/coralnpu/float/FloatCore.scala`]
+
+### Rounding mode logic
+The Float Core validates the rounding mode (`rm`) specified in the instruction against the architectural `frm` CSR. If the instruction specifies dynamic rounding (`0b111`), it uses the value from the CSR. If the CSR value is also invalid, the instruction is stalled or marked as invalid.
+
+[Source: `hdl/chisel/src/coralnpu/float/FloatCoreInterface.scala`, `FloatCore.scala`]
+
+## Edge cases and behavior
+
+### Zfbfmin conversions
+When `enableZfbfmin` is active, the Float Core supports Bfloat16 to/from FP32 conversions. These are mapped to the `F2F` operation group in `fpnew` with specific format identifiers (`FP16ALT` for BF16).
+
+### Backpressure handling
+The Float Core uses an internal instruction queue (`instQueue`) and tracks the FPU's busy state (`busy_o`). It holds the current instruction until both the FPU and the output scalar writeback bus (if applicable) are ready to accept it.
+
+[Source: `hdl/chisel/src/coralnpu/float/FloatCore.scala`]
 
 --------------------------------------------------------------------------------
 
 **Provenance & Traceability**
-- **Verified As Of:** 2026-07-24
+- **Verified As Of:** 2026-07-25
 - **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
-- **Primary Source(s):** `hdl/chisel/src/coralnpu/float/FloatCore.scala:L71`, `hdl/chisel/src/coralnpu/float/FloatCore.scala:L166`, `hdl/chisel/src/coralnpu/float/FloatCore.scala:L231`, `hdl/chisel/src/coralnpu/float/FloatCoreInterface.scala:L180` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+- **Primary Source(s):** `hdl/chisel/src/coralnpu/float/FloatCore.scala`, `hdl/chisel/src/coralnpu/float/FloatCoreInterface.scala`
 - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
