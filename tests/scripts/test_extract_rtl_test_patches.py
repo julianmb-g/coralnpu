@@ -32,13 +32,30 @@ class TestExtractRtlTestPatches(unittest.TestCase):
         
         branches = parse_finalized_branches(temp_file)
         
-        self.assertIn('mutation/1', branches)
+        self.assertNotIn('mutation/1', branches)
         self.assertNotIn('mutation/2', branches)
-        self.assertIn('mutation/3', branches)
+        self.assertNotIn('mutation/3', branches)
         self.assertNotIn('mutation/4', branches)
         self.assertIn('mutation/5', branches)
         
         os.remove(temp_file)
+
+    def test_generate_patch_pathspec(self):
+        import subprocess
+        from unittest.mock import patch, mock_open
+        from extract_rtl_test_patches import generate_patch
+        
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = "dummy diff"
+            with patch('builtins.open', mock_open()):
+                generate_patch(['mutation/5'], '/dummy/repo', 'dummy.patch')
+            
+            # The 3rd call to subprocess.run should be the git diff command
+            diff_call = mock_run.call_args_list[-1]
+            args = diff_call[0][0]
+            self.assertIn('tests/', args)
+            self.assertIn('*Test.scala', args)
 
 if __name__ == '__main__':
     unittest.main()

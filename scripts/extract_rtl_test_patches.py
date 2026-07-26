@@ -15,12 +15,12 @@ def parse_finalized_branches(file_path):
                 # Handle both leading/trailing pipes and no leading/trailing pipes
                 if parts[0] == '':
                     # Leading pipe present: ['', BranchName, SourceCommit, Purpose, Status, Created, '']
-                    if len(parts) >= 5 and "Finalized" in parts[4]:
+                    if len(parts) >= 5 and "Finalized (Mutant Killed, Test Enhanced, Restored)" in parts[4]:
                         branch_name = parts[1].strip('` ')
                         finalized_branches.append(branch_name)
                 else:
                     # No leading pipe: [BranchName, SourceCommit, Purpose, Status, Created]
-                    if len(parts) >= 4 and "Finalized" in parts[3]:
+                    if len(parts) >= 4 and "Finalized (Mutant Killed, Test Enhanced, Restored)" in parts[3]:
                         branch_name = parts[0].strip('` ')
                         finalized_branches.append(branch_name)
                     
