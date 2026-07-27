@@ -53,41 +53,17 @@ class TestApplyDocDeltas(unittest.TestCase):
     @patch("os.path.isfile", return_value=True)
     @patch("apply_doc_deltas.validate_patch", return_value=True)
     @patch("subprocess.run")
-    def test_apply_patch_fallback_merge_success(self, mock_run, mock_validate, mock_isfile):
-        """Verifies fallback via 3-way merge is attempted and succeeds when git apply fails."""
-        mock_run.side_effect = [
-            subprocess.CalledProcessError(1, "git apply"),
-            None,  # git fetch
-            None,  # git merge
-            None,  # git reset
-            None,  # git checkout
-            None,  # git add
-        ]
-        
-        apply_doc_deltas.apply_patch("dummy.patch", "/dummy/ext")
-        
-        # Assert git apply was called
-        mock_run.assert_any_call(["git", "apply", "--index", "dummy.patch"], check=True)
-        # Assert fallback fetch and merge were called
-        mock_run.assert_any_call(["git", "fetch", "/dummy/ext", "main"], check=True)
-        mock_run.assert_any_call(["git", "merge", "FETCH_HEAD", "--no-commit", "--no-ff", "-X", "theirs"], check=True)
-
-    @patch("os.path.isfile", return_value=True)
-    @patch("apply_doc_deltas.validate_patch", return_value=True)
-    @patch("subprocess.run")
     def test_apply_patch_fallback_checkout_success(self, mock_run, mock_validate, mock_isfile):
-        """Verifies fallback via direct checkout succeeds when 3-way merge fails."""
+        """Verifies fallback via direct checkout succeeds."""
         mock_run.side_effect = [
             subprocess.CalledProcessError(1, "git apply"),
             None,  # git fetch
-            subprocess.CalledProcessError(1, "git merge"),  # git merge fails
-            None,  # git merge --abort
-            None,  # git checkout (fallback to checkout)
+            None,  # git checkout
         ]
         
         apply_doc_deltas.apply_patch("dummy.patch", "/dummy/ext")
         
-        # Assert fallback fetch, merge, and final checkout of doc/ were called
+        # Assert fallback fetch and final checkout of doc/ were called
         mock_run.assert_any_call(["git", "fetch", "/dummy/ext", "main"], check=True)
         mock_run.assert_any_call(["git", "checkout", "FETCH_HEAD", "--", "doc/"], check=True)
 

@@ -31,30 +31,15 @@ def validate_patch(patch_path):
 
 
 def apply_native_fallback(external_repo_path):
-    """Fallback using git fetch and 3-way merge or direct checkout."""
+    """Fallback using git fetch and direct checkout."""
     print("Attempting native fetch fallback...")
     try:
         # 1. Fetch from external repo path
         subprocess.run(["git", "fetch", external_repo_path, "main"], check=True)
         
-        # Try 3-way merge
-        try:
-            print("Trying native 3-way merge...")
-            # Merge without committing or fast-forwarding, prioritizing their changes
-            subprocess.run(["git", "merge", "FETCH_HEAD", "--no-commit", "--no-ff", "-X", "theirs"], check=True)
-            # Reset any changes outside of doc/
-            subprocess.run(["git", "reset", "HEAD", "--", "."], check=True)
-            # Clean up the working directory for non-doc changes
-            subprocess.run(["git", "checkout", "HEAD", "--", "."], check=True)
-            # Re-stage only the doc/ changes
-            subprocess.run(["git", "add", "doc/"], check=True)
-        except subprocess.CalledProcessError as merge_err:
-            print(f"3-way merge failed ({merge_err}). Falling back to direct checkout of doc/...")
-            try:
-                subprocess.run(["git", "merge", "--abort"], check=True)
-            except subprocess.CalledProcessError:
-                pass
-            subprocess.run(["git", "checkout", "FETCH_HEAD", "--", "doc/"], check=True)
+        # Direct checkout of doc/
+        print("Trying direct checkout of doc/...")
+        subprocess.run(["git", "checkout", "FETCH_HEAD", "--", "doc/"], check=True)
             
         print("Successfully applied documentation changes using native fetch fallback.")
     except subprocess.CalledProcessError as e:
