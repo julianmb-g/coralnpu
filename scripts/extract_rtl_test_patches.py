@@ -46,7 +46,7 @@ def generate_patch(branches, repo_path, output_patch_path):
             
             # Run git diff for each branch using merge base
             result = subprocess.run([
-                'git', '-C', repo_path, 'diff', merge_base, branch, '--', 'tests/', '*Test.scala'
+                'git', '-C', repo_path, 'diff', merge_base, branch, '--', 'tests/', '**/*Test.scala'
             ], capture_output=True, text=True, check=True)
             
             if result.stdout:

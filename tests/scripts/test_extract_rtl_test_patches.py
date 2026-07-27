@@ -55,7 +55,7 @@ class TestExtractRtlTestPatches(unittest.TestCase):
             diff_call = mock_run.call_args_list[-1]
             args = diff_call[0][0]
             self.assertIn('tests/', args)
-            self.assertIn('*Test.scala', args)
+            self.assertIn('**/*Test.scala', args)
 
 if __name__ == '__main__':
     unittest.main()

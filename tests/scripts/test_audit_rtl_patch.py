@@ -21,10 +21,10 @@ index 123..456 100644
 @@ -1 +1 @@
 -a
 +b
-diff --git a/src/MyTest.scala b/src/MyTest.scala
+diff --git a/src/deep/dir/MyTest.scala b/src/deep/dir/MyTest.scala
 index 123..456 100644
---- a/src/MyTest.scala
-+++ b/src/MyTest.scala
+--- a/src/deep/dir/MyTest.scala
++++ b/src/deep/dir/MyTest.scala
 """)
         
         from audit_rtl_patch import audit_patch

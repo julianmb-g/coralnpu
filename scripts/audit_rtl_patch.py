@@ -43,4 +43,4 @@ if __name__ == "__main__":
             print(f"  {f}")
         sys.exit(1)
     else:
-        print("Patch contains only allowed files (tests/ or *Test.scala).")
+        print("Patch contains only allowed files (tests/ or **/*Test.scala).")
