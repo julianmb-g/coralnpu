@@ -1,27 +1,58 @@
+#!/usr/bin/env python3
 import unittest
 import subprocess
+from unittest.mock import patch, MagicMock
 import os
-from unittest.mock import patch
+import sys
+
+# Add the scripts directory to the system path to allow importing apply_with_fallback
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts')))
+import apply_with_fallback
 
 class TestApplyWithFallback(unittest.TestCase):
-    def test_apply_patch_success(self):
-        # Mock subprocess.run to simulate a successful git apply
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout="Patch applied\\n", stderr="")
-            from scripts import apply_with_fallback
-            success, stdout, stderr = apply_with_fallback.apply_patch("test.patch", ".")
-            self.assertTrue(success)
-            mock_run.assert_called_once_with(["git", "apply", "--index", "test.patch"], cwd=".", capture_output=True, text=True, check=False)
 
-    def test_apply_patch_failure(self):
-        # Mock subprocess.run to simulate a failed git apply
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="Patch failed
-")
-            from scripts import apply_with_fallback
-            success, stdout, stderr = apply_with_fallback.apply_patch("test.patch", ".")
-            self.assertFalse(success)
-            mock_run.assert_called_once_with(["git", "apply", "--index", "test.patch"], cwd=".", capture_output=True, text=True, check=False)
+    @patch('subprocess.run')
+    def test_apply_patch_success(self, mock_run):
+        # Simulate successful git apply
+        mock_run.return_value = MagicMock(stdout="Patch applied successfully", stderr="", returncode=0)
+        self.assertTrue(apply_with_fallback.apply_patch_with_fallback("test.patch"))
+        mock_run.assert_called_once_with(
+            ["git", "apply", "--reject", "--whitespace=nowarn", "test.patch"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+
+    @patch('subprocess.run')
+    def test_apply_patch_failure_and_fallback(self, mock_run):
+        # Simulate git apply failure
+        mock_run.side_effect = subprocess.CalledProcessError(1, "git apply", stderr="Patch failed to apply")
+        self.assertFalse(apply_with_fallback.apply_patch_with_fallback("test.patch"))
+        mock_run.assert_called_once_with(
+            ["git", "apply", "--reject", "--whitespace=nowarn", "test.patch"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        # Verify that fallback message is printed (we can't directly test print, but we can verify the function returns False)
+
+    @patch('subprocess.run')
+    def test_apply_patch_failure_with_fetch_fallback(self, mock_run):
+        # Simulate git apply failure
+        mock_run.side_effect = [
+            subprocess.CalledProcessError(1, "git apply", stderr="Patch failed to apply"),
+            MagicMock(stdout="Fetch successful", stderr="", returncode=0)
+        ]
+        external_path = "/tmp/external_repo"
+        self.assertFalse(apply_with_fallback.apply_patch_with_fallback("test.patch", external_repo_path=external_path))
+
+        # Verify git apply was called
+        self.assertEqual(mock_run.call_args_list[0].args[0], ["git", "apply", "--reject", "--whitespace=nowarn", "test.patch"])
+        self.assertEqual(mock_run.call_args_list[0].kwargs, {'check': True, 'capture_output': True, 'text': True})
+
+        # Verify git fetch was called as fallback
+        self.assertEqual(mock_run.call_args_list[1].args[0], ["git", "-C", external_path, "fetch", "origin"])
+        self.assertEqual(mock_run.call_args_list[1].kwargs, {'check': True, 'capture_output': True, 'text': True})
 
 if __name__ == "__main__":
     unittest.main()
