@@ -20,11 +20,10 @@ class TestApplyRtlTestPatches(unittest.TestCase):
 
     @patch('subprocess.run')
     def test_apply_patch_success(self, mock_run):
-        # Simulate successful git apply
         mock_run.return_value = MagicMock(stdout="Patch applied successfully", stderr="", returncode=0)
         self.assertTrue(apply_rtl_test_patches.apply_patches("test.patch"))
         mock_run.assert_called_once_with(
-            ["git", "apply", "--reject", "--whitespace=nowarn", "--index", "test.patch"],
+            ["git", "apply", "--index", "--whitespace=nowarn", "test.patch"],
             check=True,
             capture_output=True,
             text=True
@@ -32,15 +31,26 @@ class TestApplyRtlTestPatches(unittest.TestCase):
 
     @patch('subprocess.run')
     def test_apply_patch_failure(self, mock_run):
-        # Simulate git apply failure
         mock_run.side_effect = subprocess.CalledProcessError(1, "git apply", stderr="Patch failed to apply")
         self.assertFalse(apply_rtl_test_patches.apply_patches("test.patch"))
         mock_run.assert_called_once_with(
-            ["git", "apply", "--reject", "--whitespace=nowarn", "--index", "test.patch"],
+            ["git", "apply", "--index", "--whitespace=nowarn", "test.patch"],
             check=True,
             capture_output=True,
             text=True
         )
+
+    @patch('subprocess.run')
+    def test_apply_patch_failure_with_fetch_fallback(self, mock_run):
+        mock_run.side_effect = [
+            subprocess.CalledProcessError(1, "git apply", stderr="Patch failed to apply"),
+            MagicMock(stdout="Fetch successful", stderr="", returncode=0)
+        ]
+        external_path = "/usr/local/google/home/julianmb/coralnpu-rtl-mutations"
+        self.assertFalse(apply_rtl_test_patches.apply_patches("test.patch", external_repo_path=external_path))
+        
+        self.assertEqual(mock_run.call_args_list[0].args[0], ["git", "apply", "--index", "--whitespace=nowarn", "test.patch"])
+        self.assertEqual(mock_run.call_args_list[1].args[0], ["git", "-C", external_path, "fetch", "origin"])
 
 if __name__ == "__main__":
     unittest.main()

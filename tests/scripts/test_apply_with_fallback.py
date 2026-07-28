@@ -17,7 +17,7 @@ class TestApplyWithFallback(unittest.TestCase):
         mock_run.return_value = MagicMock(stdout="Patch applied successfully", stderr="", returncode=0)
         self.assertTrue(apply_with_fallback.apply_patch_with_fallback("test.patch"))
         mock_run.assert_called_once_with(
-            ["git", "apply", "--reject", "--whitespace=nowarn", "test.patch"],
+            ["git", "apply", "--index", "--whitespace=nowarn", "test.patch"],
             check=True,
             capture_output=True,
             text=True
@@ -29,7 +29,7 @@ class TestApplyWithFallback(unittest.TestCase):
         mock_run.side_effect = subprocess.CalledProcessError(1, "git apply", stderr="Patch failed to apply")
         self.assertFalse(apply_with_fallback.apply_patch_with_fallback("test.patch"))
         mock_run.assert_called_once_with(
-            ["git", "apply", "--reject", "--whitespace=nowarn", "test.patch"],
+            ["git", "apply", "--index", "--whitespace=nowarn", "test.patch"],
             check=True,
             capture_output=True,
             text=True
@@ -47,7 +47,7 @@ class TestApplyWithFallback(unittest.TestCase):
         self.assertFalse(apply_with_fallback.apply_patch_with_fallback("test.patch", external_repo_path=external_path))
 
         # Verify git apply was called
-        self.assertEqual(mock_run.call_args_list[0].args[0], ["git", "apply", "--reject", "--whitespace=nowarn", "test.patch"])
+        self.assertEqual(mock_run.call_args_list[0].args[0], ["git", "apply", "--index", "--whitespace=nowarn", "test.patch"])
         self.assertEqual(mock_run.call_args_list[0].kwargs, {'check': True, 'capture_output': True, 'text': True})
 
         # Verify git fetch was called as fallback
