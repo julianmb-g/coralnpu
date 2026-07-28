@@ -9,7 +9,6 @@
 #include <vector>
 #include <cstring>
 #include <elf.h>
-#include <string>
 #include "tests/verilator_sim/elf.h"
 
 // Mock Memory Interface
