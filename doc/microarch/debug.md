@@ -67,25 +67,25 @@ An external debugger communicates with the debug module by reading and writing a
 
 To write to an internal debug module register (e.g., writing `0x1` to `dmcontrol` at address `0x10`):
 
-1. **Poll for readiness:** Read the `status` CSR at `0x31014` and wait for bit 0 to be `1`.
-2. **Set address:** Write the target internal register address (`0x10`) to the `req_addr` CSR at `0x31000`.
-3. **Set data:** Write the data (`0x1`) to the `req_data` CSR at `0x31004`.
-4. **Initiate write:** Write the `WRITE` operation code (`2`) to the `req_op` CSR at `0x31008`.
-5. **Poll for response:** Read the `status` CSR at `0x31014` and wait for bit 1 to be `1`.
-6. **Check status:** Read the `rsp_op` CSR at `0x31010` to confirm the operation was successful.
-7. **Acknowledge response:** Write to the `status` CSR at `0x31014` to clear the response.
+1. **Poll for readiness:** Read the `status` CSR at `0x30814` and wait for bit 0 to be `1`.
+2. **Set address:** Write the target internal register address (`0x10`) to the `req_addr` CSR at `0x30800`.
+3. **Set data:** Write the data (`0x1`) to the `req_data` CSR at `0x30804`.
+4. **Initiate write:** Write the `WRITE` operation code (`2`) to the `req_op` CSR at `0x30808`.
+5. **Poll for response:** Read the `status` CSR at `0x30814` and wait for bit 1 to be `1`.
+6. **Check status:** Read the `rsp_op` CSR at `0x30810` to confirm the operation was successful.
+7. **Acknowledge response:** Write to the `status` CSR at `0x30814` to clear the response.
 
 ### Read Operation
 
 To read from an internal debug module register (e.g., reading from `dmstatus` at address `0x11`):
 
-1. **Poll for readiness:** Read the `status` CSR at `0x31014` and wait for bit 0 to be `1`.
-2. **Set address:** Write the target internal register address (`0x11`) to the `req_addr` CSR at `0x31000`.
-3. **Initiate read:** Write the `READ` operation code (`1`) to the `req_op` CSR at `0x31008`.
-4. **Poll for response:** Read the `status` CSR at `0x31014` and wait for bit 1 to be `1`.
-5. **Check status:** Read the `rsp_op` CSR at `0x31010` to confirm the operation was successful.
-6. **Read data:** Read the result from the `rsp_data` CSR at `0x3100c`.
-7. **Acknowledge response:** Write to the `status` CSR at `0x31014` to clear the response.
+1. **Poll for readiness:** Read the `status` CSR at `0x30814` and wait for bit 0 to be `1`.
+2. **Set address:** Write the target internal register address (`0x11`) to the `req_addr` CSR at `0x30800`.
+3. **Initiate read:** Write the `READ` operation code (`1`) to the `req_op` CSR at `0x30808`.
+4. **Poll for response:** Read the `status` CSR at `0x30814` and wait for bit 1 to be `1`.
+5. **Check status:** Read the `rsp_op` CSR at `0x30810` to confirm the operation was successful.
+6. **Read data:** Read the result from the `rsp_data` CSR at `0x3080c`.
+7. **Acknowledge response:** Write to the `status` CSR at `0x30814` to clear the response.
 
 ## AXI CSR Interface
 
