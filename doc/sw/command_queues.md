@@ -1,0 +1,52 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+# Command ring buffer structure and management
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** SW/Compiler Devs, Folks writing software
+
+The CoralNPU uses a command ring buffer to decouple scalar command submission from vector execution, enabling asynchronous processing and buffering high-latency operations to maximize throughput.
+
+## Overview
+
+The command ring interface is the software-hardware gateway for vector instructions. Software writes commands to a memory-mapped circular buffer. NPU hardware fetches them into the `RvvFrontEnd` vector instruction queue.
+
+## Interface and structure
+
+Software writes Vector/Tensor commands to a circular buffer in Tightly-Coupled Memory ([TCM](../microarch/memory/tcm.md)) or system SRAM, managed by two pointers:
+
+- **Head Pointer (`head_`)**: Updated by software/compiler as commands are enqueued.
+- **Tail Pointer (`tail_`)**: Updated by hardware as commands are consumed and dispatched.
+
+## Management and synchronization
+
+Software/hardware synchronization is managed via pointer manipulation:
+
+1. **Submission:** Software writes commands to the ring buffer, issuing memory fences (`fence`) to ensure visibility before updating the head pointer.
+2. **Execution:** Hardware polls or uses doorbell interrupts to detect head pointer updates, fetching commands into `RvvFrontEnd` queues.
+3. **Completion Tracking:** Hardware updates the shared TCM tail pointer upon completion. Software polls this memory-mapped pointer. Dual-ported, single-cycle TCM ensures polling incurs no bus/memory overhead.
+
+## Structural implementation details
+
+RTL uses decoupled `MultiFifo` instances for staging instructions between frontend fetch and vector decode.
+
+[Source: `hdl/verilog/rvv/design/RvvFrontEnd.sv`]
+[Source: `hdl/verilog/rvv/design/MultiFifo.sv`]
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/verilog/rvv/design/RvvFrontEnd.sv`, `hdl/verilog/rvv/design/MultiFifo.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

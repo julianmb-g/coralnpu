@@ -1,3 +1,5 @@
+# DMA engine
+
 <!--
  Copyright 2026 Google LLC
 
@@ -16,34 +18,18 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** HW Devs
-
-# DMA Engine
-
-The DMA engine is a single-channel, linked-list descriptor DMA controller that
-offloads bulk data movement from the CPU. It connects to the existing TileLink-UL
-crossbar as both a host (master, for read/write transactions) and a device
-(slave, for CPU programming via CSRs).
-
-Without a DMA engine, all memory transfers (loading model weights from SRAM/DDR
-into TCMs, streaming peripheral data) must be performed by the CPU, stalling
-execution.
+The single-channel, linked-list descriptor DMA engine offloads bulk data movement from the CPU. It connects to the TileLink-UL crossbar as a host (master, read/write transactions) and a device (slave, CPU programming via CSRs). It prevents CPU stalls during memory transfers (e.g., model weights, peripheral streaming).
 
 ## Architecture
 
-The DMA engine has two TileLink-UL ports:
+TileLink-UL ports:
 
-- **Host port** (128-bit): Issues Get/PutFullData transactions on the crossbar to
-  read from source addresses and write to destination addresses.
-- **Device port** (32-bit): Accepts CSR read/write transactions from the CPU to
-  program and monitor the DMA.
+- **Host port** (128-bit): Issues Get/PutFullData crossbar transactions for memory accesses.
+- **Device port** (32-bit): Accepts CSR read/write transactions from the CPU.
 
-The engine processes a linked list of descriptors stored in memory. Each
-descriptor defines a single transfer: source address, destination address,
-length, beat size, and optional peripheral flow control parameters. Descriptors
-are chained via a `next_desc` pointer; a value of 0 signals end of chain.
+The engine processes an in-memory linked list of descriptors defining transfers (source, destination, length, beat size, flow control). Descriptors chain via `next_desc`; 0 signals end-of-chain.
 
-### Transfer Modes
+### Transfer modes
 
 | Mode | Source Addr | Dest Addr | Use Case |
 |------|-----------|----------|----------|
@@ -51,40 +37,39 @@ are chained via a `next_desc` pointer; a value of 0 signals end of chain.
 | Mem→Periph | Incrementing | Fixed | SRAM→SPI TX FIFO |
 | Periph→Mem | Fixed | Incrementing | I2C RX→SRAM |
 
-### Key Parameters
+### Key parameters
 
-- **Host port width**: 128-bit (matches crossbar common width)
-- **Device port width**: 32-bit (CSR access, like GPIO/SPI)
-- **Max transfer per descriptor**: 16 MB (24-bit length field)
-- **Outstanding transactions**: 1 (single source ID, read-one-write-one)
-- **Interrupt**: None for v1 (CPU polls STATUS register)
+- **Host port width**: 128-bit
+- **Device port width**: 32-bit
+- **Max transfer per descriptor**: 16 MB (24-bit length)
+- **Outstanding transactions**: 1
+- **Interrupt**: None (CPU polls STATUS)
 
-## Register Map
+## Register map
 
-Base address: `0x40050000` (4 KB region, after I2C at `0x40040000`)
+Base address: `0x40050000` (4 KB region)
 
 | Offset | Name | Access | Bits | Description |
 |--------|------|--------|------|-------------|
 | `0x00` | CTRL | RW | [0] enable, [1] start (W1S, self-clearing), [2] abort | Control |
 | `0x04` | STATUS | RO | [0] busy, [1] done, [2] error, [7:4] error_code | Status |
-| `0x08` | DESC_ADDR | RW | [31:0] | Address of first descriptor in memory |
-| `0x0C` | CUR_DESC | RO | [31:0] | Address of currently executing descriptor |
-| `0x10` | XFER_REMAIN | RO | [23:0] | Bytes remaining in current transfer |
+| `0x08` | DESC_ADDR | RW | [31:0] | First descriptor address |
+| `0x0C` | CUR_DESC | RO | [31:0] | Current descriptor address |
+| `0x10` | XFER_REMAIN | RO | [23:0] | Bytes remaining |
 
-### Programming Sequence
+### Programming sequence
 
 ```text
-1. Build descriptor chain in memory (SRAM or DDR)
-2. Write DESC_ADDR with address of first descriptor
-3. Write CTRL with enable=1, start=1
-4. Poll STATUS.done until set
+1. Build memory descriptor chain
+2. Write DESC_ADDR
+3. Write CTRL (enable=1, start=1)
+4. Poll STATUS.done
 5. Check STATUS.error
 ```
 
-## Descriptor Format
+### Descriptor format
 
-Descriptors are 32 bytes (two 128-bit TL-UL beats) and must be 32-byte aligned
-in memory. The DMA fetches them via its host port.
+32-byte aligned 32-byte descriptors (two 128-bit TL-UL beats) fetched via host port.
 
 ```text
 Offset  Field         Bits     Description
@@ -93,53 +78,43 @@ Offset  Field         Bits     Description
 0x08    xfer_len      [23:0]   Transfer length in bytes
         xfer_width    [26:24]  Beat size: log2(bytes). 0=1B, 1=2B, 2=4B, 3=8B, 4=16B
         flags         [31:27]  [27] src_fixed, [28] dst_fixed, [29] poll_en, [30:31] reserved
-0x0C    next_desc     [31:0]   Address of next descriptor (0 = end of chain)
-0x10    poll_addr     [31:0]   Status register address to poll (0 = no polling)
-0x14    poll_mask     [31:0]   Bitmask applied to polled value
-0x18    poll_value    [31:0]   Expected value after masking
+0x0C    next_desc     [31:0]   Next descriptor address (0 = end)
+0x10    poll_addr     [31:0]   Status register poll address (0 = none)
+0x14    poll_mask     [31:0]   Poll bitmask
+0x18    poll_value    [31:0]   Expected masked value
 0x1C    reserved      [31:0]
 ```
 
-## Peripheral Flow Control
+### Peripheral flow control
 
-Peripherals like SPI master expose status registers (TX Full, RX Empty flags).
-The DMA uses **descriptor-level status polling** to pace transfers without
-requiring any peripheral modifications.
-
-Each descriptor includes an optional `poll_addr` / `poll_mask` / `poll_value`
-triplet. When configured (`poll_en` set and `poll_addr != 0`), the DMA reads
-`poll_addr` before each data beat and waits until
-`(read_data & poll_mask) == poll_value`.
+DMA uses descriptor-level status polling to pace transfers, avoiding peripheral modifications.
+If configured (`poll_en`, `poll_addr != 0`), DMA reads `poll_addr` before each beat, waiting until `(read_data & poll_mask) == poll_value`.
 
 ### Example: DMA → SPI TX
 
 ```text
 Descriptor:
   src_addr   = 0x20000000  (SRAM buffer)
-  dst_addr   = 0x40020008  (SPI TXDATA register)
+  dst_addr   = 0x40020008  (SPI TXDATA)
   dst_fixed  = 1
-  poll_addr  = 0x40020000  (SPI STATUS register)
+  poll_addr  = 0x40020000  (SPI STATUS)
   poll_mask  = 0x00000004  (bit 2 = TX Full)
   poll_value = 0x00000000  (wait until TX not full)
 ```
-
-The DMA reads SPI STATUS, checks `(status & 0x4) == 0`, and only then reads the
-next source byte and writes it to TXDATA. This naturally paces the DMA to the
-SPI clock rate.
 
 ### Example: I2C RX → DMA
 
 ```text
 Descriptor:
-  src_addr   = 0x40040008  (I2C RXDATA register)
+  src_addr   = 0x40040008  (I2C RXDATA)
   dst_addr   = 0x20001000  (SRAM buffer)
   src_fixed  = 1
-  poll_addr  = 0x40040000  (I2C STATUS register)
+  poll_addr  = 0x40040000  (I2C STATUS)
   poll_mask  = 0x00000002  (bit 1 = RX available)
-  poll_value = 0x00000002  (wait until RX data ready)
+  poll_value = 0x00000002  (wait for RX data)
 ```
 
-## State Machine
+## State machine
 
 ```text
 IDLE ──[start]──► FETCH_DESC_0 ──[d.fire]──► FETCH_DESC_1 ──[d.fire]──► POLL_CHECK
@@ -171,74 +146,56 @@ IDLE ──[start]──► FETCH_DESC_0 ──[d.fire]──► FETCH_DESC_1 �
   └────────────────────────── DONE ◄─────────────────────────────────────────┘
 ```
 
-### State Descriptions
+### State descriptions
 
 - **IDLE**: Waits for `CTRL.start`. Latches `DESC_ADDR`.
-- **FETCH_DESC_0**: Issues TL-UL Get (128-bit) for descriptor bytes 0–15
-  (src_addr, dst_addr, len/flags, next_desc).
-- **FETCH_DESC_1**: Issues TL-UL Get (128-bit) for descriptor bytes 16–31
-  (poll_addr, poll_mask, poll_value).
-- **POLL_CHECK**: If `poll_en` is set and `poll_addr != 0`, go to POLL_REQ.
-  Otherwise skip to XFER_READ_REQ.
-- **POLL_REQ**: Issues TL-UL Get (32-bit) at `poll_addr`.
-- **POLL_RESP**: Captures D channel data. If `(data & poll_mask) == poll_value`,
-  proceed to XFER_READ_REQ. Otherwise loop back to POLL_REQ.
-- **XFER_READ_REQ**: Issues TL-UL Get at current source address with configured
-  beat size.
-- **XFER_READ_RESP**: Captures D channel data into buffer register.
-- **XFER_WRITE_REQ**: Issues TL-UL PutFullData with buffered data to dest
-  address.
-- **XFER_WRITE_RESP**: On D ack, updates addresses (unless fixed) and remaining
-  length. If remaining > 0, loop to POLL_CHECK. If remaining == 0 and
-  `next_desc != 0`, go to FETCH_DESC_0. Otherwise DONE.
+- **FETCH_DESC_0**: TL-UL Get (128-bit) bytes 0–15.
+- **FETCH_DESC_1**: TL-UL Get (128-bit) bytes 16–31.
+- **POLL_CHECK**: If `poll_en` and `poll_addr != 0`, goto POLL_REQ. Else XFER_READ_REQ.
+- **POLL_REQ**: TL-UL Get (32-bit) at `poll_addr`.
+- **POLL_RESP**: Captures D channel. If `(data & poll_mask) == poll_value`, goto XFER_READ_REQ. Else POLL_REQ.
+- **XFER_READ_REQ**: TL-UL Get at source address.
+- **XFER_READ_RESP**: Captures D channel data.
+- **XFER_WRITE_REQ**: TL-UL PutFullData to destination.
+- **XFER_WRITE_RESP**: On D ack, updates addresses and remaining length. If remaining > 0, loop to POLL_CHECK. If remaining == 0 and `next_desc != 0`, goto FETCH_DESC_0. Else DONE.
 - **DONE**: Sets `STATUS.done`, returns to IDLE.
 
-Abort from any state transitions to IDLE with error flag set.
-TL-UL D channel error transitions to DONE with error code.
+Abort transitions to IDLE with error flag. TL-UL D channel error transitions to DONE with error code.
 
-## TileLink Host Interface
+## TileLink host interface
 
-Single 128-bit TL-UL master port. Generates:
+Single 128-bit TL-UL master port generates:
 
-- **Get** (read): opcode=4, size=`xfer_width`, address=`src_addr`, mask=all-ones
-  for size
-- **PutFullData** (write): opcode=0, size=`xfer_width`, address=`dst_addr`,
-  data=buffer
-- **Poll Get**: opcode=4, size=2 (32-bit), address=`poll_addr`
-- **Descriptor Get**: opcode=4, size=4 (16 bytes), address=`desc_addr` /
-  `desc_addr+16`
+- **Get**: opcode=4, size=`xfer_width`, address=`src_addr`, mask=all-ones
+- **PutFullData**: opcode=0, size=`xfer_width`, address=`dst_addr`, data=buffer
+- **Poll Get**: opcode=4, size=2, address=`poll_addr`
+- **Descriptor Get**: opcode=4, size=4, address=`desc_addr` / `desc_addr+16`
 
-Source ID always 0 (single outstanding).
+Source ID is 0. Host A channel shared among descriptor fetch, poll reads, data accesses.
 
-The host A channel is shared between descriptor fetch, poll reads, data reads,
-and data writes. The FSM drives a mux selecting the appropriate
-opcode/address/data/size based on current state.
+## TileLink device interface
 
-## TileLink Device Interface
-
-Follows the GPIO pattern (`hdl/chisel/src/bus/GPIO.scala`):
+Follows GPIO pattern (`hdl/chisel/src/bus/GPIO.scala`):
 
 - `tl_a.ready := !tl_d_valid`
-- On `tl_a.fire`: decode `address[11:0]`, read/write CSRs
-- Start bit triggers state machine kick
+- `tl_a.fire`: decode `address[11:0]`, access CSRs. Start bit triggers FSM.
 
-## Crossbar Integration
+### Crossbar connection
 
-### Address Map
+### Address map
 
-The DMA occupies `0x40050000–0x40050FFF` (4 KB), after I2C at `0x40040000`.
+DMA occupies `0x40050000–0x40050FFF`, after I2C at `0x40040000`.
 
-### Host Connectivity
+### Host connectivity
 
-The DMA host port connects to all memory and peripheral devices it may need to
-access:
+Host port connects to memory and peripherals:
 
 ```scala
 "dma" -> Seq("sram", "coralnpu_device", "rom", "ddr_ctrl", "ddr_mem",
              "spi_master", "gpio", "i2c_master", "uart0", "uart1")
 ```
 
-The CPU must also be able to program the DMA:
+CPU programming path:
 
 ```scala
 "coralnpu_core" -> Seq(...existing..., "dma")
@@ -246,14 +203,13 @@ The CPU must also be able to program the DMA:
 
 ## Implementation
 
-Single new file: `hdl/chisel/src/bus/DmaEngine.scala`
+File: `hdl/chisel/src/bus/DmaEngine.scala`
 
-Configuration changes in:
+Configuration changes:
 
-- `hdl/chisel/src/soc/CrossbarConfig.scala` — host, device, address range,
-  connections
-- `hdl/chisel/src/soc/SoCChiselConfig.scala` — `DmaParameters`, module config
-- `hdl/chisel/src/soc/CoralNPUChiselSubsystem.scala` — instantiation case
+- `hdl/chisel/src/soc/CrossbarConfig.scala` (host/device ranges, connections)
+- `hdl/chisel/src/soc/SoCChiselConfig.scala` (`DmaParameters`)
+- `hdl/chisel/src/soc/CoralNPUChiselSubsystem.scala` (instantiation)
 
 ### Module IO
 
@@ -268,23 +224,15 @@ class DmaEngine(hostParams: Parameters, deviceParams: Parameters) extends Module
 }
 ```
 
-### Internal Structure
+### Internal structure
 
-- **CSR register file**: Regs for CTRL, STATUS, DESC_ADDR, following GPIO pattern
-- **Descriptor latch**: Registers for all descriptor fields, loaded during FETCH
-  states
-- **Data buffer**: 128-bit register for read-then-write pipeline
-- **Address counters**: Current src/dst addresses, remaining byte count
-- **FSM**: ChiselEnum with states listed above
-- **Integrity**: `RequestIntegrityGen` for host A channel,
-  `ResponseIntegrityGen` for device D channel
+- **CSR register file**: CTRL, STATUS, DESC_ADDR.
+- **Descriptor latch**: Registers loaded during FETCH.
+- **Data buffer**: 128-bit register.
+- **Address counters**: src/dst, remaining length.
+- **FSM**: ChiselEnum states.
+- **Integrity**: `RequestIntegrityGen` (host A), `ResponseIntegrityGen` (device D).
 
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability**
-- **Verified As Of:** 2026-07-25
-- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
-- **Primary Source(s):** N/A
-- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-04 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/bus/DmaEngine.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

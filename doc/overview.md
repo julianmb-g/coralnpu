@@ -1,0 +1,110 @@
+# CoralNPU overview
+
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+>
+> **Intended Audience:** HW Devs, SW/Compiler Devs
+
+CoralNPU is a RISC-V CPU optimized for ML acceleration using a fused scalar/SIMD design.
+
+![Diagram](images/coralnpu_block.png)
+
+## Architecture
+
+* **Core:** `SCore` (scalar) and `RvvCore` (vector).
+* **Memory:** TCM (ITCM `0x0`, DTCM `0x10000`).
+* **Interfaces:** AXI4 host, TLUL peripheral bridge.
+
+### Scalar core
+
+Custom `rv32im` frontend drives ML+SIMD backend (in-order, run-to-completion). The scalar core implements the base integer instruction set but has no support for AMO (Atomic Memory Operations) instructions. The C extension is reclaimed for 5b SIMD register indices. Branches follow a static taken/not-taken policy.
+
+| Registers | Width |
+| :--- | :--- |
+| Scalar (x0-x31) | 32b |
+| CSR | Various |
+
+### Vector core
+
+Decoupled SIMD core buffering instructions via FIFO. Supports 8/16/32-bit data.
+
+| Registers | Width |
+| :--- | :--- |
+| Vector (v0-v31) | 128b |
+| Accumulator | 8x8x 32b |
+
+### MAC
+
+The central component of the design is a quantized outer product
+multiply-accumulate engine. An outer-product engine provides two-dimensional
+broadcast structures to maximize the amount of deliverable compute with respect
+to memory accesses. On one axis is a parallel broadcast (“wide”, convolution
+weights), and the other axis the transpose shifted inputs of a number of batches
+(“narrow”, eg. MobileNet XY batching).
+
+![CoralNPU MAC](images/coralnpu_aconv.png)
+
+The outer-product construction is a vertical arrangement of multiple VDOT
+opcodes which utilize 4x 8bit multiplies reduced into 32 bit accumulators and
+performing 256 MACs per cycle.
+
+### Stripmining
+
+Strip mining is defined as folding array-based parallelism to fit the available
+hardware parallelism. To reduce frontend instruction dispatch pressure becoming
+a bottleneck, and to natively support instruction level tiling patterns through
+the SIMD registers, the instruction encoding shall explicitly include a
+stripmine mechanism that converts a single frontend dispatch event to the
+command queue into four serialized issue events into the SIMD units. For
+instance a “vadd v0” in Dispatch will produce “vadd v0 : vadd v1 : vadd v2 :
+vadd v3” at Issue. These will be processed as four discrete events.
+
+### Cache
+
+Caches exists as a single layer between the core and the first level of shared
+SRAM. The L1 cache and scalar core frontend are an overhead to the rest of the
+backend compute pipeline and ideally are as small as possible.
+
+The L1Icache is 8KB (256b blocks * 256 slots) with 4-way set associativity.
+
+The L1Dcache sizing is towards the scalar core requirements to perform loop
+management and address generation. The L1Dcache is 16KB (SIMD256b) with low set
+associativity of 4-way. The L1Dcache is implemented with a dual bank
+architecture where each bank is 8KB (similar to L1Icache). This property allows
+for a degree of next line prefetch. The L1Dcache also serves as an alignment
+buffer for the scalar and SIMD instructions to assist development and to
+simplify software support. In an embedded setting, the L1Dcache provides half of
+the memory bandwidth to the ML outer-product engine when only a single external
+memory port is provided. Line and all entry flushing is supported where the core
+stalls until completion to simplify the contract.
+
+## Clock & reset
+
+Synchronous operation on `clk_i`. `RstSync` handles reset synchronization and fine-grained clock gating. Asynchronous interfaces require external CDC.
+
+## Interrupts
+
+| Port | Description | Target |
+| :--- | :--- | :--- |
+| `irq` | Peripheral | `mext` |
+| `timer_irq` | Timer | `mtip` |
+| `software_irq` | IPI | `msip` |
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-08-04 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/Core.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

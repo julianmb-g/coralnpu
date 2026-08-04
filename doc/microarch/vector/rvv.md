@@ -1,141 +1,81 @@
-# Vector Core (RVV)
-
 <!--
- Copyright 2026 Google LLC
+Copyright 2026 Google LLC
 
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-     http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 -->
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> While every effort is made to ensure technical accuracy, the underlying source
-> code and hardware RTL implementation remain the absolute source of truth. Use
-> at your own risk.
+# Vector core (RVV)
 
 > **Intended Audience:** HW Devs
 
-The Vector Core in CoralNPU is a high-performance SIMD engine that implements a
-subset of the RISC-V Vector (RVV) 1.0 specification.
+The Vector Core is a high-performance SIMD engine implementing a subset of RISC-V Vector (RVV) 1.0.
 
-[Source: hdl/chisel/src/coralnpu/rvv/RvvCore.scala | As of: 2026-06-30 | Commit: 77bc1ffe06dbf3b7bafc7eab167ead2b42668df9]
+The `RvvCore` module serves as the primary top-level integration wrapper for the CoralNPU vector execution pipeline. It bridges the instruction dispatch and scalar register file interfaces from the host scalar core (`SCore`) to the dedicated vector backend.
 
-## Overview
+## System architecture and implementation
 
-The Vector Core is decoupled from the scalar frontend by a command FIFO. This
-allows the scalar core to continue fetching and dispatching instructions while
-the Vector Core processes long-running vector operations. For details on instruction assembly and dispatch from the scalar core, see the **[RVV Frontend](../../microarch/vector/rvv_frontend.md)** documentation.
+`RvvCore` manages the decoupling between scalar frontend dispatch and vector execution. It acts as the boundary where decoupled vector instructions, configuration state (vtype, vl), and scalar operands are consumed. It instantiates the `RvvFrontEnd` to manage configuration and structural hazard tracking, subsequently forwarding decoupled vector micro-operations (uops) to the vector backend.
 
-[Source: hdl/verilog/rvv/design/RvvFrontEnd.sv]
+[Source: `hdl/chisel/src/coralnpu/rvv/RvvCore.scala`]
 
-### Key Specifications
+## Specifications
 
-- **Registers**: 32 vector registers (v0..v31).
-- **VLEN**: 128 bits.
-- **ELEN**: 32 bits (supports 8, 16, and 32-bit elements).
-- **Lanes**: 4 instruction lanes (matching scalar core).
-- **Dispatch**: Up to 3 micro-ops per cycle from a centralized command queue.
+* **Registers:** 32 (v0..v31).
+
+* **VLEN/ELEN:** 128b / 32b.
+
+* **Lanes:** 4.
+
+* **Dispatch:** Up to 3 μops/cycle.
 
 ## Microarchitecture
 
-The Vector Core is a decoupled, out-of-order execution engine. It consists of
-several functional units implemented in the Verilog backend:
+Decoupled, out-of-order execution engine featuring:
 
-1. **[ALU](../../microarch/vector/rvvalu.md)**: Two integer arithmetic and logical units (VALU0 and
-   VALU1). VALU0 supports all instructions including comparisons; VALU1 supports
-   all arithmetic except comparisons.
-1. **[PMT/RDT](../../microarch/vector/pmtrdt.md)**: One permutation and reduction unit.
-1. **[DIV](../../microarch/vector/vdiv.md)**: One vector division unit.
-1. **[LSU](../../microarch/memory/lsu.md)**: Two load/store units for vector memory operations.
+* **ALU:** Two integer ALUs (VALU0/1).
 
-[Source: hdl/verilog/rvv/design/rvv_backend.sv] \[Source:
-hdl/verilog/rvv/inc/rvv_backend_define.svh\]
+* **PMT/RDT:** Permutation/reduction unit.
 
-### Activation Functions
+* **DIV:** Vector division unit.
 
-While the Vector Core does not contain a dedicated, fixed-function "Activation
-Unit," it supports a wide variety of **[Activation Functions](../../sw/activations.md)**
-(e.g., ReLU, Sigmoid, Tanh) through a combination of specialized hardware
-features.
+* **LSU:** Two Load/Store units.
 
-- **ReLU/ReLU6**: Implemented using standard vector `VMAX` and `VMIN`
-  instructions in the Vector ALU.
-- **Sigmoid/Tanh**: Typically implemented via software-assisted lookup tables
-  () or polynomial approximations leveraging the **[VFPU](../../microarch/vector/vfpu.md)** for
-  high-precision intermediate calculations.
-- **Saturating Arithmetic**: Fixed-point activations are supported through
-  saturating instructions (e.g., `VSADD`, `VSSUB`) which provide automatic
-  clipping to EEW limits.
+[Source: `hdl/verilog/rvv/design/rvv_backend.sv`]
 
-For more details, see the
-**[Activation Functions Documentation](../../sw/activations.md)**.
+### Scalar/vector interop
 
-### Scalar/Vector Interop
-
-The Vector Core supports direct movement of data between scalar floating-point
-registers and vector registers:
-
-- **`vfmv.s.f`**: Moves a scalar FP32 register value (`frs1`) into the first
-  element (index 0) of a vector register.
-- **`vfmv.f.s`**: Moves the first element of a vector register into a scalar
-  FP32 register (`frd`).
-
-To support these instructions, the
-**[Floating-Point Register File (FRF)](../../microarch/core/fregfile.md)** arbitrates its write port
-between the LSU (for floating-point loads) and the RVV core's asynchronous
-writeback path. The LSU typically takes priority in case of a collision.
-
-[Source: hdl/chisel/src/coralnpu/scalar/SCore.scala (val fRegfile arbitration)]
-
-## System Verification Environment (SVE)
-
-The Vector Core (RVV) relies on a dedicated SystemVerilog Verification Environment (SVE) using UVM. For comprehensive details on the specific testbenches (including `rvv_backend_tb` and `rvv_fifo_tb`) and their UVM interfaces, please refer to the **[Verification Documentation](../../verification.md#rvv-systemverilog-environment-sve)**.
+Data movement between scalar FP registers and vector registers via `vfmv.s.f` and `vfmv.f.s`, arbitrated by the [FRF](../core/fregfile.md).
 
 ## Interfaces
 
-### Control Interface
+### Dispatch and configuration
 
-The interface to the scalar core uses the `RvvCoreShim`.
+| Signal Bundle                             | Direction    | Description                                                                                    |
+| ----------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------- |
+| `inst_valid` / `inst_data` / `inst_ready` | Input/Output | Decoupled valid/ready handshake for incoming vector instructions from the scalar decode stage. |
+| `vstart`, `vxrm`, `vxsat`, `frm`          | Input        | Immediate architectural CSR states determining execution configuration and rounding modes.     |
+| `config_state_valid` / `config_state`     | Output       | Pushes updated vector configuration state back to the scalar core for synchronization.         |
+| `reg_read_valid` / `reg_read_data` | Input     | Values sourced from the scalar integer register file required for vector address generation, strides, or scalar-vector operations. |
+| `freg_read_data`                   | Input     | Values sourced from the scalar floating-point register file for mixed-precision vector operations.                                 |
+| `uop_lsu_*_rvv2lsu` | Output    | Address, data, and mask generation delivered from the vector core to the Load/Store Unit. |
+| `uop_lsu_*_lsu2rvv` | Input     | Load responses and acknowledgment signals returned from the LSU to the vector backend.    |
 
-| Signal Name | Direction | Description                         |
-| ----------- | --------- | ----------------------------------- |
-| inst_valid  | Input     | Valid signal for instruction lanes  |
-| inst_bits   | Input     | Instruction data (PC, opcode, bits) |
-| inst_ready  | Output    | Ready signal for backpressure       |
+### LSU
 
-[Source: hdl/chisel/src/coralnpu/rvv/RvvCore.scala (class RvvCoreShim)]
-
-### LSU Interface
-
-| Signal Name           | Direction | Description        |
-| --------------------- | --------- | ------------------ |
-| rvv2lsu_valid         | Output    | LSU request valid  |
-| rvv2lsu_vregfile_data | Output    | Vector store data  |
-| lsu2rvv_valid         | Input     | LSU response valid |
-| lsu2rvv_data          | Input     | Vector load data   |
-
-[Source: hdl/chisel/src/coralnpu/rvv/RvvInterface.scala]
-
-### Register File Interface
-
-| Signal Name | Direction | Description                                    |
-| ----------- | --------- |
+Dedicated load/store interface for vector memory operations.
 
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability**
-- **Verified As Of:** 2026-07-25
-- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
-- **Primary Source(s):** `hdl/chisel/src/coralnpu/rvv/RvvCore.scala`, `hdl/chisel/src/coralnpu/rvv/RvvInterface.scala`, `hdl/verilog/rvv/design/rvv_backend.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/rvv/RvvCore.scala`, `hdl/chisel/src/coralnpu/rvv/RvvInterface.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

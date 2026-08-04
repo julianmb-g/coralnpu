@@ -1,5 +1,3 @@
-# Vector Backend Reciprocal & Square Root Estimates
-
 <!--
  Copyright 2026 Google LLC
 
@@ -18,42 +16,58 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
+# Vector backend reciprocal & square root estimates
+
 > **Intended Audience:** HW Devs
 
 The `rvv_backend_sqrt7_rec7` module provides hardware support for the RISC-V Vector extension's 7-bit reciprocal (`vfrece7.v`) and square-root (`vfsqrt7.v`) estimate instructions. It is designed to compute low-precision approximations at high throughput, bypassing the more complex and iterative standard floating-point division/sqrt units to accelerate transcendental functions like Sigmoid and Tanh.
 
-## Architectural Overview
+## Architectural overview
 
 The unit implements a fully pipelined 4-stage execution architecture to maximize throughput while computing 7-bit estimates. It shares a single datapath for both reciprocal and square-root estimates, distinguishing the operation using the least significant bit of the source register index (`vs1_i[0]`).
 
 - `vs1_i[0] == 1`: Executes 7-bit Reciprocal Estimate (`vfrece7.v`).
+
 - `vs1_i[0] == 0`: Executes 7-bit Square Root Estimate (`vfsqrt7.v`).
 
-### 4-Stage Execution Pipeline
+### 4-stage execution pipeline
 
 The estimator employs a fully-pipelined, 4-stage data path without internal backpressure stalling (stall is only asserted if `out_ready_i` is low at the final stage).
 
 1. **Stage 1 (Input & Subnormal Detection):** Registers input signals (`operand_i`, `rnd_mode_i`, `tag_i`) and determines if the input operand is a subnormal number by checking for a zero exponent and non-zero mantissa (`pip1_subn`).
+
 2. **Stage 2 (Normalization & Table Lookup):** Computes the leading zero count of the mantissa (`leading_zero_cnt`) to normalize the exponent (`pip1_exp_normed`). It combinationally performs the ROM table lookups for both the square-root and reciprocal mantissa estimates (`pip2_sqrt7_man` and `pip2_rec7_man`). Specifically:
+
    - The SQRT7 lookup table leverages `pip2_exp_normed[0]` and the upper 6 bits of the normalized mantissa index to fetch a 7-bit estimate.
    - The REC7 lookup table uses the full 7-bit `pip2_man_index` to fetch a 7-bit estimate.
+
    - Stage 2 also dynamically evaluates special cases like `NaN`, `qNaN`, `zero`, and `infinity` based on standard IEEE 754 representations.
+
 3. **Stage 3 (Exponent Calculation & Assembly):** Calculates the final normalized exponents (`pip2_sqrt7_exp_bf_sft`, `pip2_sqrt7_exp`, `pip2_rec7_exp`). Aligns the estimated 7-bit mantissas into their proper 23-bit positions (`{pip3_sqrt7_man, 16'h0}`). For reciprocal subnormal cases, bounds checking against exponent underflow/overflow is performed, triggering potential clamping behavior based on the dynamic/architectural rounding mode (`rnd_mode_i`).
+
 4. **Stage 4 (Final Selection & Writeback):** Selects the correct final result (`sqrt7_result` or `rec7_result`) and floating-point exception flags (`pip4_sqrt7_fexp` or `pip4_rec7_fexp`) based on the active operation type (`in_valid_i` vs `rec7_vld`). Propagates the result along with the tracking `tag_o`.
 
-## Hardware Interfaces
+## Hardware interfaces
 
 The module utilizes a standardized decoupled handshake (`valid`/`ready`) with flush capability:
 
 | Port                          | Direction | Width                 | Description                                                                 |
-| :---------------------------- | :-------- | :-------------------- | :
+| :---------------------------- | :-------- | :-------------------- | :-------------------------------------------------------------------------- |
+| `clk`                         | Input     | 1                     | Clock signal                                                                |
+| `rst_n`                       | Input     | 1                     | Active-low reset signal                                                     |
+| `operand_i`                   | Input     | `WORD_WIDTH`          | Floating-point input operand                                                |
+| `vs1_i`                       | Input     | `REGFILE_INDEX_WIDTH` | Source register index (LSB determines op type)                              |
+| `rnd_mode_i`                  | Input     | 3 (`RVFRM`)           | Rounding mode                                                               |
+| `tag_i`                       | Input     | `TagType`             | Instruction tracking tag                                                    |
+| `in_valid_i`                  | Input     | 1                     | Indicates valid input data                                                  |
+| `in_ready_o`                  | Output    | 1                     | Indicates readiness to accept new data                                      |
+| `flush_i`                     | Input     | 1                     | Pipeline flush signal                                                       |
+| `result_o`                    | Output    | `WORD_WIDTH`          | Estimated floating-point result                                             |
+| `tbl_status_o`                | Output    | 4 (`RVFEXP_t`)        | Floating-point exception flags                                              |
+| `tag_o`                       | Output    | `TagType`             | Passed-through tracking tag                                                 |
+| `out_valid_o`                 | Output    | 1                     | Indicates valid output result                                               |
+| `out_ready_i`                 | Input     | 1                     | Backpressure signal from the receiving stage                                |
 
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability**
-- **Verified As Of:** 2026-07-25
-- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
-- **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_sqrt7_rec7.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_sqrt7_rec7.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

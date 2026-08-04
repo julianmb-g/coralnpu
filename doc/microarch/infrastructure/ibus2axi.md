@@ -1,5 +1,3 @@
-# IBus to AXI Bridge (IBus2Axi)
-
 <!--
  Copyright 2026 Google LLC
 
@@ -18,54 +16,64 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** HW Devs, HW Integrators
+# IBus to AXI bridge (ibus2axi)
+
+> **Intended Audience:** HW Devs
 
 ## Overview
 
-The `IBus2Axi` module serves as a protocol bridge, translating instruction fetch requests from the CoralNPU's internal instruction bus (`IBusIO`) into standard AXI memory-mapped read transactions (`AxiMasterReadIO`). It manages the read path for instructions that miss the internal ITCM and must be fetched from the external AXI interface.
+The `IBus2Axi` bridge translates instruction fetch requests from the internal `IBusIO` to standard AXI memory-mapped read transactions (`AxiMasterReadIO`). It manages instruction fetches that miss the ITCM, routing them to the external AXI read-only interface.
 
 ## Interfaces
 
-| Interface | Type              | Direction       | Description                              |
-| :-------- | :---------------- | :-------------- | :--------------------------------------- |
-| `ibus`    | `IBusIO`          | Flipped (Slave) | Internal core instruction bus interface. |
-| `axi`     | `AxiMasterReadIO` | Master          | Standard AXI read-only master interface. |
+| Interface | Type              | Direction | Description |
+| :-------- | :---------------- | :-------- | :---------- |
+| `ibus`    | `IBusIO`          | Flipped   | Internal instruction bus slave. |
+| `axi`     | `AxiMasterReadIO` | Master    | AXI read-only master. |
 
-## Path Architecture
+> **Note:** This bridge exclusively uses the AXI4 read protocol. There are no TLUL ports in the RTL implementation of this module.
 
-### Read Path
+## AXI4 burst constraints
 
-The module operates exclusively on the AXI read channels to explicitly fulfill instruction fetches.
+The IBus to AXI bridge operates under strict AXI4 protocol constraints to simplify instruction fetch logic and reduce latency for cache misses.
 
-- **Address Phase**: `ibus.valid` drives the AXI `arvalid` signal. The address is aligned to the LSU data width using `linebit` (`log2Ceil(p.lsuDataBits / 8)`).
-- **Data Phase**: The bridge implements a state machine to track `sraddrActive` and `sdataValid`, and buffers incoming instruction data into the `sdata` register. The `io.ibus.rdata` is driven directly from this buffer.
-- **Handshake Logic**: `ibus.ready` is asserted when the AXI data cycle completes (`io.axi.data.valid`) or buffered data is available (`sdataValid`), provided the requested address matches the fetched address (`addrMatch`).
+| Constraint | Value | Description |
+| :--- | :--- | :--- |
+| **Burst Type** | INCR | Fixed incrementing burst type for all transactions. |
+| **Burst Length** | 1 (Fixed) | Single-beat transaction; multi-beat bursts are not supported. |
+| **Burst Size** | LSU Data Width | Configured based on the LSU interface data width (e.g., 32b/64b). |
+| **Lock Type** | Normal | No exclusive access or atomic locking is supported. |
 
-### ARPROT Hardcoding Deviation (ADR-034)
+> **Note:** The bridge does not support multi-beat bursts. Any instruction fetch request requiring multiple words must be initiated as individual read transactions on the AXI bus.
 
-The AXI protection signal `arprot` is statically hardwired to `2.U` in the implementation:
+* **Address Phase**: `ibus.valid` drives AXI `arvalid`. The address is aligned to LSU data width using `linebit`.
+
+* **Data Phase**: An internal FSM tracks `sraddrActive` and `sdataValid`, buffering data in `sdata`. `io.ibus.rdata` is driven directly from this buffer.
+
+* **Handshake**: `ibus.ready` asserts when AXI data is valid or buffered data is present, provided requested address matches the fetched address.
+
+### Arprot signal configuration
+
+The AXI read protection signal `arprot` is statically hardwired in RTL:
 
 `io.axi.addr.bits.prot := 2.U`
 
-- **Value `2.U` (0b010)**: Indicates an **Unprivileged, Non-secure, Data access**.
-- **Deviation**: Because this bridge handles instruction fetches, the standard AXI expectation is that `ARPROT[2]` should be asserted (Instruction access). However, the implementation statically requests it as a Data access. System integrators must be aware of this when designing upstream AXI crossbars or memory protection units, as fetch requests will appear identically to standard data reads on the bus.
+* **Value `2.U` (0b010)**: Indicates an **Unprivileged, Non-secure, Data access**.
 
-## Fault Handling
+* **Security Hazard / Non-compliance**: Because this bridge is explicitly designed for instruction fetches, hardwiring `arprot` to `2.U` incorrectly signals data access rather than instruction access (`4.U` or `6.U`) downstream. This presents an insecure configuration that may bypass instruction-access policies on external memory protection units.
 
-The module monitors the AXI read response code (`rresp`). If a read response indicates an error (`rresp =/= 0.U`), the module asserts `io.ibus.fault.valid`.
+## Fault handling
 
-The `FaultInfo` payload includes:
+The module monitors the AXI read response code (`rresp`). Any error response (`rresp =/= 0.U`) asserts `io.ibus.fault.valid`.
 
-- `write`: Always `false.B` (as this is a read-only fetch bridge).
-- `addr`: The physical block address (`saddrReg`) that triggered the fault.
-- `epc`: The original program counter (`io.ibus.addr`) associated with the faulting fetch request.
+The `FaultInfo` payload details:
+
+* `write`: Always `false.B` (read-only).
+
+* `addr`: The physical faulting block address (`saddrReg`).
+
+* `epc`: The associated program counter (`io.ibus.addr`).
 
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability**
-- **Verified As Of:** 2026-07-25
-- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
-- **Primary Source(s):** `hdl/chisel/src/coralnpu/IBus2Axi.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/IBus2Axi.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

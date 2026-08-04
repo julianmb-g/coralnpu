@@ -1,61 +1,89 @@
-# Multiplier Unit (MLU) Architecture
-
 <!--
- Copyright 2026 Google LLC
+Copyright 2026 Google LLC
 
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-     http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 -->
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** HW Devs
+>
+> **Intended Audience:** HW Devs, SW/Compiler Devs
 
-The Multiplier Unit (MLU) is responsible for executing integer multiplication instructions within the CoralNPU scalar core. It supports standard RISC-V M-extension 32-bit multiplication operations, providing both lower and upper half products with various sign-extension semantics.
+# Multiplication unit
 
-## Supported Operations
+The Multiply Unit (MLU) executes multiplication operations: MUL, MULH, MULHSU
+and MULHU.
 
-The MLU handles the following operations, defined in the `MluOp` Chisel Enum ([Source](hdl/chisel/src/coralnpu/scalar/Mlu.scala)):
+## Interfaces
 
-- `MUL`: 32-bit $\times$ 32-bit multiplication, returning the lower 32 bits.
-- `MULH`: Signed 32-bit $\times$ Signed 32-bit multiplication, returning the upper 32 bits.
-- `MULHSU`: Signed 32-bit $\times$ Unsigned 32-bit multiplication, returning the upper 32 bits.
-- `MULHU`: Unsigned 32-bit $\times$ Unsigned 32-bit multiplication, returning the upper 32 bits.
+Inputs to the MLU are instructions from the Dispatch Unit or data reads from the
+Register File. The single MLU in the CoralNPU core can service instructions from
+any of the four instruction lanes, but only one command is dispatched in any
+cycle.
 
-## Interface Specifications
+Outputs of the MLU are writes to the Register file.
 
-The MLU is integrated into the scalar execution pipeline with parameterized multi-lane issue capabilities (`p.instructionLanes`).
+Figure 1 shows the inputs and outputs to and from the MLU.
 
-| Interface Group | Port  | Type               | Description |
-| --------------- | ----- | ------------------ | ----------- |
-| Decode | `req` | `Flipped(Decoupled)` | Issue request containing target register address and `MluOp` per lane. |
-| Execute | `rs1` | `Flipped(RegfileReadDataIO)` | Register file read data for source operand 1. |
-| Execute | `rs2` | `Flipped(RegfileReadDataIO)` | Register file read data for source operand 2. |
-| Execute | `rd` | `Decoupled(Flipped(RegfileWriteDataIO))` | Result output to register file write port. |
+![image](../../images/mlu_interfaces.png)
 
-## Pipeline Stages
+Figure 1: Mlu interfaces
 
-The MLU is a pipelined unit that processes instructions over three logical stages:
+### MLU inputs
 
-1. **Stage 1 (Select & Decode)**: An `Arbiter` selects an incoming request from the multiple instruction lanes. The target register, operation, and one-hot lane selection mask are registered in a 1-entry `Queue` buffer (`stage2Input`).
-2. **Stage 2 (Multiplication)**: Source operands `rs1` and `rs2` are multiplexed from the active lane. Depending on the `MluOp`, the operands are appropriately sign-extended to 33-bits. The core hardware multiplier computes the full 66-bit signed product (`prod = rs1s * rs2s`), which is then buffered into a 1-entry `Queue` (`stage3Input`).
-3. **Stage 3 (Output)**: A multiplexer extracts either the lower 32 bits (`MUL`) or the upper 32 bits (`MULH`, `MULHSU`, `MULHU`) of the product and drives it to the `rd` port with a registered valid signal.
+Note: There are 4 instances of each of these signals (one for each instruction
+lane).
+
+| Signal Name  | Type          | Description                                                        |
+| ------------ | ------------- | ------------------------------------------------------------------ |
+| req.valid    | Bool          | If the command if valid.                                           |
+| req.op       |               | The function to execute.                                           |
+| req.addr     | UInt(5)       | The RegFile address to write the result to.                        |
+| req.ready    | Bool (output) | If the command is accepted. Used in a ready-valid hand-shake.      |
+| rs1.valid    | Bool          | If there is a valid rs1 read this cycle. Only used for assertions. |
+| rs1.data     | UInt(32)      | The rs1 data read from the RegFile.                                |
+| rs2.valid    | Bool          | If there is a valid rs1 read this cycle. Only used for assertions. |
+| rs2.data     | UInt(32)      | The rs2 data read from the RegFile.                                |
+
+### MLU outputs
+
+| Signal Name | Type     | Description                                                                       |
+| ----------- | -------- | --------------------------------------------------------------------------------- |
+| rd.valid    | Bool     | If the command if valid.                                                          |
+| rd.addr     | UInt(5)  | The RegFile address to write the result to.                                       |
+| rd.data     | UInt(32) | The computation result to write to RegFile.                                       |
+| rd.ready    | Bool     | If the write result is accepted by the RegFile. Used in a ready-valid hand-shake. |
+
+### Timing/pipeline
+
+The MLU is a three stage pipeline, with the following stages:
+
+1. **Dispatch:** The dispatch unit determines if MLU operations can be executed.
+   Amongst the four lanes, the MLU accepts the first valid MLU instruction. This
+   request will be processed next cycle.
+
+2. **Compute:** The second stage performs computation of the multiplication,
+   using the register read data from rs1 and rs2.
+
+3. **Writeback:** The multiplication result is stored back to the register file.
+
+A waveform showing a typical interaction with the waveform can be found in
+Figure 2:
+
+![image](../../images/mlu_waveform.png)
+
+Figure 2: Mlu waveform.
 
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability**
-- **Verified As Of:** 2026-07-25
-- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
-- **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Mlu.scala`
-- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/Mlu.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

@@ -1,5 +1,3 @@
-# Interconnects & Interfaces
-
 <!--
  Copyright 2026 Google LLC
 
@@ -18,80 +16,87 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
+# Interconnects & interfaces
+
 > **Intended Audience:** HW Devs, HW Integrators
 
-## Seamless Facade (AXI4 Boundary)
+## Seamless facade (AXI4 boundary)
 
 The CoralNPU IP enforces a strict "Seamless Facade" by exposing only standard AXI4 interfaces (`axi_slave` and `axi_master`) at the top-level `CoreAxi` wrapper. All internal bridging, protocol translation, and subsystem-specific interconnects are strictly encapsulated within the core wrapper. SoC integrators must interface exclusively with the provided AXI4 ports, ensuring that the IP can be integrated into standard AMBA fabrics without exposing internal, platform-specific protocols.
 
-
 The CoralNPU relies on standard AXI4 interfaces for external communication, providing a decoupled, high-bandwidth bridge to the internal NPU core which utilizes a custom, low-latency `FabricIO` protocol.
 
-## CoreAxi Wrapper
+## Coreaxi wrapper
 
 The `CoreAxi` wrapper serves as the definitive top-level IP boundary explicitly designed for SoC integrators. It comprehensively encapsulates the core pipeline, TCMs, and internal bus translations, exposing only standard AXI4 interfaces.
 
-### External AXI4 Interfaces
+### External AXI4 interfaces
 
 The IP explicitly exports two distinct AXI4 interfaces:
 
 - **`axi_slave`**: Used by the host SoC to control the NPU, access the CSRs, and perform backdoor SRAM loading.
+
 - **`axi_master`**: Used by the NPU Core to initiate memory transactions to the broader SoC (e.g., fetching instructions not in ITCM or accessing external DDR memory).
 
 **Bus Widths:**
 
-- **Data Width**: 256-bit data buses (`p.axi2DataBits`).
+- **Data Width**: 128-bit data buses (`p.axi2DataBits`).
+
 - **Address Width**: 32-bit physical addresses (`p.axi2AddrBits`).
 
-### Read Data Skid Buffer
+### Read data skid buffer
 
 To maintain AXI compliance and decouple internal backpressure from the host interface, the `CoreAxi` wrapper integrates a 2-entry `readDataSkid` queue on the master read data channel. This skid buffer ensures that if the host SoC stalls the read data response, the internal data path does not lose critical read responses, preventing transaction dropping and simplifying backpressure resolution at the core boundary.
 
-## AxiSlave to FabricIO Translation
+## Axislave to fabricio translation
 
 The `AxiSlave` module translates incoming AXI4 transactions from the host into the internal `FabricIO` protocol.
 
-### Arbitration and Dispatch
+### Arbitration and dispatch
 
 Read and Write address channels from the AXI4 master are arbitrated using a simulation-safe Round-Robin Arbiter (`CoralNPURRArbiter`). This ensures fairness between host read and write requests entering the core.
 
-### Transaction Support
+### Transaction support
 
 The `AxiSlave` module supports standard AXI4 transactions, including multi-beat bursts. It handles burst types such as FIXED, INCR, and WRAP, as indicated in `AxiSlave.scala`. Transaction IDs are not supported at this boundary.
 
-### Backpressure and Stall Logic
+### Backpressure and stall logic
 
 The `AxiSlave` respects the `periBusy` signal from the internal `FabricMux`. If the target internal peripheral (e.g., TCM) is busy, the `AxiSlave` stalls the AXI4 transaction without dropping data, waiting until `periBusy` is de-asserted before asserting the `FabricIO` valid signals. This low-latency translation abstracts the internal `FabricIO` constraints from the host SoC.
 
-## Internal SRAM Adapter
+## Internal SRAM adapter
 
 The `Internal SRAM Adapter` translates incoming internal bus transactions into direct [SRAM](../memory/sram.md) accesses.
 
-### Latency Optimization
+### Latency optimization
 
 The adapter is optimized to eliminate multi-cycle queuing latency:
 
 - **Direct Routing:** Request channels are routed directly to the SRAM interface.
+
 - **Pipelined Metadata:** Metadata tracking uses a `Pipe` with latency 1.
+
 - **Skid Buffering:** The output response channel features a 1-entry skid buffer with flow/pipe enabled to maintain bus compliance while decoupling backpressure.
+
 - **Handshaking Redesign:** Handshaking logic is redesigned to prevent overflow on host stalls, ensuring backpressure is propagated correctly without dropping requests.
 
 ### Constraints
 
 - **Single Outstanding:** The `Internal SRAM Adapter` is NOT designed to handle multi-outstanding read transactions. Any downstream arbitration or buffering must adhere to this single-outstanding constraint.
 
-## CoreTlul Wrapper
+## Coretlul wrapper
 
 The `CoreTlul` wrapper provides an alternative top-level interface exposing physical **TLUL** (TileLink Uncached Lite) ports, wrapping the internal `CoreAxi` pipeline. This wrapper ensures compatibility with OpenTitan-style interconnects while maintaining the same core microarchitecture.
 
-### External TLUL Interfaces
+### External TLUL interfaces
 
 The wrapper exposes two distinct TLUL interfaces:
 
 - **`tl_host`**: The NPU acts as a TLUL Host (Master) to initiate transactions to the broader system. Internally, this bridges to the `axi_master` port of the `CoreAxi` pipeline via an `Axi2TLUL` adapter.
+
 - **`tl_device`**: The NPU acts as a TLUL Device (Slave) receiving control and data transactions from the host system. Internally, this bridges to the `axi_slave` port of the `CoreAxi` pipeline via a `TLUL2Axi` adapter.
 
-#### TLUL Port Signals (tl_host - NPU as Host)
+#### Tlul port signals (tl_host - NPU as host)
 
 | Port      | Channel | Signal    | Sub-field    | Direction | Width                        | Description           |
 | --------- | ------- | --------- | ------------ | --------- | ---------------------------- | --------------------- |
@@ -120,7 +125,7 @@ The wrapper exposes two distinct TLUL interfaces:
 |           |         |           | `data_intg`  | Input     | 7                            | Data integrity        |
 |           |         | `error`   |              | Input     | 1                            | Error flag            |
 
-#### TLUL Port Signals (tl_device - NPU as Device)
+#### Tlul port signals (tl_device - NPU as device)
 
 | Port        | Channel | Signal    | Sub-field    | Direction | Width                        | Description           |
 | ----------- | ------- | --------- | ------------ | --------- | ---------------------------- | --------------------- |
@@ -149,16 +154,6 @@ The wrapper exposes two distinct TLUL interfaces:
 |             |         |           | `data_intg`  | Output    | 7                            | Data integrity        |
 |             |         | `error`   |              | Output    | 1                            | Error flag            |
 
-<!-- mdformat off -->
-
-<!-- prettier-ignore-start -->
-
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability**
-- **Verified As Of:** 2026-07-25
-- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
-- **Primary Source(s):** `hdl/chisel/src/coralnpu/CoreAxi.scala:L23`, `hdl/chisel/src/coralnpu/AxiSlave.scala:L42`, `hdl/chisel/src/bus/Axi.scala:L124`, `hdl/chisel/src/coralnpu/CoreTlul.scala:L20`, `hdl/chisel/src/bus/TileLinkUL.scala:L22` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/CoreAxi.scala:L23`, `hdl/chisel/src/coralnpu/AxiSlave.scala:L42`, `hdl/chisel/src/bus/Axi.scala:L124`, `hdl/chisel/src/coralnpu/CoreTlul.scala:L20`, `hdl/chisel/src/bus/TileLinkUL.scala:L22` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

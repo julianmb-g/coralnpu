@@ -1,0 +1,57 @@
+# Simulation
+
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+## VCS support
+
+CoralNPU supports using VCS simulator. To enable VCS support, the following
+environment variables need to be set:
+
+```bash
+export VCS_HOME=${PATH_TO_YOUR_VCS_HOME}
+export LM_LICENSE_FILE=${YOUR_LICENSE_FILE}
+```
+
+`LD_LIBRARY_PATH` and `PATH` should also be updated.
+
+```bash
+export LD_LIBRARY_PATH="${VCS_HOME}"/linux64/lib
+export PATH=$PATH:${VCS_HOME}/bin/
+```
+
+A VCS simulation can defined with the `vcs_testbench_test` rule. For example
+use in a BUILD file:
+
+```starlark
+load("//rules:vcs.bzl", "vcs_testbench_test")
+
+vcs_testbench_test(
+    name = "foobar_tb",
+    srcs = ["Foobar_tb.sv"],
+    module = "Foobar_tb",
+    deps = ":foobar",
+)
+```
+
+By default, we disable VCS within bazel. Invoke
+`bazel {build,run,test} --config=vcs` to enable VCS support.
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-08-04 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hw_sim/coralnpu_simulator.h` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

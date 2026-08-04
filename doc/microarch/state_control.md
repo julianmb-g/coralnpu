@@ -1,0 +1,58 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+# Global control and instruction logic
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+> **Intended Audience:** HW Devs, SW/Compiler Devs
+
+CoralNPU utilizes a decoupled, superscalar pipelined architecture. Control flow, instruction sequencing, and backpressure are managed by distributed state machines and stall/flush logic across Fetch, Decode, and Execution stages.
+
+## Instruction fetch and PC control (`uncachedfetch` / `fetchcontrol`)
+
+The Fetch unit supplies instructions and predicts early control-flow changes.
+
+- **PC Management:** The Program Counter is managed by `FetchControl`, calculating the next PC based on sequential execution, branch targets, or trap handler addresses.
+- **Pre-decoding:** `FetchControl` pre-decodes fetched instructions to identify jumps (`jal`) or branches (`bxx`), redirecting the fetch stream early to minimize branch penalty.
+- **Transaction State Machine:** In-flight Instruction Bus (IBus) memory requests are tracked via `FetchReorderBuffer` 5-stage transactional FSM:
+  1. A-channel request tracking.
+  2. D-channel response matching (via transaction IDs).
+  3. Response commitment to the instruction buffer.
+  4. Response discarding (if the fetch was flushed post-request).
+  5. Pipeline flushing (`io.flushTx`) on branches or exceptions.
+
+## Decode, dispatch, and interlocks (decode / `score`)
+
+Decode and Dispatch logic routes instructions to parallel execution lanes (Scalar ALU, Branch Unit, LSU, Multiplier, Divider, Vector Core).
+
+- **Scoreboarding:** The dispatcher maintains integer and floating-point scoreboards (`fscoreboard`, `scoreboard.regd`) for RAW hazard prevention. Instructions stall in the dispatch queue until operands are ready.
+- **Structural Hazards:** Dispatch halts if target execution unit input queues are full (e.g., `lsuQueueCapacity`, `rvvQueueCapacity`).
+- **Global Halts:** The dispatcher evaluates system-level control signals, halting execution on `wfi`, debugger intervention (`csr.io.dm.debug_mode`), or architectural halts.
+
+## Trap and fault management (`faultmanager`)
+
+The `FaultManager` aggregates all pipeline exceptions.
+
+- **Sources:** Collects synchronous exceptions from:
+  - **Fetch:** Instruction access faults or misalignment.
+  - **Decode:** Illegal instructions (`undefFault`).
+  - **Execution/LSU:** Memory access faults or unaligned loads/stores.
+  - **Vector Core:** RVV-specific exceptions.
+- **Resolution:** Upon fault validation, `FaultManager` triggers a global pipeline flush (`dflush` / `iflush`), squashing in-flight instructions and redirecting PC to the CSR trap vector base address.
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/UncachedFetch.scala`, `hdl/chisel/src/coralnpu/scalar/SCore.scala`, `hdl/chisel/src/coralnpu/scalar/FaultManager.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.

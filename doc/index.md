@@ -1,50 +1,73 @@
-<!-- Copyright 2026 Google LLC -->
-<!-- Licensed under the Apache License, Version 2.0 (the "License"); -->
-<!-- you may not use this file except in compliance with the License. -->
-<!-- You may obtain a copy of the License at -->
-<!-- http://www.apache.org/licenses/LICENSE-2.0 -->
-<!-- Unless required by applicable law or agreed to in writing, software -->
-<!-- distributed under the License is distributed on an "AS IS" BASIS, -->
-<!-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. -->
-<!-- See the License for the specific language governing permissions and -->
-<!-- limitations under the License. -->
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+# CoralNPU documentation index
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** HW Devs
+> **Intended Audience:** HW Devs, HW Integrators, SW/Compiler Devs, Folks writing software
 
-# CoralNPU documentation index
-
-Welcome to the CoralNPU documentation suite, the authoritative source for the CoralNPU IP block.
+Authoritative documentation for the CoralNPU IP.
 
 ## Getting started
 
-New team members should begin by reviewing these essential triage points to orient themselves with the project architecture and validation environment:
-
-- [System Overview](./system_overview.md)
-- [Glossary of Terms](./glossary.md)
-- [Onboarding Tutorials](./onboarding/tutorials.md)
-- [Validation Environment](./onboarding/validation.md)
-
-## Architecture overview
-
-*A high-level architecture overview diagram will be integrated here.*
+- [System Overview](./overview.md)
+- [Glossary](./glossary.md)
+- [Tutorials](./tutorials/npusim_mobilenet_tutorial.md)
+- [Validation Overview](./onboarding/validation.md)
 
 ## Role-based navigation
 
-| Persona | Primary Documentation Domain |
+| Persona | Primary Domain |
 | :--- | :--- |
-| **HW Devs** | [Microarchitecture Deep Dives](./microarch/microarch.md) |
-| **SW/Compiler Devs** | [Hardware/Software Interface](./hw_sw/csr.md) |
-| **HW Integrators** | [SoC Subsystem & Interfaces](./soc_subsystem.md) |
-| **Folks writing software** | [Onboarding & Tutorials](./onboarding/tutorials.md) |
+| **HW Devs** | [Microarchitecture](./microarch/microarch.md), [Core](./microarch/core/core.md), [Vector Backend](./microarch/vector/rvv_backend.md), [Clock & Reset](./hw_sw/clock_reset_power.md) |
+| **SW/Compiler Devs** | [HW/SW Interface](./hw_sw/hardware_software_interface.md), [Instruction Details](./hw_sw/instruction_details.md), [Core CSRs](./microarch/infrastructure/csr.md), [Memory Map](./hw_sw/memory_map.md), [Command Queues](./sw/command_queues.md) |
+| **HW Integrators** | [SoC/Interfaces](./microarch/infrastructure/soc_crossbar.md), [Interrupts](./hw_sw/interrupts.md), [Clock & Reset](./hw_sw/clock_reset_power.md) |
+| **Folks writing software** | [Programming Model](./tutorials/writing_coralnpu_programs.md), [ISA Reference](./sw/rvv_isa.md) |
+
+## Microarchitecture
+
+### Core Execution
+- [Core](./microarch/core/core.md)
+- [ALU](./microarch/core/alu.md)
+- [Branch Unit](./microarch/core/bru.md)
+- [Scalar Float Core](./microarch/core/scalar_float_core.md)
+- [Register File](./microarch/core/regfile.md)
+
+### Vector Processing
+- [Vector Backend](./microarch/vector/rvv_backend.md)
+- [TPE](./microarch/vector/tpe.md)
+- [Activation Unit](./microarch/vector/activation_unit.md)
+- [Retirement Buffer](./microarch/vector/rob.md)
+
+### Memory Hierarchy
+- [LSU](./microarch/memory/lsu.md)
+- [SRAM Banking](./microarch/memory/sram_banking.md)
+
+### Infrastructure
+- [Bus Infrastructure](./microarch/infrastructure/interconnects.md)
+- [CSRs](./microarch/infrastructure/csr.md)
+
+## Software/Hardware Interface
+- [Hardware/Software Interface](./hw_sw/hardware_software_interface.md)
+- [Memory Map](./hw_sw/memory_map.md)
+- [Interrupts](./hw_sw/interrupts.md)
+- [Clock/Reset/Power](./hw_sw/clock_reset_power.md)
+- [Command Queues](./sw/command_queues.md)
+- [DMA](./sw/dma.md)
 
 --------------------------------------------------------------------------------
 
-**Provenance & Traceability**
-- **Verified As Of:** 2026-07-25
-- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
-- **Primary Source(s):** `doc/index.md`
-- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-
-> **Traceability:** Generated by Gemini. Derived from upstream commit 6a8cc54a67fb4ca7ecda116453fbdc4a97994ebf.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-04 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/Parameters.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
