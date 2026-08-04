@@ -168,6 +168,7 @@ cocotb_test_suite(
         "test_module": ["test_tlul_socket_1n.py"],
         "deps": [
             "//coralnpu_test_utils:TileLinkULInterface",
+            "//coralnpu_test_utils:TlulVerificationEnv",
         ],
         "waves": True,
         "size": "small",
@@ -196,6 +197,7 @@ cocotb_test_suite(
         "test_module": ["test_tlul_socket_m1.py"],
         "deps": [
             "//coralnpu_test_utils:TileLinkULInterface",
+            "//coralnpu_test_utils:TlulVerificationEnv",
         ],
         "waves": True,
         "size": "small",
