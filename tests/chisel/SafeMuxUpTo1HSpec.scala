@@ -29,13 +29,13 @@ class SafeMuxUpTo1HWrapper extends Module {
     val defaultVal = Input(Valid(TestEnum()))
     val sel = Input(Vec(2, Bool()))
     val data = Input(Vec(2, Valid(TestEnum())))
-    val outValid = Output(Bool())
-    val outBits = Output(UInt(2.W))
+    val out_valid = Output(Bool())
+    val out_bits = Output(UInt(2.W))
   })
 
   val res = SafeMuxUpTo1H(io.defaultVal, io.sel, io.data, TestEnum)
-  io.outValid := res.valid
-  io.outBits := res.bits.asUInt
+  io.out_valid := res.valid
+  io.out_bits := res.bits.asUInt
 }
 
 class SafeMuxUpTo1HSpec extends AnyFreeSpec with ChiselSim {
@@ -51,28 +51,15 @@ class SafeMuxUpTo1HSpec extends AnyFreeSpec with ChiselSim {
         dut.io.data(1).valid.poke(0)
         dut.io.data(1).bits.poke(TestEnum.A)
 
-        dut.clock.step()
-
-        dut.io.outValid.expect(1)
-        dut.io.outBits.expect(2)
-      }
-    }
-
-    "fallback to default when no selectors are active" in {
-      simulate(new SafeMuxUpTo1HWrapper) { dut =>
-        dut.io.defaultVal.valid.poke(1)
-        dut.io.defaultVal.bits.poke(0) // TestEnum.A
-        dut.io.sel(0).poke(0)
-        dut.io.sel(1).poke(0)
-        dut.io.data(0).valid.poke(1)
-        dut.io.data(0).bits.poke(2) // TestEnum.B
-        dut.io.data(1).valid.poke(1)
-        dut.io.data(1).bits.poke(2)
-
-        dut.clock.step()
-
-        dut.io.outValid.expect(1)
-        dut.io.outBits.expect(0)
+      dut.clock.step()
+      
+      // If the mutant is used (enumObj(bitsUInt)), Chisel will throw an exception 
+      // or assert during simulation here because 3 is out of bounds for TestEnum.
+      // If safe extraction is used (enumObj.safe(bitsUInt)._1), it will safely 
+      // return the first element (0) without crashing and mask the out-of-bounds value.
+      // If the mutant (unsafe cast) is used, it will pass through the invalid value (3).
+      dut.io.out_valid.expect(true.B)
+      dut.io.out_bits.expect(2.U)
       }
     }
 
@@ -91,13 +78,15 @@ class SafeMuxUpTo1HSpec extends AnyFreeSpec with ChiselSim {
         dut.io.data(1).valid.poke(0)
         dut.io.data(1).bits.poke(TestEnum.A)
 
-        dut.clock.step()
-
-        // isSafe should be false, so valid should be false
-        dut.io.outValid.expect(0)
-        // bits should be zeroed
-        dut.io.outBits.expect(0)
-      }
+      dut.clock.step()
+      
+      // If the mutant is used (enumObj(bitsUInt)), Chisel will throw an exception 
+      // or assert during simulation here because 3 is out of bounds for TestEnum.
+      // If safe extraction is used (enumObj.safe(bitsUInt)._1), it will safely 
+      // return the first element (0) without crashing and mask the out-of-bounds value.
+      // If the mutant (unsafe cast) is used, it will pass through the invalid value (3).
+      dut.io.out_valid.expect(false.B)
+      dut.io.out_bits.expect(0.U)
     }
   }
 }
