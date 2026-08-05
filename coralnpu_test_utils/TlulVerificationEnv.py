@@ -218,6 +218,7 @@ class TlulVerificationEnv:
         a_ready = getattr(self.dut, f"{prefix}_a_ready")
         while True:
             await RisingEdge(self.clock)
+            await cocotb.triggers.ReadOnly()
             try:
                 if a_valid.value and a_ready.value == 1:
                     txn = self._reconstruct_a_txn(prefix)
@@ -234,6 +235,7 @@ class TlulVerificationEnv:
         d_ready = getattr(self.dut, f"{prefix}_d_ready")
         while True:
             await RisingEdge(self.clock)
+            await cocotb.triggers.ReadOnly()
             try: 
                 if d_valid.value and d_ready.value == 1:
                     txn = self._reconstruct_d_txn(prefix)
@@ -250,6 +252,7 @@ class TlulVerificationEnv:
         a_ready = getattr(self.dut, f"{prefix}_a_ready")
         while True:
             await RisingEdge(self.clock)
+            await cocotb.triggers.ReadOnly()
             try: 
                 if a_valid.value and a_ready.value == 1:
                         txn = self._reconstruct_a_txn(prefix)
