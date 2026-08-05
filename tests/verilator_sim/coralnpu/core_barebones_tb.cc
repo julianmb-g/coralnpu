@@ -153,6 +153,7 @@ struct Core_tb : Sysc_tb {
     }
 
     uint64_t retiring_this_cycle = 0;
+#if KP_exposeDebugPorts
     if (io_debug_rb_inst_0_valid.read()) retiring_this_cycle++;
     if (io_debug_rb_inst_1_valid.read()) retiring_this_cycle++;
     if (io_debug_rb_inst_2_valid.read()) retiring_this_cycle++;
@@ -161,6 +162,7 @@ struct Core_tb : Sysc_tb {
     if (io_debug_rb_inst_5_valid.read()) retiring_this_cycle++;
     if (io_debug_rb_inst_6_valid.read()) retiring_this_cycle++;
     if (io_debug_rb_inst_7_valid.read()) retiring_this_cycle++;
+#endif
 
     instruction_count += retiring_this_cycle;
 
@@ -607,6 +609,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   REPEAT_13(BIND_CSR_IN);
 #undef BIND_CSR_IN
 
+#if KP_exposeDebugPorts
 #define BIND_DEBUG_DISPATCH(x) \
   core.io_debug_dispatch_##x##_instFire(io_debug_dispatch_##x##_instFire); \
   core.io_debug_dispatch_##x##_instAddr(io_debug_dispatch_##x##_instAddr); \
@@ -614,6 +617,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
 
   REPEAT_4(BIND_DEBUG_DISPATCH);
 #undef BIND_DEBUG_DISPATCH
+#endif
 
   memory_interface.clock(testbench.clock);
   memory_interface.reset(testbench.reset);
