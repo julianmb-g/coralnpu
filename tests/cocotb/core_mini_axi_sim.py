@@ -580,11 +580,7 @@ async def core_mini_axi_backdoor_load_test(dut):
     assert (dtcm_front == dtcm_back
             ).all(), "DTCM mismatch between AXI and Backdoor load"
 
-  # 4. Execute to ensure it actually works
-  await core_mini_axi.execute_from(entry_point)
-  await core_mini_axi.wait_for_halted()
-  assert core_mini_axi.dut.io_fault.value == 0
-  dut._log.info("Backdoor load comparison test passed!")    # 4. Execute to ensure it actually works
+    # 4. Execute to ensure it actually works
     await core_mini_axi.execute_from(entry_point)
     await core_mini_axi.wait_for_halted()
     assert core_mini_axi.dut.io_fault.value == 0

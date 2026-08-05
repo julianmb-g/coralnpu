@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
->>>>>>> main
 import subprocess
 import os
 import sys
@@ -24,33 +21,6 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from parse_active_branches import parse_active_branches
 
-<<<<<<< HEAD
-def verify_active_branches(tracker_path):
-    active_branches = parse_active_branches(tracker_path)
-    
-    # Get local branches
-    # Need to run git branch in the integration workspace
-    result = subprocess.run(['git', '-C', '/usr/local/google/home/julianmb/julianmb-g_coralnpu', 'branch', '--format=%(refname:short)'], capture_output=True, text=True)
-    local_branches = result.stdout.splitlines()
-    
-    missing_branches = []
-    for branch in active_branches:
-        # Check if the branch is a substring or exactly present? 
-        # The BRANCH_TRACKER might list a branch that has a remote prefix.
-        if branch not in local_branches:
-            missing_branches.append(branch)
-    
-    return missing_branches
-
-if __name__ == "__main__":
-    missing = verify_active_branches('/google/data/rw/users/ju/julianmb/wiki/projects/coralnpu-rtl-mutations/BRANCH_TRACKER.md')
-    if missing:
-        print(f"Missing branches: {missing}")
-        exit(1)
-    else:
-        print("All active branches are present.")
-        exit(0)
-=======
 def verify_active_branches(tracker_path, repo_path=None, external_repo_path=None):
     """Verifies and fetches active branches listed in the tracker."""
     active_branches = parse_active_branches(tracker_path)
@@ -110,4 +80,3 @@ if __name__ == "__main__":
         
     print("All active branches are present or have been synchronized.")
     sys.exit(0)
->>>>>>> main
