@@ -23,21 +23,44 @@ def parse_active_branches(file_path):
         
     with open(file_path, 'r') as f:
         lines = f.readlines()
+        
+        status_col_idx = -1
+        branch_col_idx = -1
+        
         for line in lines:
             # Parse bullet points: - [ ] branch_name [STATUS: ACTIVE]
             match = re.search(r'\[ \] (.*) \[STATUS: ACTIVE\]', line)
             if match:
-                # Clean up the branch name from the bullet point entry
                 branch_name = match.group(1).split('(')[0].strip()
                 active_branches.append(branch_name)
             
-            # Parse table
-            # | Branch Name | Source Commit | Purpose | Status | Created |
-            if '|' in line and 'Branch Name' not in line and '---' not in line:
+            # Find table header
+            if '|' in line and 'Branch Name' in line and 'Source Commit' in line:
                 parts = [p.strip() for p in line.split('|')]
-                # Parts: ['', BranchName, SourceCommit, Purpose, Status, Created, '']
-                if len(parts) >= 5 and "Active" in parts[4]:
-                    branch_name = parts[1].strip('` ')
+                # Filter out empty strings from leading/trailing pipes
+                parts = [p for p in parts if p]
+                status_col_idx = parts.index('Status')
+                branch_col_idx = parts.index('Branch Name')
+                continue
+            elif 'Branch Name' in line and 'Source Commit' in line and '|' not in line:
+                parts = [p.strip() for p in line.split('|')] # Fallback for no pipes?
+                # Actually, if no pipes, split by ' | '? 
+                # Let's assume standard md table which might have | 
+                parts = [p.strip() for p in line.split('|')]
+                parts = [p for p in parts if p]
+                status_col_idx = parts.index('Status')
+                branch_col_idx = parts.index('Branch Name')
+                continue
+
+            # Parse table body
+            if '|' in line and '---' not in line and 'Branch Name' not in line:
+                parts = [p.strip() for p in line.split('|')]
+                # Handle leading/trailing empty strings from pipes
+                if parts[0] == '': parts = parts[1:]
+                if parts[-1] == '': parts = parts[:-1]
+                
+                if len(parts) > status_col_idx and "Active" in parts[status_col_idx]:
+                    branch_name = parts[branch_col_idx].strip('` ')
                     active_branches.append(branch_name)
                     
     return list(set(active_branches))
