@@ -87,6 +87,7 @@ class SafeMuxUpTo1HSpec extends AnyFreeSpec with ChiselSim {
       // If the mutant (unsafe cast) is used, it will pass through the invalid value (3).
       dut.io.out_valid.expect(false.B)
       dut.io.out_bits.expect(0.U)
+      }
     }
   }
 }
