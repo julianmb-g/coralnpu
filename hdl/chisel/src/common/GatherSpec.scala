@@ -40,6 +40,8 @@ class GatherSpec extends AnyFreeSpec with ChiselSim {
           dut.io.indices(i).poke(indices(i))
           dut.io.data(i).poke(data(i))
         }
+        
+        dut.clock.step()
 
         // Check results
         for (i <- 0 until 16) {

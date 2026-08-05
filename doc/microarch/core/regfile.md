@@ -1,5 +1,3 @@
-# Scalar Register File (Regfile)
-
 <!--
  Copyright 2026 Google LLC
 
@@ -18,54 +16,168 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers, Compiler Engineers
+# Scalar register file (regfile)
 
-The `Regfile` module (`Regfile.scala`) implements the primary 32-entry integer register file for the CoralNPU scalar core. Beyond providing standard read/write access to the general-purpose registers (GPRs), it houses the global scoreboard logic responsible for tracking Read-After-Write (RAW) dependencies and interlocking the instruction decoders.
+> **Intended Audience:** HW Devs, SW/Compiler Devs
 
-## Architectural Purpose
+The `Regfile` module implements the primary 32-entry integer general-purpose register file (GPR) for the CoralNPU scalar core. Beyond providing standard read/write access to scalar registers, it houses the global scoreboard logic responsible for tracking Read-After-Write (RAW) dependencies and interlocking the instruction decoders.
 
-The register file is parameterized by the number of instruction lanes (`p.instructionLanes`). It is highly multi-ported to support superscalar dispatch and features internal write-forwarding to minimize pipeline stalls.
+## Architectural purpose
 
-## Read and Write Ports
+The register file is parameterized by `p.scalarRegCount` (typically 32 general-purpose registers) of width `p.xlen`. To support superscalar execution and dispatch without stalls, it features a highly multi-ported memory array, combinational write-forwarding, a `readSet` injection interface, and a dual-nature scoreboard.
 
-The register file provides the following structural port configuration:
+## Read and write ports
 
-| Port Type            | Quantity               | Purpose                                                                                                                                                                                                                  |
-| :------------------- | :--------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Read Ports**       | `instructionLanes * 2` | Supports reading two operands (`rs1`, `rs2`) per instruction lane during the decode cycle.                                                                                                                               |
-| **Write Ports**      | `instructionLanes + 2` | `instructionLanes` ports are dedicated to the standard ALUs. Two extra write ports (`extraWritePorts`) are provisioned for longer-latency units (e.g., the MLU/DVU and the LSU) to prevent structural writeback hazards. |
-| **Bus/Target Ports** | `instructionLanes`     | Priority-encoded address ports for LSU address generation and branch target calculation.                                                                                                                                 |
+The register file provides a highly multi-ported interface parameterized by the number of instruction lanes (`p.instructionLanes`).
 
-### Write Forwarding
+### Port count and configuration
 
-Read ports are equipped with write forwarding logic. If a read index matches an active write index in the same cycle, the data is forwarded directly from the write port to the read port (`rwdata(i) := Mux(write, wdata(i), rdata(i))`), ensuring back-to-back dependent instructions do not stall unnecessarily.
+- **Read Ports**: `p.instructionLanes * 2` ports (e.g., 8 ports for 4 lanes). Each port consists of an input read address (`io.readAddr(i)`) and a sequential read output (`io.readData(i)`).
 
-## Global Scoreboard
+- **Write Ports**: `p.instructionLanes + extraWritePorts` (where `extraWritePorts = 2`, total 6 write ports for 4 lanes).
 
-To manage RAW dependencies across the pipeline, the `Regfile` module maintains a 32-bit global scoreboard.
+- **Port Allocation**:
 
-- **Set Condition (`scoreboard_set`)**: During the decode cycle, speculated opcodes set the scoreboard bits corresponding to their destination registers (`rd`). If an opcode is in the shadow of a taken branch, it still sets the scoreboard, but the actual writeback will be masked.
-- **Clear Condition (`scoreboard_clr`)**: During the execute/writeback cycle, valid write data arrivals clear the respective scoreboard bits.
+  - `p.instructionLanes` write ports are dedicated to standard core pipelines (one per instruction lane) for same-cycle results.
+  - `extraWritePorts` (2 ports) are dedicated to late-writeback units: one for the Matrix Lookup Unit / Data Vector Unit (MLU/DVU) and one for the Load-Store Unit (LSU) to support longer/variable latency operations.
 
-The scoreboard value (`io.scoreboard.regd` and combinatorial `io.scoreboard.comb`) is routed back to the decoders. If an instruction attempts to read a register whose scoreboard bit is set, the decoder will interlock (stall) until the bit is cleared.
+### Cycle separation
 
-> [!NOTE] > `x0` (register 0) is hardwired to zero and optimized away. It is not tracked by the scoreboard.
+Write operations split their handshake across pipeline stages:
 
-## Assertions and Faults
+- Write addresses are declared during the **Decode cycle** via `io.writeAddr` (to set the global scoreboard early).
 
-The `Regfile` module includes hardware assertions to detect critical structural errors:
+- Write data is supplied during the **Execute/Writeback cycle** via `io.writeData`.
 
-- **Write Collisions**: Asserts that no two write ports attempt to write to the same register index (other than `x0`) in the same cycle.
-- **Scoreboard Errors**: Asserts that the scoreboard state remains consistent and does not experience spurious clears (`scoreboard_error`).
+### Port interface table
 
-<!-- mdformat off -->
+| Port / Interface | Group | Type | Width | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `io.readAddr` | Decode | Input Vec | `log2Ceil(p.scalarRegCount)` | Read addresses for operand fetch. |
+| `io.readSet` | Decode | Input Vec | `p.xlen` | Special override injection. |
+| `io.writeAddr` | Decode | Input Vec | `log2Ceil(p.scalarRegCount)` | Speculated destination register addresses. |
+| `io.readData` | Execute | Output Vec | `p.xlen` | Read data responses. |
+| `io.writeData` | Execute | Input Vec | `p.xlen` + addr | Writeback data and destination address. |
+| `io.writeMask` | Execute | Input Vec | Bool | Mask indicating write skip (e.g. branch shadow). |
 
-<!-- prettier-ignore-start -->
+[Primary Source: `hdl/chisel/src/coralnpu/scalar/Regfile.scala` - Read/Write Ports definition]
+
+## Write forwarding and latency
+
+Register read responses operate with a **1-cycle sequential latency**. Both ready state and data bits are registered:
+
+- `readDataReady(i)` tracks whether a read request was active.
+
+- `readDataBits(i)` stores the data retrieved.
+
+```scala
+
+readDataReady(i) := io.readAddr(i).valid || io.readSet(i).valid
+
+```
+
+### Write forwarding (bypass) logic
+
+Because read responses take 1 cycle, same-cycle writebacks would normally introduce a pipeline stall. To prevent this, the register file contains internal **combinational write forwarding bypass paths**:
+
+- If an active writeback (with `valid` high and `writeMask` low) targets a register index currently being read, the updated data (`writeData`) is combinationally forwarded directly to the read output of the same cycle (`rwdata`).
+
+- This bypasses the memory array's internal 1-cycle delay, making the updated value immediately available to the executing instruction in the next stage.
+
+```scala
+
+val write = VecAt(writeValid, idx)
+rdata(i)  := VecAt(regfile, idx)
+wdata(i)  := VecAt(writeData, idx)
+rwdata(i) := Mux(write, wdata(i), rdata(i))
+
+```
+
+[Primary Source: `hdl/chisel/src/coralnpu/scalar/Regfile.scala` - Read port and write forwarding bypass]
+
+## Write hazard and collision detection
+
+Hardware prohibits multiple write ports from targeting the same non-zero register index in the same clock cycle.
+
+To prevent physical write collisions and structural hazards, the hardware implements the following mechanisms:
+
+- **Index Priority Masking**: For each register `i > 0`, the write valid signals of all write ports are verified. Chisel asserts that at most one port succeeds:
+
+  ```scala
+  assert(PopCount(valid) <= 1.U)
+  ```
+
+- **Hazard Diagnostic Assertion**: A dedicated register `write_fail` tracks overlapping writes. If two distinct write ports both present valid data for the same non-zero destination index, an assertion fires on the subsequent cycle to aid simulation debugging:
+
+  ```scala
+  write_fail := io.writeData(i).valid && io.writeData(j).valid &&
+                io.writeData(i).bits.addr === io.writeData(j).bits.addr &&
+                io.writeData(i).bits.addr =/= 0.U
+  assert(!write_fail)
+  ```
+
+[Primary Source: `hdl/chisel/src/coralnpu/scalar/Regfile.scala` - Multi-port collision assertions]
+
+## Global scoreboard dependency tracking
+
+The `Regfile` houses a global dependency tracking register (`scoreboard`) of width `p.scalarRegCount`. The scoreboard manages RAW interlocks in the decoders by tracking speculated outstanding destination registers.
+
+### Scoreboard mechanics
+
+- **Bit-Setting**: Bits are set on the scoreboard during the decode cycle based on speculated destination addresses declared via `io.writeAddr` (`scoreboard_set`).
+
+- **Bit-Clearing**: Scoreboard bits are cleared during writeback cycles (`scoreboard_clr` mapped from `io.writeData`). Bit 0 (corresponding to register `x0`) is always masked out of the clear mask to ensure it is never scoreboard-tracked.
+
+- **Consistency Guard**: Chisel asserts that cleared scoreboard bits were previously set:
+
+  ```scala
+  scoreboard_error := ((scoreboard & scoreboard_clr) =/= scoreboard_clr) && !dm_write_valid
+  assert(!scoreboard_error)
+  ```
+
+### Dual scoreboard fields: `regd` vs. `comb`
+
+To allow the instruction decoders maximum efficiency in scheduling, the scoreboard outputs two distinct fields:
+
+- **`io.scoreboard.regd`**: Outputs the registered scoreboard state directly (`scoreboard`).
+
+- **`io.scoreboard.comb`**: Outputs the scoreboard state combinationally subtracted by the same-cycle writeback clear mask (`scoreboard & ~scoreboard_clr`). This allows decoders to combinationally resolve and clear RAW interlocks on the exact same cycle the writeback data arrives!
+
+[Primary Source: `hdl/chisel/src/coralnpu/scalar/Regfile.scala` - Scoreboard and lock tracking fields]
+
+## Register x0 special handling
+
+The integer register 0 (`x0`) is hardwired to zero, as mandated by the RISC-V ISA. The hardware employs the following optimizations to bypass `x0` tracking and save power:
+
+- **Memory Array Bypassing**: `writeValid(0)` is permanently hardwired to `true.B`, and `writeData(0)` is permanently tied to `0.U`. The physical register `regfile(0)` is optimized away entirely by Chisel synthesis.
+
+- **Scoreboard Exclusion**: Scoreboard setting and clearing logic specifically filters out bit 0. Writes targeting register 0 do not register a dependency interlock.
+
+- **Debug Collection**: A dedicated signal `x0` tracks writes attempting to target index 0 (e.g., standard `nop` instructions) strictly for debugging and performance counters without affecting state.
+
+[Primary Source: `hdl/chisel/src/coralnpu/scalar/Regfile.scala` - Zero register hardwiring optimizations]
+
+## Readset injection interface
+
+The register file provides a dedicated sideband injection interface `io.readSet` for each read port.
+
+### Interface behavior and override
+
+- If `io.readSet(i).valid` is asserted, the register file ignores the output of the physical register file (`rwdata`) and combinationally overrides `nxtReadDataBits` with `io.readSet(i).value`.
+
+- This injection takes absolute precedence, allowing external sources (such as debug rings, bypass loops, or special execution units) to dynamically override operand fetches combinationally.
+
+```scala
+
+nxtReadDataBits(i) := Mux(io.readSet(i).valid, io.readSet(i).value, rwdata(i))
+
+```
+
+[Primary Source: `hdl/chisel/src/coralnpu/scalar/Regfile.scala` - readSet override multiplexing logic]
 
 --------------------------------------------------------------------------------
 
-<!-- prettier-ignore-end -->
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** [hdl/chisel/src/coralnpu/scalar/Regfile.scala](../../../hdl/chisel/src/coralnpu/scalar/Regfile.scala) - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/Regfile.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

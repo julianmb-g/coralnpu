@@ -1,5 +1,3 @@
-# Vector Retirement Unit
-
 <!--
  Copyright 2026 Google LLC
 
@@ -16,9 +14,11 @@
  limitations under the License.
 -->
 
-
-> **Intended Audience:** Hardware Developers
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+# Vector retirement unit
+
+> **Intended Audience:** HW Devs
 
 The Vector Retirement Unit (`rvv_backend_retire`) serves as the final stage of the vector execution pipeline. It acts as the interface between the Reorder Buffer (ROB) and the architectural state, orchestrating the commitment of up to `NUM_RT_UOP` micro-ops per cycle.
 
@@ -27,51 +27,29 @@ The Vector Retirement Unit (`rvv_backend_retire`) serves as the final stage of t
 The retirement unit is responsible for:
 
 1. Routing execution results to the appropriate register files (VRF, XRF, FRF).
+
 2. Resolving intra-cycle Write-After-Write (WAW) hazards.
+
 3. Updating architectural status registers (`vxsat`, `fcsr`).
+
 4. Handling trap flushes and updating the Vector Control and Status Register (`vcsr`).
 
-## Data Routing and Register Updates
+## Data routing and register updates
 
 Micro-ops presented by the ROB (`rob2rt_write_data`) include a target destination type (`w_type`). The retirement unit demultiplexes these requests to the corresponding physical register file boundaries:
 
 | Destination (`w_type`) | Target Register File | Interface Signals | Description                                                                                                                     |
 | :--------------------- | :------------------- | :---------------- | :------------------------------------------------------------------------------------------------------------------------------ |
-| `VRF`                  | Vector Register File | `rt2vrf_write_*`  | Writes up to `VLEN` bits of vector data. Modifies byte-level elements based on the `rt_strobe` mask (`vd_type == BODY_ACTIVE`). |
-| `XRF`                  | Scalar Register File | `rt2xrf_write_*`  | Extracts the lower 32 bits (`w_data[31:0]`) for scalar destinations (e.g., reductions, `vmv.x.s`).                              |
-| `FRF`                  | Float Register File  | `rt2frf_write_*`  | If `ZVE32F_ON` is defined, routes floating-point scalar results to the FRF.                                                     |
-
-## Write-After-Write (WAW) Hazard Resolution
-
-The vector pipeline allows multiple micro-ops to retire in the same cycle. If two or more micro-ops target the same architectural vector register (`w_index`), a Write-After-Write (WAW) hazard occurs.
-
-The `rvv_backend_retire_waw` sub-module resolves this by evaluating dependencies across the active retirement window (`UOP_NUM`).
-
-- It compares the destination index of each micro-op against all younger micro-ops in the same cycle (`w_index[i] == w_index[UOP_NUM-1]`).
-- If a collision (`vd_hit`) is detected, the older micro-op's write valid signal (`hit_waw`) is masked out.
-- The latest micro-op writes its data and byte strobes (`res` and `res_strobe`), effectively overriding the older operations without stalling the pipeline.
-
-## Status Flags and Exceptions
-
-During retirement, execution side-effects are aggregated and written to the architectural CSRs:
-
-- **Saturation (`vxsat`)**: The `vxsaturate` bits from each active byte lane (`w_strobe`) are logically OR'd together. If any saturation occurred, the `vxsat` register is updated.
-- **Floating-Point Exceptions (`fcsr`)**: If `ZVE32F_ON` is defined, the five floating-point exception flags (Invalid `nv`, Divide-by-Zero `dz`, Overflow `of`, Underflow `uf`, Inexact `nx`) are aggregated across all active lanes and written to the `fcsr`.
-
-## Trap Handling and Pipeline Flush
-
-If the oldest retiring micro-op indicates a trap (`trap_flag[0]`), the retirement process is immediately halted for all subsequent micro-ops.
-
-- `rt2rob_write_ready` is gated for younger micro-ops.
-- The `vcsr` is updated with the trap state (`rt2vcsr_write_data`).
-- No architectural state (VRF, XRF, FRF, `vxsat`, `fcsr`) is modified by the trapping micro-op or any younger instructions in the window.
-
-<!-- mdformat off -->
-<!-- prettier-ignore-start -->
+| `VRF`                  | Vector Regs          | `rt2vrf_write_valid`, `rt2vrf_write_data` | Handles vector register updates from the retirement queue.                                                      |
+| `XRF`                  | Scalar Regs          | `rt2xrf_write_valid`, `rt2rvs_write_data`, `rvs2rt_write_ready` | Handles scalar register updates back to the core scalar register file.                                          |
+| `FRF`                  | Float Regs           | `rt2frf_write_valid`, `frf2rt_write_ready` | Handles floating point register updates (conditionally compiled with `ZVE32F_ON`).                              |
+| `VCSR`                 | Vector CSR           | `rt2vcsr_write_valid`, `rt2vcsr_write_data`, `vcsr2rt_write_ready` | Handles updates to Vector Control and Status Registers.                                                         |
+| `VXSAT`                | Vector Saturation    | `rt2vxsat_write_valid`, `rt2vxsat_write_data`, `vxsat2rt_write_ready` | Updates the vector saturation bit based on execution results.                                                   |
+| `FCSR`                 | Float CSR            | `rt2fcsr_write_valid`, `rt2fcsr_write_data`, `fcsr2rt_write_ready` | Updates floating-point exception status.                                                                        |
 
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_retire.sv`, `hdl/verilog/rvv/design/rvv_backend_retire_waw.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_retire.sv`, `hdl/verilog/rvv/design/rvv_backend_retire_waw.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- prettier-ignore-end -->
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

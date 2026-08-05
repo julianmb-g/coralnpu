@@ -1,5 +1,3 @@
-# Vector ISA and Execution Architecture
-
 <!--
  Copyright 2026 Google LLC
 
@@ -16,16 +14,42 @@
  limitations under the License.
 -->
 
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Software Developers, Compiler Engineers
+# Vector ISA and execution architecture
 
-## Vector ALU Instruction Encodings (OP-V)
+> **Intended Audience:** SW/Compiler Devs
+
+## Vector control and status registers (csrs)
+
+The CoralNPU implements standard RISC-V Vector CSRs, including `vtype` and `vl`, as defined by the RISC-V Vector Specification v1.0.
+
+### Vector type register (`vtype`)
+
+The `vtype` read-only CSR configures the current default vector layout, element width, and multiplier. In the CoralNPU Chisel/RTL implementation, the fields of `vtype` are mapped as follows:
+
+| Bit Range | Field Name | Width (Bits) | Description |
+| :--- | :--- | :--- | :--- |
+| `xlen-1` (31) | `vill` | 1 | Vector Instruction Illegal. Set to 1 if the configuration requested by `vset{i}vl{i}` is unsupported. |
+| `xlen-2:8` (30:8) | `0` (Reserved) | `xlen - 9` (23) | Reserved bits. Must be hardwired to zero. |
+| 7 | `ma` | 1 | Mask Agnostic. Controls how elements under mask are updated. |
+| 6 | `ta` | 1 | Tail Agnostic. Controls how tail elements are updated. |
+| 5:3 | `sew` | 3 | Selected Element Width. Determines the default element bit width. |
+| 2:0 | `lmul_orig` | 3 | Original Vector Register Grouping (LMUL). The multiplier configuration as set in `vset(i)vl(i)`. |
+
+### Vector length register (`vl`)
+
+The `vl` CSR defines the active vector length for vector instruction execution. The width of `vl` is parameterized based on the physical vector register length (`p.rvvVlen`):
+
+- **Width:** `log2Ceil(p.rvvVlen + 1)` bits.
+
+- **Value Range:** `0` to `VLMAX` (where `VLMAX` corresponds to the maximum element index given `sew` and `lmul` grouping constraints).
+
+## Vector ALU instruction encodings (OP-V)
 
 The following tables list the supported Vector ALU operations decoded by `RvvDecode.scala` (Opcode `1010111`).
 
-### OPIVV - Vector-Vector Operations (funct3 = 000)
+### Opivv - vector-vector operations (funct3 = 000)
 
 | Instruction    |  Funct6  | VM  | Constraints                              |
 | :------------- | :------: | :-: | :--------------------------------------- |
@@ -67,7 +91,7 @@ The following tables list the supported Vector ALU operations decoded by `RvvDec
 | `VNCLIPU`      | `101110` | 0/1 |                                          |
 | `VNCLIP`       | `101111` | 0/1 |                                          |
 
-### OPIVX - Vector-Scalar Operations (funct3 = 100)
+### Opivx - vector-scalar operations (funct3 = 100)
 
 | Instruction  |  Funct6  | VM  | Constraints                     |
 | :----------- | :------: | :-: | :------------------------------ |
@@ -113,7 +137,7 @@ The following tables list the supported Vector ALU operations decoded by `RvvDec
 | `VNCLIPU`    | `101110` | 0/1 |                                 |
 | `VNCLIP`     | `101111` | 0/1 |                                 |
 
-### OPIVI - Vector-Immediate Operations (funct3 = 011)
+### Opivi - vector-immediate operations (funct3 = 011)
 
 | Instruction  |  Funct6  | VM  | Constraints                     |
 | :----------- | :------: | :-: | :------------------------------ |
@@ -151,7 +175,7 @@ The following tables list the supported Vector ALU operations decoded by `RvvDec
 | `VNCLIPU`    | `101110` | 0/1 |                                 |
 | `VNCLIP`     | `101111` | 0/1 |                                 |
 
-### OPFVV - Floating-Point Vector-Vector Operations (funct3 = 001)
+### Opfvv - floating-point vector-vector operations (funct3 = 001)
 
 | Instruction   |  Funct6  |   vs1   | Constraints |
 | :------------ | :------: | :-----: | :---------- |
@@ -159,35 +183,36 @@ The following tables list the supported Vector ALU operations decoded by `RvvDec
 | `VFNCVTBF16`  | `010010` | `11101` |             |
 | `VFWMACCBF16` | `111011` |   vs1   | Widening    |
 
-### OPFVF - Floating-Point Vector-Scalar Operations (funct3 = 101)
+### Opfvf - floating-point vector-scalar operations (funct3 = 101)
 
 | Instruction   |  Funct6  |   rs1   | Constraints |
 | :------------ | :------: | :-----: | :---------- |
 | `VFWCVTBF16`  | `010010` | `01101` | Widening    |
 | `VFWMACCBF16` | `111011` |   rs1   | Widening    |
 
-## Scheduling and Execution Constraints
+## Scheduling and execution constraints
 
-### Zero `vstart` Requirement
+### Zero `vstart` requirement
 
 The following operations (typically OPMVV mode, funct3 = 010) are tracked for compressed instruction validation and require `vstart` to be zero to execute without trapping:
 
 - **Reductions**: `vredsum`, `vredand`, `vredor`, `vredxor`, `vredminu`, `vredmin`, `vredmaxu`, `vredmax`, `vwredsumu`, `vwredsum`.
+
 - **Unary Operations**: `vcpop`, `vfirst`, `vmsbf`, `vmsof`, `vmsif`, `viota`.
+
 - **Compression**: `vcompress`.
 
 _Note: These instructions are validated in `RvvDecode.scala` for internal compressed pipeline tracking._
 
-## Hardware `vstart` Memory Fault Behavior (ADR-043)
+## Hardware `vstart` memory fault behavior (ADR-043)
 
 The CoralNPU hardware does NOT dynamically update the `vstart` CSR on a mid-instruction memory fault (such as a trap during a vector load/store operation).
 
 It is exclusively software-driven via CSR writes. Software trap handlers and operating system contexts must manually manage the `vstart` state via explicit `vstart_write` operations if they intend to resume vector execution after resolving a memory fault. Relying on the hardware to automatically checkpoint the failing element position into `vstart` will result in incorrect execution state recovery.
 
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/rvv/RvvDecode.scala`, `hdl/chisel/src/coralnpu/scalar/Csr.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/rvv/RvvDecode.scala`, `hdl/chisel/src/coralnpu/rvv/RvvInterface.scala`, `hdl/chisel/src/coralnpu/scalar/Csr.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

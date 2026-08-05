@@ -1,7 +1,5 @@
-# SoC Crossbar (CoralNPUXbar)
-
 <!--
- Copyright 2024 Google LLC
+ Copyright 2026 Google LLC
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -16,66 +14,51 @@
  limitations under the License.
 -->
 
-> **Intended Audience:** Hardware/SoC Integrators
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+# SoC crossbar (coralnpuxbar)
+
+> **Intended Audience:** HW Integrators
 
 The `CoralNPUXbar` is the central interconnect of the CoralNPU IP, responsible for routing transactions between internal hosts (such as the NPU core) and internal/external devices (SRAM, CSRs, and the SoC bus). It is a parameterizable, data-driven crossbar generator that standardizes internal communication and enforces architectural boundaries.
 
-## Architectural Function
+## Architectural function
 
 The crossbar serves as the primary integration point for the CoralNPU IP within a larger SoC. It provides:
 
 - **Routing & Arbitration**: Multiplexes requests from multiple internal hosts to targeted devices based on a centralized address map.
+
 - **Clock Domain Crossing (CDC)**: Integrates asynchronous FIFO buffers to safely bridge different clock domains for host and device interfaces.
+
 - **Bus Width Conversion**: Automatically bridges interfaces of varying data widths (e.g., 32-bit to 128-bit) to ensure compatibility across the system.
+
 - **Interface Integrity**: Enforces parity/ECC protection at the port boundaries, ensuring that data corruption is detected at the ingress and egress of the interconnect fabric.
 
-## Internal Architecture
+## Interfaces
+
+The crossbar exposes arrays of parameterized TileLink-UL (TL-UL) interfaces for both hosts and devices:
+
+| Interface Group | Type | Direction | Description |
+| :--- | :--- | :--- | :--- |
+| `io.hosts` | `MixedVec[TLULHost2Device]` | Flipped (Slave) | Array of TL-UL interfaces accepting requests from internal/external hosts. |
+| `io.devices` | `MixedVec[TLULHost2Device]` | Master | Array of TL-UL interfaces routing requests to targeted devices. |
+
+## Internal architecture
 
 Internally, the `CoralNPUXbar` utilizes a high-performance, low-latency interconnect fabric. For SoC integration, all internal communication details are abstracted into a standard AXI4 host-facing interface to maintain a seamless IP boundary.
 
-### Key Components
+### Key components
 
 | Component                   | Description                                                                                         |
 | :-------------------------- | :-------------------------------------------------------------------------------------------------- |
-| **InterconnectSocket1N**    | A 1-to-N socket that routes a single host's requests to multiple devices based on address decoding. |
-| **InterconnectSocketM1**    | An M-to-1 socket that arbitrates between multiple hosts competing for access to a single device.    |
-| **InterconnectFifoAsync**   | Asynchronous CDC FIFO for bridging clock domains.                                                   |
-| **InterconnectWidthBridge** | Logic for converting between different bus data widths.                                             |
+| `TlulFifoAsync`             | Asynchronous FIFO buffer for Clock Domain Crossing (CDC) between the main clock and device/host clocks. |
+| `TlulWidthBridge`           | Bus width converter to adapt host or device data widths to the internal 128-bit crossbar standard. |
+| `TlulSocket1N`              | Demultiplexer socket routing a single host to N possible devices based on address decoding.           |
+| `TlulSocketM1`              | Multiplexer/Arbiter socket merging requests from M hosts into a single device interface.              |
 
-## Parameterization & Interfaces
-
-The crossbar is dynamically generated based on a `CrossbarConfig` object, which defines the topology, clock domains, and address regions.
-
-### Primary Host Interface (AXI4)
-
-The top-level IP wrapper exposes a standard **AXI4** interface for the host processor to access internal CSRs and memory.
-
-- **Address Width**: 32-bit.
-- **Data Width**: 32-bit (for CSR access) or 128-bit (for high-bandwidth memory access).
-- **Protocol**: AXI4 (No support for bursts or transaction IDs at the host-facing boundary to maintain integration simplicity).
-
-### Internal Memory Interfaces
-
-The crossbar provides high-bandwidth paths to internal memories:
-
-- **ITCM/DTCM**: Dedicated low-latency paths to Instruction and Data Tightly Coupled Memories.
-- **SRAM**: High-bandwidth interface to the on-chip shared SRAM.
-
-## Address Decoding & Routing
-
-The `CoralNPUXbar` performs combinational address decoding. If a host attempts to access an unmapped address region, the crossbar automatically routes the request to an internal **Error Responder**, which returns a standard bus error (e.g., `SLVERR` on AXI).
-
-## Implementation Details
-
-- **Arbitration**: Fixed-priority or Round-Robin arbitration is supported depending on the configuration of individual `InterconnectSocketM1` instances.
-- **Integrity**: Port integrity wrappers (`bus.PortIntegrity`) generate and check consistency bits on the address and data channels.
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** 8ba6f4108901602e14e28345b4bd009e6f3b6897 - **Primary Source(s):** `hdl/chisel/src/soc/CoralNPUXbar.scala`, `hdl/chisel/src/bus/Socket1N.scala`, `hdl/chisel/src/bus/SocketM1.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/soc/CoralNPUXbar.scala`, `hdl/chisel/src/bus/Socket1N.scala`, `hdl/chisel/src/bus/SocketM1.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

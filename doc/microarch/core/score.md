@@ -1,5 +1,3 @@
-# Scalar Core Pipeline Wiring
-
 <!--
  Copyright 2026 Google LLC
 
@@ -18,66 +16,31 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers
+# Scalar core pipeline wiring
 
-## Pipeline Instantiation and Wiring
+> **Intended Audience:** HW Devs
+
+## Pipeline instantiation and wiring
 
 The `SCore` module instantiates the core functional units and wires them together. The primary components instantiated are:
 
 | Component             | Module/Implementation      | Description                                                                              |
 | :-------------------- | :------------------------- | :--------------------------------------------------------------------------------------- |
-| **Fetch**             | `Fetch` or `UncachedFetch` | Fetches instructions. Chosen via `enableFetchL0` parameter.                              |
-| **Decode/Dispatch**   | `DispatchV2`               | Decodes instructions and tracks hazards.                                                 |
-| **Register File**     | `Regfile` / `FRegfile`     | Integer register file, and conditionally a floating-point register file (`enableFloat`). |
-| **ALU**               | `Alu`                      | Integer arithmetic logic unit. Replicated per `instructionLanes`.                        |
-| **BRU**               | `Bru`                      | Branch resolution unit. Replicated per `instructionLanes`.                               |
-| **MLU**               | `Mlu`                      | Multiplier unit.                                                                         |
-| **DVU**               | `Dvu`                      | Divider unit.                                                                            |
-| **LSU**               | `Lsu`                      | Load/Store Unit for memory access.                                                       |
-| **CSR**               | `Csr`                      | Control and Status Registers.                                                            |
-| **Fault Manager**     | `FaultManager`             | Aggregates and prioritizes faults.                                                       |
-| **Retirement Buffer** | `RetirementBuffer`         | In-order instruction retirement (can be `mini` if `!useRetirementBuffer`).               |
+| `regfile`             | `Regfile`                  | Scalar register file.                                                                    |
+| `fetch`               | `Fetch` / `UncachedFetch`  | Instruction fetch unit.                                                                  |
+| `csr`                 | `Csr`                      | Control and Status Registers.                                                            |
+| `dispatch`            | `DispatchV2`               | Instruction decode and dispatch.                                                         |
+| `lsu`                 | `Lsu`                      | Load/Store Unit.                                                                         |
+| `fault_manager`       | `FaultManager`             | Handles exceptions and faults.                                                           |
+| `retirement_buffer`   | `RetirementBuffer`         | Tracks instruction completion and retirement.                                            |
+| `alu`                 | `Alu`                      | Arithmetic Logic Unit(s).                                                                |
+| `bru`                 | `Bru`                      | Branch Unit(s).                                                                          |
+| `mlu`                 | `Mlu`                      | Multiplier Unit.                                                                         |
+| `dvu`                 | `Dvu`                      | Divider Unit.                                                                            |
 
-**Wiring Highlights:**
-
-- **Dispatch to Units**: `dispatch.io` drives the `req` interfaces of the `Alu`, `Bru`, `Mlu`, `Dvu`, and `Lsu`.
-- **Execution to Regfile**: Write ports of `Regfile` arbitrate results from execution units (ALU, BRU, LSU, MLU, DVU) and external units like the Vector Core (`rvvcore`) or debug interfaces.
-- **Fault Handling**: Hardware exceptions from decode (e.g., undef, branch faults) and execution (memory faults) are routed to the `FaultManager`, which informs the `RetirementBuffer`.
-
-## Retirement Buffer Routing
-
-The `RetirementBuffer` acts as the sync point for committing architectural state.
-
-| Signal Group            | Source / Sink                                     | Description                                                     |
-| :---------------------- | :------------------------------------------------ | :-------------------------------------------------------------- |
-| **Inputs (Dispatch)**   | `dispatch.io.inst`, `jump`, `branch`              | In-flight instruction tracking.                                 |
-| **Target PCs**          | `dispatch.io.bruTarget`, `regfile.io.target.data` | Jump and branch targets.                                        |
-| **Write Data (Scalar)** | `regfile.io.writeData`                            | Routes scalar write data tracking for retirement.               |
-| **Write Data (Vector)** | `io.rvvcore.get.rd_rob2rt_o`                      | If RVV enabled, tracks vector write data per lane.              |
-| **Write Data (Float)**  | `fRegfile.get.io.write_ports`                     | If Float enabled, tracks float write data.                      |
-| **Completion Status**   | `lsu.io.storeComplete`, `fault_manager.io.out`    | Flags for memory and exception completion.                      |
-| **Backpressure**        | `dispatch.io.retirement_buffer_*`                 | Exposes `nSpace`, `empty`, and `trapPending` to stall dispatch. |
-
-## SCore Interface Boundaries
-
-The `SCore` top-level exposes the following boundaries to the wider system hierarchy:
-
-| Interface Port                     | Direction | Type                   | Description                                              |
-| :--------------------------------- | :-------- | :--------------------- | :------------------------------------------------------- |
-| `csr`                              | In/Out    | `CsrInOutIO`           | External CSR read/write access.                          |
-| `halted`, `fault`, `wfi`           | Output    | `Bool`                 | Core status flags (halted, faulted, wait-for-interrupt). |
-| `irq`, `timer_irq`, `software_irq` | Input     | `Bool`                 | External interrupt pins.                                 |
-| `dm`                               | In/Out    | `CoreDMIO`             | Debug Module interface (single step, debug PC, resume).  |
-| `ibus`                             | In/Out    | `IBusIO`               | Instruction fetch bus.                                   |
-| `dbus`, `ebus`                     | In/Out    | `DBusIO`, `EBusIO`     | Data and Execution bus interfaces.                       |
-| `rvvcore`                          | In/Out    | `RvvCoreIO`            | Vector core execution interface (Optional).              |
-| `iflush`, `dflush`                 | In/Out    | `IFlushIO`, `DFlushIO` | Instruction and Data cache flush controls.               |
-| `debug`                            | In/Out    | `DebugIO`              | Cycle, PC, instruction trace and debug output.           |
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/SCore.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/scalar/SCore.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

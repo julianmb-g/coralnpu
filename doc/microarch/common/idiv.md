@@ -1,74 +1,59 @@
-# Integer Divider (IDiv)
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-<!--
-Copyright 2026 Google LLC
+<!-- Copyright 2023 Google LLC -->
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+# Integer Divider (IDiv)
 
-     http://www.apache.org/licenses/LICENSE-2.0
+>
+> **Intended Audience:** HW Devs
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
-> **Intended Audience:** Hardware Developers
-
-The `IDiv` module implements a vectorized integer division and remainder unit for the CoralNPU. It executes dividing operations sequentially using a non-restoring division algorithm.
-
-## Architecture and State Machine
-
-The divider calculates results across `n` parallel lanes. It uses a state machine to drive the division across multiple cycles to reduce combinatorial depth.
-
-### Division Iterations and Latency
-
-The latency of the division operation is determined by the `Stages` parameter. By default, `Stages = 4`, which processes 4 bits per cycle.
-
-- **Rcnt (Round Count):** Calculated as `32 / Stages` (default 8).
-- **Total Latency:** The divider state machine iterates from `0` to `Rcnt`. The result is ready when `count === Rcnt.U`, yielding a pipeline latency of `Rcnt + 1` cycles (typically 9 cycles) from request to response.
-
-### State Transitions
-
-| State Register | Description                       | Transitions                                                                                          |
-| -------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `active`       | Division in progress.             | Set `true` when a valid request is accepted (`ivalid`). Set `false` when `count === Rcnt.U`.         |
-| `result`       | Division complete and data ready. | Set `true` when `active` and `count === Rcnt.U`. Set `false` when the output is consumed (`ovalid`). |
-| `count`        | Iteration counter.                | Cleared to `0` on `ivalid`. Increments by `1` while `active`.                                        |
-
-## Interfaces
-
-The `IDiv` unit uses standard Decoupled (ready/valid) handshaking for input operands and output results.
-
-| Interface | Direction | Description                                                       |
-| --------- | --------- | ----------------------------------------------------------------- |
-| `req`     | Input     | Operation type (DIV, DIVU, REM, REMU).                            |
-| `ina`     | Input     | Decoupled vector of `n` 32-bit numerators.                        |
-| `inb`     | Input     | Decoupled vector of `n` 32-bit denominators.                      |
-| `out`     | Output    | Decoupled vector of `n` 32-bit results (quotients or remainders). |
+The `IDiv` module provides multi-lane integer division and remainder operations for the CoralNPU. It executes 32-bit operations iteratively over multiple cycles, computing multiple quotient bits per cycle.
 
 ## Supported Operations
 
-The operation type is provided via the `req` signal.
+The module decodes a 4-bit `req` signal to select the operation:
 
-- `DIV`: Signed division.
-- `DIVU`: Unsigned division.
-- `REM`: Signed remainder.
-- `REMU`: Unsigned remainder.
+| Bit Index | Operation | Description |
+| :--- | :--- | :--- |
+| `0` | `DIV` | Signed Division |
+| `1` | `DIVU` | Unsigned Division |
+| `2` | `REM` | Signed Remainder |
+| `3` | `REMU` | Unsigned Remainder |
 
-<!-- mdformat off -->
+[Source: hdl/chisel/src/common/IDiv.scala](hdl/chisel/src/common/IDiv.scala)
 
-<!-- prettier-ignore-start -->
+## Interfaces
+
+The module processes `n` parallel lanes per request using decoupled valid/ready interfaces.
+
+| Port | Direction | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `req` | Input | `UInt(4.W)` | Operation select bitmask. |
+| `ina` | Flipped | `Decoupled(Vec(n, UInt(32.W)))` | Dividend input stream. |
+| `inb` | Flipped | `Decoupled(Vec(n, UInt(32.W)))` | Divisor input stream. |
+| `out` | Output | `Decoupled(Vec(n, UInt(32.W)))` | Division or remainder result stream. |
+
+[Source: hdl/chisel/src/common/IDiv.scala](hdl/chisel/src/common/IDiv.scala)
+
+## Execution Pipeline
+
+The `IDiv` computes results iteratively based on the configured `Stages` parameter (default 4 stages per cycle).
+
+- **Initialization**: When a valid input is received, the dividend and divisor are conditionally negated based on sign bits.
+- **Iterative Phase**: The module executes restoring division over `32 / Stages` cycles (default 8 cycles for 32-bit division).
+- **Finalization**: Post-processing restores the correct sign to the quotient or remainder based on the selected operation.
+
+[Source: hdl/chisel/src/common/IDiv.scala](hdl/chisel/src/common/IDiv.scala)
 
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/common/IDiv.scala:L23-188` (No explicit testbench found) - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability**
 
-<!-- prettier-ignore-end -->
+- **Verified As Of:** 2026-07-25
+- **Upstream Commit:** [2be7892532110edbcd0ca4e7ff56e4360a428df7](https://github.com/google/coralnpu/commit/2be7892532110edbcd0ca4e7ff56e4360a428df7)
+- **Primary Source(s):** `hdl/chisel/src/common/IDiv.scala`
+- **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

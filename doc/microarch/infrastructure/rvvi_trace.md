@@ -14,49 +14,38 @@
  limitations under the License.
 -->
 
-# RvviTrace
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Integrators, Verification Engineers
+# RVVITrace
+
+> **Intended Audience:** HW Integrators, HW Devs
 
 The `RvviTrace` module provides the architectural traceability interface to the RISC-V Verification Interface (RVVI), capturing instruction retirement, register state, and exception events.
 
-## Interface Boundaries
+## Interface boundaries
 
 The module ingests retirement state through two primary Chisel bundles:
 
-- **`rb`**: `RetirementBufferDebugIO` capturing instruction retirement validity, program counters, instructions, and writeback payload data.
-- **`csr`**: `CsrTraceIO` capturing CSR access events and modified data.
+- **`rb`**: `RetirementBufferDebugIO` capturing instruction retirement validity, program counters, instructions, and writeback payload data. [Source: hdl/chisel/src/coralnpu/RetirementBuffer.scala](https://github.com/google/coralnpu/blob/fcb74cfe79dbd184b9c53539490994e701981f80/hdl/chisel/src/coralnpu/RetirementBuffer.scala)
 
-## Trace Port Routing
+- **`csr`**: `CsrTraceIO` capturing CSR access events and modified data. [Source: hdl/chisel/src/coralnpu/CsrManager.scala](https://github.com/google/coralnpu/blob/fcb74cfe79dbd184b9c53539490994e701981f80/hdl/chisel/src/coralnpu/CsrManager.scala)
+
+## Trace port routing
 
 Internal architectural state tracking is routed to the `RvviTraceBlackBox` (`rvviTrace.sv` SystemVerilog wrapper) over a parameterizable number of ports (`p.retirementBufferSize`):
 
-| Trace Port   | Source Logic              | Description                                                                                                                                  |
-| ------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `valid_i`    | `io.rb.inst(i).valid`     | Asserts when the instruction in the retirement slot is valid.                                                                                |
-| `order_i`    | `count + i`               | 64-bit architectural instruction sequence counter, incremented by the pop-count of valid instructions (`PopCount(io.rb.inst.map(_.valid))`). |
-| `insn_i`     | `io.rb.inst(i).bits.inst` | The 32-bit instruction encoding.                                                                                                             |
-| `trap_i`     | `io.rb.inst(i).bits.trap` | Asserts when the retired instruction triggers a hardware trap.                                                                               |
-| `pc_rdata_i` | `io.rb.inst(i).bits.pc`   | The program counter of the retired instruction.                                                                                              |
+| Trace Port | Source Logic | Description |
+| :--- | :--- | :--- |
+| `rvvi_valid` | `RetirementBuffer` | Valid retirement cycle indicator. |
+| `rvvi_pc` | `RetirementBuffer` | Program counter of retired instruction. |
+| `rvvi_inst` | `RetirementBuffer` | Retired instruction word. |
+| `rvvi_wdata` | `RetirementBuffer` | Writeback data payload. |
 
-### Register File Writebacks
+[Source: hdl/chisel/src/coralnpu/RvviTrace.scala](https://github.com/google/coralnpu/blob/fcb74cfe79dbd184b9c53539490994e701981f80/hdl/chisel/src/coralnpu/RvviTrace.scala)
 
-Register writebacks are decoded and mapped to their architectural spaces:
-
-- **Scalar (X)**: Routed to `x_wdata` and `x_wb` when `wb_idx` matches the 0-31 range.
-- **Floating-Point (F)**: Routed to `f_wdata` and `f_wb` when `wb_idx` offsets against `p.floatRegfileBaseAddr`.
-- **Vector (V)**: Routed to 128-bit `v_wdata` and `v_wb`. If RVV is enabled, logic uses a `PriorityMux` over `vecWrites` to aggregate multiple vector lane writes. Otherwise, it uses `p.rvvRegfileBaseAddr` offsetting.
-- **CSR**: Routed to a 4096-width boolean array (`csr_wb`) and data array (`csr`), matched against `io.csr.addr`.
-
-> [!NOTE]
-> The `debug_mode_i` trace port is currently hardcoded to `false.B`. The inputs `lrsc_cancel`, `halt`, `ixl`, and `mode` are hardcoded to `0` inside the BlackBox wrapper.
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** 25f92494031ffc2e5eec7a8e9e51bbbca354586a - **Primary Source(s):** `hdl/chisel/src/coralnpu/RvviTrace.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/RvviTrace.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

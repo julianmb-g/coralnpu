@@ -1,5 +1,3 @@
-# Vector Floating-Point Unit (VFPU)
-
 <!--
  Copyright 2026 Google LLC
 
@@ -16,23 +14,25 @@
  limitations under the License.
 -->
 
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers, Compiler Engineers
+# Vector floating-point unit (VFPU)
+
+> **Intended Audience:** HW Devs, SW/Compiler Devs
 
 ## Overview
 
 The Vector Floating-Point Unit (VFPU) is responsible for executing vector floating-point operations. It instantiates the `fpnew` floating-point engine to handle core arithmetic operations.
 
-## Supported Vector Extensions
+## Supported vector extensions
 
 The VFPU supports the following standard RISC-V Vector Extensions (RVV) for floating-point and Brain Floating-Point (BF16) operations:
 
 - **Zvfbfmin**: Vector BF16 Conversions (Converts between FP32 and BF16).
+
 - **Zvfbfwma**: Vector BF16 Widening Multiply-Accumulate.
 
-### Key Instructions
+### Key instructions
 
 | Instruction   | Extension  | Description                             |
 | :------------ | :--------- | :-------------------------------------- |
@@ -40,70 +40,44 @@ The VFPU supports the following standard RISC-V Vector Extensions (RVV) for floa
 | `VFNCVTBF16`  | `Zvfbfmin` | Narrowing conversion from FP32 to BF16. |
 | `VFWMACCBF16` | `Zvfbfwma` | Widening multiply-accumulate on BF16.   |
 
-## Zvfbfmin/Zvfbfwma Subnormal Handling (ADR-044)
+## Zvfbfmin/zvfbfwma subnormal handling (ADR-044)
 
 The CoralNPU fully supports the `Zvfbfmin` and `Zvfbfwma` extensions for converting and operating on Brain Floating-Point (BF16) formats in the vector pipeline.
 
 Crucially for numerical stability and compiler expectations, the cast units within the `fpnew` instantiation handle subnormal (denormal) values natively. Subnormal values encountered during vector conversions (such as `VFWCVTBF16` and `VFNCVTBF16`) are **NOT** flushed to zero. They are processed mathematically, preserving precision at the lower boundaries of the exponent range.
 
-## Rounding Semantics (FpNewRoundingMode)
+## Rounding semantics (fpnewroundingmode)
 
 The following rounding modes are supported, mapped directly to the `fpnew` engine as defined in `FloatCore.scala`:
 
-| Mnemonic | Value | Description                                     |
-| :------- | :---- | :---------------------------------------------- |
-| **RNE**  | 0     | Round to nearest, ties to even                  |
-| **RTZ**  | 1     | Round to zero                                   |
-| **RDN**  | 2     | Round down (towards -inf)                       |
-| **RUP**  | 3     | Round up (towards +inf)                         |
-| **RMM**  | 4     | Round to nearest, ties to max magnitude         |
-| **DYN**  | 7     | Dynamic rounding mode (embedded in instruction) |
+| Mnemonic | Value | Description |
+| :--- | :---: | :--- |
+| `RNE` | `000` | Round to nearest, ties to even |
+| `RTZ` | `001` | Round to zero |
+| `RDN` | `010` | Round down (towards -inf) |
+| `RUP` | `011` | Round up (towards +inf) |
+| `RMM` | `100` | Round to nearest, ties to max magnitude |
+| `DYN` | `111` | Dynamic rounding mode (embedded in instruction / CSR) |
 
-These modes correspond to the standard RISC-V rounding modes. See the RISC-V Unprivileged spec, Chapter 20.2 for details.
+## Floating-point exception (fflags) handling constraints
 
-## Core Operations (FpNewOperation)
+Although the underlying `fpnew` arithmetic engine generates floating-point exception flags (`NV`, `DZ`, `OF`, `UF`, `NX` inside `sub_fpexp` and `falu_result.fpexp`), and the vector Reorder Buffer (ROB) collects these exception signals via update writeback ports, the retired exceptions are **discarded** at the boundary.
 
-The VFPU supports the following operations, mapped to the `fpnew` core arithmetic engine:
+Specifically, the `rvv_backend_retire` module produces `rt2fcsr_write_valid` and `rt2fcsr_write_data`, but:
 
-| Mnemonic     | Value | Description                                 |
-| :----------- | :---- | :------------------------------------------ |
-| **FMADD**    | 0     | Fused Multiply-Add                          |
-| **FNMSUB**   | 1     | Fused Negative Multiply-Subtract            |
-| **ADD**      | 2     | Floating-Point Addition/Subtraction         |
-| **MUL**      | 3     | Floating-Point Multiplication               |
-| **DIV**      | 4     | Floating-Point Division                     |
-| **SQRT**     | 5     | Floating-Point Square Root                  |
-| **SGNJ**     | 6     | Sign-Injection (SGNJ, SGNJN, SGNJX)         |
-| **MINMAX**   | 7     | Floating-Point Minimum/Maximum              |
-| **CMP**      | 8     | Floating-Point Comparisons                  |
-| **CLASSIFY** | 9     | Floating-Point Classify                     |
-| **F2F**      | 10    | Floating-Point to Floating-Point Conversion |
-| **F2I**      | 11    | Floating-Point to Integer Conversion        |
-| **I2F**      | 12    | Integer to Floating-Point Conversion        |
-| **CPKAB**    | 13    | Cast and Pack AB                            |
-| **CPKCD**    | 14    | Cast and Pack CD                            |
-| **STORE**    | 15    | FP Store (Special value, internal use only) |
+- These retired exception signals are **NOT** connected to any top-level output port in `RvvCore.sv`.
 
-Note: `STORE` (15) is used internally by the VFPU to identify store-related data movements and is not a functional `fpnew` arithmetic operation.
+- These signals are completely omitted from the Chisel `RvvCoreIO` (defined in `RvvInterface.scala`).
 
-## Exception Reporting
+Consequently, floating-point exceptions generated by vector instructions do **NOT** write to the architectural `fcsr` or propagate to the top-level NPU core boundaries. The architectural status register `fcsr` remains unmodified by vector operations, and there is no hardware-level mechanism for software to detect or catch floating-point exceptions generated by VFPU operations via standard CSR interfaces.
 
-Floating-point exceptions are reported via a 5-bit `status_o` vector from the `fpnew` engine, which is routed directly to the `fflags` field of the CSR interface (`io.csr.in.fflags.bits`). Exception flags are updated when valid results are produced (`out_valid_o`) and the instruction is not a floating-point move (`!fmv`).
+## RVV 1.0 exception routing violation
 
-| Bit | Mnemonic | Description       |
-| :-- | :------- | :---------------- |
-| 4   | **NV**   | Invalid Operation |
-| 3   | **DZ**   | Divide by Zero    |
-| 2   | **OF**   | Overflow          |
-| 1   | **UF**   | Underflow         |
-| 0   | **NX**   | Inexact           |
+**Spec Violation:** The CoralNPU vector core implementation currently violates the RISC-V Vector 1.0 specification regarding exception routing. Vector-initiated floating-point exceptions (e.g., division by zero, overflow) generated in the VFPU are silently discarded and are not routed to the architectural `fcsr` (`fflags`). Consequently, software cannot observe vector floating-point exceptions.
 
-Note: The bit mapping follows the standard RISC-V `fflags` definition.
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/float/FloatCore.scala`, `hdl/chisel/src/common/Fp.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/float/FloatCore.scala`, `hdl/chisel/src/common/Fp.scala`, `hdl/verilog/rvv/design/rvv_backend_retire.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

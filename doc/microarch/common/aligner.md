@@ -1,7 +1,7 @@
 # Aligner
 
 <!--
- Copyright 2024 Google LLC
+ Copyright 2026 Google LLC
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -16,56 +16,54 @@
  limitations under the License.
 -->
 
-> **Intended Audience:** Hardware Developers
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-The `Aligner` is a generic hardware utility module used to compress an array of input data by packing all valid elements toward the lower indices (the "front") of the output array, eliminating any invalid gaps. It preserves the original relative ordering of the valid elements.
+The `Aligner` is a fundamental hardware block used to compact or shift data elements based on a validity mask. It is primarily used in the [Vector Backend](../vector/rvv_backend.md) and [DMA](../../peripherals/dma.md) to handle misaligned data or to pack sparse vector results.
 
-## Architectural Function
+## Behavior
 
-In vectorized or superscalar data paths, operations often result in sparse validity masks (e.g., after predicated execution or filtering). The `Aligner` reorganizes these sparse arrays into dense, contiguous blocks.
+The block accepts an input array of data elements and a corresponding bitmask indicating which elements are valid. It then "aligns" all valid elements to the beginning (index 0) of the output array, maintaining their relative order.
 
-**Behavioral Example:**
+### Example
 
 - **Inputs:**
-  - `valid_in` = `[0, 1, 0, 1]`
   - `data_in` = `[A, B, C, D]`
+  - `valid_in` = `[0, 1, 0, 1]`
+
 - **Outputs:**
   - `valid_out` = `[1, 1, 0, 0]`
   - `data_out` = `[B, D, X, X]` (where X is "don't care")
-
-### Implementation Details
-
-The underlying SystemVerilog (`Aligner.sv`) operates by computing a parallel prefix sum (population count) of the `valid_in` signals.
-
-- For each input index `i`, `valid_count[i]` determines the target output index `o` where `data_in[i]` should be routed if it is valid.
-- The output multiplexers use this computed index to select the appropriate input data for each output slot.
 
 ## Interfaces
 
 The `Aligner` is instantiated as a parameterized component over a data type `T` (with a specific bit width) and an array size `N`. In Chisel, it is exposed as a `BlackBox` that generates the appropriate Verilog wrapper.
 
-| Port Name   | Direction | Type            | Description                                           |
-| :---------- | :-------- | :-------------- | :---------------------------------------------------- |
-| `valid_in`  | Input     | `logic [N-1:0]` | Validity mask for the input data elements.            |
-| `data_in`   | Input     | `T [N-1:0]`     | Array of input data elements.                         |
-| `valid_out` | Output    | `logic [N-1:0]` | Contiguous validity mask for the packed output.       |
-| `data_out`  | Output    | `T [N-1:0]`     | Packed array of valid data elements at lower indices. |
+### Parameters
+
+| Name | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `N` | `Int` | - | The number of input/output ports. |
+| `WIDTH` | `Int` | - | The bit-width of each data element. |
+
+### Ports
+
+| Name | Direction | Width | Description |
+| :--- | :--- | :--- | :--- |
+| `io.in` | Input | `Vec(N, T)` | Array of input data elements. |
+| `io.valid_in` | Input | `UInt(N)` | Bitmask indicating which inputs are valid. |
+| `io.out` | Output | `Vec(N, T)` | Array of aligned output data elements. |
+| `io.valid_out`| Output | `UInt(N)` | Bitmask indicating which outputs are now valid. |
 
 ## Verification
 
-This hardware block is validated using standalone tests.
+The `Aligner` is verified using directed tests that exercise various combinations of valid masks and data patterns.
 
-- [Aligner Chisel Testbench](hdl/chisel/src/common/AlignerTest.scala)
-- [Aligner Verilog Testbench](hdl/verilog/rvv/design/Aligner_tb.sv)
-
-<!-- mdformat off -->
-<!-- prettier-ignore-start -->
+- [Aligner Chisel Testbench](../../../hdl/chisel/src/common/AlignerTest.scala)
+- [Aligner SystemVerilog Source](../../../hdl/verilog/rvv/design/Aligner.sv)
 
 --------------------------------------------------------------------------------
 
-<!-- prettier-ignore-end -->
+**Provenance & Traceability** - **Verified As Of:** 2026-05-20 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/common/Aligner.scala:L53`, `hdl/verilog/rvv/design/Aligner.sv:L19` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/common/Aligner.scala:L53`, `hdl/verilog/rvv/design/Aligner.sv:L19` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

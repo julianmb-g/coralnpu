@@ -15,6 +15,16 @@
 load("@coralnpu_hw//third_party/python:requirements.bzl", "requirement")
 
 py_library(
+    name = "TlulVerificationEnv",
+    srcs = ["TlulVerificationEnv.py"],
+    deps = [
+        ":TileLinkULInterface",
+        ":secded_golden",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+py_library(
     name = "TileLinkULInterface",
     srcs = ["TileLinkULInterface.py"],
     deps = [

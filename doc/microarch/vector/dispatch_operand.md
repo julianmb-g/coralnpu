@@ -1,5 +1,3 @@
-# Vector Dispatch Operand Extraction and Byte Type Generation
-
 <!--
  Copyright 2026 Google LLC
 
@@ -16,14 +14,15 @@
  limitations under the License.
 -->
 
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** HW Developers
+# Vector dispatch operand extraction and byte type generation
+
+> **Intended Audience:** HW Devs
 
 The Vector Dispatch unit contains dedicated sub-modules responsible for routing Vector Register File (VRF) read data to the appropriate execution unit pipelines and generating per-element byte types. These mechanisms handle the dynamic effective execution width (EEW) scaling, vector masking, and structural routing limitations of the VRF.
 
-## VRF Routing Limitations and Operand Extraction
+## Vrf routing limitations and operand extraction
 
 The `rvv_backend_dispatch_operand` module maps the 6 read ports of the VRF (`rd_data_vrf2dp[5:0]`) to up to 3 micro-ops per cycle. The extraction logic heavily relies on the `uop_class` to correctly route data based on whether an instruction expects a vector, scalar, or immediate in each operand slot.
 
@@ -31,51 +30,14 @@ The `rvv_backend_dispatch_operand` module maps the 6 read ports of the VRF (`rd_
 
 | Signal           | Direction | Width               | Description                                                             |
 | :--------------- | :-------- | :------------------ | :---------------------------------------------------------------------- |
-| `uop_uop2dp`     | Input     | `NUM_DP_UOP`        | Micro-op control queues containing `uop_class`                          |
-| `rd_data_vrf2dp` | Input     | `NUM_DP_VRF * VLEN` | Raw data from the VRF read ports                                        |
-| `v0_mask_vrf2dp` | Input     | `VLEN`              | Vector mask data from VRF                                               |
-| `vrf_byp`        | Output    | `NUM_DP_UOP`        | Bypassed vector operands (`v0`, `vs1`, `vs2`, `vd`) routed to datapaths |
-
-### Extraction Logic
-
-The extraction logic multiplexes the 6 VRF read ports into the `vrf_byp` operand buses. For `DISPATCH3` configurations, the logic considers the combined `uop_class` signatures (e.g., `VVV`, `XVV`, `XVX`) of the three concurrent micro-ops to resolve the source and destination lanes. If concurrent micro-ops share similar operand requirements, the logic multiplexes the `rd_data_vrf2dp` buses accordingly to avoid structural VRF read port hazards.
-
-## Byte Type Generation
-
-The `rvv_backend_dispatch_opr_byte_type` module computes the activity state of every byte within an operand, essential for correct masking, tail policies, and element-wise operations during mixed-width execution.
-
-### Byte States
-
-Each byte within a vector operand is classified into one of the following states:
-
-- `BODY_ACTIVE`: The element is within the active vector length (`vl`), past `vstart`, and its corresponding mask bit is 1 (or unmasked).
-- `BODY_INACTIVE`: The element is within the active vector length but its mask bit is 0.
-- `TAIL`: The element index is greater than or equal to `vl`.
-- `NOT_CHANGE`: The element index is less than `vstart` (Prestart).
-
-### Interface
-
-| Signal              | Direction | Description                                                             |
-| :------------------ | :-------- | :---------------------------------------------------------------------- |
-| `uop_info`          | Input     | Micro-op metadata containing `vl`, `vstart`, `vm`, and EEW sizes        |
-| `v0_data`           | Input     | Mask data for the current operand                                       |
-| `operand_byte_type` | Output    | Struct containing byte classifications for `vs2`, `vd`, and `v0_strobe` |
-
-### EEW Scaling and Narrowing/Widening
-
-Byte type generation calculates element indices based on the maximum EEW (`eew_max`) present among the operands. It supports alignment shifts for narrowing and widening instructions:
-
-- **Narrowing (1:2, 1:4):** Adjusts the element start offset based on the micro-op index to pack elements correctly.
-- **Widening (2:1, 4:1):** Scales the element start offset to spread elements across multiple destination registers.
-
-<!-- mdformat off -->
-
-<!-- prettier-ignore-start -->
+| `vrf_byp`        | Output    | `NUM_DP_UOP`        | Bypassed UOP operands to the next stage.                                |
+| `uop_uop2dp`     | Input     | `NUM_DP_UOP`        | UOP queue data input to the dispatch unit.                              |
+| `rd_data_vrf2dp` | Input     | `NUM_DP_VRF * VLEN` | Read data from the Vector Register File ports.                          |
+| `v0_mask_vrf2dp` | Input     | `VLEN` (128 bits)   | The v0 mask register read data for masking operations.                  |
 
 --------------------------------------------------------------------------------
 
-<!-- prettier-ignore-end -->
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_dispatch_operand.sv`, `hdl/verilog/rvv/design/rvv_backend_dispatch_opr_byte_type.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_dispatch_operand.sv`, `hdl/verilog/rvv/design/rvv_backend_dispatch_opr_byte_type.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

@@ -1,5 +1,3 @@
-# Vector Backend Floating-Point Divider (FDIV)
-
 <!--
  Copyright 2026 Google LLC
 
@@ -16,59 +14,65 @@
  limitations under the License.
 -->
 
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers
+# Vector backend floating-point divider (FDIV)
+
+> **Intended Audience:** HW Devs
 
 The Vector Backend Floating-Point Divider (`rvv_backend_fdiv_unit`) serves as the multi-cycle execution pipeline for vector floating-point division and square root instructions. It acts as an integration unit around the iterative `fpnew` division IP, managing the handshake, scalar-to-vector broadcasting, and exception aggregation back to the Vector Reorder Buffer (ROB).
 
-## Architecture & Dataflow
+## Architecture & dataflow
 
 The FDIV unit receives micro-operations (`DIV_RS_t`) from the vector dispatch logic. Since division and square root are long-latency, iterative operations, the unit manages backpressure using refined structural handshakes, asserting `fdiv_uop_ready` (`&fdiv_ready`) only when all underlying `fpnew` execution lanes assert their ready signals. The pipeline is configured with a zero-cycle pipeline latency configuration (`NumPipeRegs (0)`).
 
-### Operation Routing
+### Operation routing
 
 The unit decodes the micro-operation `ari_funct6` field to route data into the underlying computational units:
 
 - **VFDIV (Vector-Vector / Vector-Scalar Divide):** Configures the `fpnew` IP for `DIV`. If the operation is scalar-to-vector (`OPFVF`), the `vs1_data` word is broadcasted across all execution lanes.
+
 - **VFRDIV (Vector-Scalar Reverse Divide):** Configures the IP for `DIV`, reversing the operands such that `src2` receives the broadcasted scalar value and `src1` receives the vector element.
+
 - **VFUNARY1 (Vector Square Root):** Configures the IP for `SQRT` using `vs2_data` as the primary operand.
 
-### Execution Lanes & `fpnew` Implementation
+### Execution lanes & `fpnew` implementation
 
-The unit instantiates `` `VLENW `` parallel instances of `fpnew_divsqrt_th_64_multi`.
+The unit instantiates `` `VLENW `` parallel instances (representing the vector register width VLEN = 128) of `fpnew_divsqrt_th_64_multi`.
 
 - **Configuration:** The units are configured for `FP32` execution (`FpFmtConfig: 5'b10000`).
+
 - **Rounding Mode:** The architectural rounding mode (`frm`) is dynamically mapped from the micro-operation state to the `fpnew` format (e.g., `FRNE` to `RNE`, `FRTZ` to `RTZ`).
+
 - **Trap Flushing:** A global `trap_flush_rvv` signal can abort in-flight iterative divisions.
 
-### Result Aggregation & ROB Writeback
+### Result aggregation & ROB writeback
 
 Since the `fpnew` units process iteratively, the unit waits until all `VLENW` lanes assert `out_valid_o` (`sub_result_vld`).
 
 - The aggregated `result_valid` (`&sub_result_vld`) is used to handshake with the ROB's `result_ready`.
+
 - The per-lane IEEE floating-point exception flags (`sub_fpexp`) are concatenated into the 4-bit `fpexp` field of the `PU2ROB_t` structure.
+
 - Uop information (`rob_entry` and `uop_pc`) is pipelined through an `edff` to synchronize with the delayed output result.
 
 ## Interfaces
 
 | Signal           | Direction | Width             | Description                                                   |
 | :--------------- | :-------- | :---------------- | :------------------------------------------------------------ |
-| `clk`            | Input     | 1-bit             | Global clock signal.                                          |
-| `rst_n`          | Input     | 1-bit             | Global active-low asynchronous reset signal.                  |
-| `fdiv_uop_valid` | Input     | 1-bit             | Valid signal for incoming FDIV micro-operation.               |
-| `fdiv_uop`       | Input     | `DIV_RS_t` packet | Micro-operation payload for FDIV.                             |
-| `fdiv_uop_ready` | Output    | 1-bit             | Ready signal indicating unit can receive new micro-operation. |
-| `result_valid`   | Output    | 1-bit             | Valid signal for result submission to ROB.                    |
-| `result`         | Output    | `PU2ROB_t` packet | Result payload for ROB.                                       |
-| `result_ready`   | Input     | 1-bit             | Ready signal from ROB indicating available space.             |
-| `trap_flush_rvv` | Input     | 1-bit             | Global flush signal to reset pipeline during traps.           |
+| `clk`            | Input     | 1                 | Clock signal                                                  |
+| `rst_n`          | Input     | 1                 | Active-low reset signal                                       |
+| `fdiv_uop_valid` | Input     | 1                 | Indicates valid micro-operation from dispatch                 |
+| `fdiv_uop`       | Input     | `sizeof(DIV_RS_t)`| The floating-point division/sqrt micro-operation              |
+| `fdiv_uop_ready` | Output    | 1                 | Indicates unit is ready to accept a new micro-operation       |
+| `result_valid`   | Output    | 1                 | Indicates a valid division/sqrt result is available           |
+| `result`         | Output    | `sizeof(PU2ROB_t)`| The computation result payload for the Reorder Buffer (ROB)   |
+| `result_ready`   | Input     | 1                 | Backpressure signal from the ROB                              |
+| `trap_flush_rvv` | Input     | 1                 | Global trap/flush signal to clear pipeline                    |
 
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_fdiv_unit.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_fdiv_unit.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

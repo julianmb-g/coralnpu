@@ -28,23 +28,25 @@ class MemoryIfTest : public ::testing::Test {
 };
 
 TEST_F(MemoryIfTest, IsValidAddress_DefaultProfile) {
-  // Default profile: [0x100000, 0x200000)
-  EXPECT_TRUE(mem_if_.IsValidAddress(0x100000, 1));
-  EXPECT_TRUE(mem_if_.IsValidAddress(0x1FFFFF, 1));
-  EXPECT_TRUE(mem_if_.IsValidAddress(0x100000, 0x100000));
+  // Default profile: ITCM [0x0, 0x2000), DTCM [0x10000, 0x18000)
+  Memory_if default_if("default_if_test", "/dev/null", -1, "default");
+  EXPECT_TRUE(default_if.IsValidAddress(0x0000, 1));
+  EXPECT_TRUE(default_if.IsValidAddress(0x10000, 1));
+  EXPECT_TRUE(default_if.IsValidAddress(0x0000, 0x2000));
 
-  EXPECT_FALSE(mem_if_.IsValidAddress(0x0FFFFF, 2)); // Crosses boundary
-  EXPECT_FALSE(mem_if_.IsValidAddress(0x000000, 1));
-  EXPECT_FALSE(mem_if_.IsValidAddress(0x200000, 1));
+  EXPECT_FALSE(default_if.IsValidAddress(0x1FFF, 2)); // Crosses boundary
+  EXPECT_FALSE(default_if.IsValidAddress(0x2000, 1));
+  EXPECT_FALSE(default_if.IsValidAddress(0x18000, 1));
 }
 
 TEST_F(MemoryIfTest, IsValidAddress_HighMemProfile) {
-  // HighMem profile: [0x0, 0x200000)
+  // HighMem profile: [0x100000, 0x200000)
   Memory_if highmem_if("highmem_if_test", "/dev/null", -1, Memory_if::kHighMem);
-  EXPECT_TRUE(highmem_if.IsValidAddress(0x000000, 1));
+  EXPECT_TRUE(highmem_if.IsValidAddress(0x100000, 1));
   EXPECT_TRUE(highmem_if.IsValidAddress(0x1FFFFF, 1));
-  EXPECT_TRUE(highmem_if.IsValidAddress(0x000000, 0x200000));
+  EXPECT_TRUE(highmem_if.IsValidAddress(0x100000, 0x100000));
 
+  EXPECT_FALSE(highmem_if.IsValidAddress(0x000000, 1));
   EXPECT_FALSE(highmem_if.IsValidAddress(0x200000, 1));
 }
 

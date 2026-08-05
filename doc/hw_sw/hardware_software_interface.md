@@ -1,0 +1,93 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+> ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
+
+# Hardware/software interface
+
+> **Intended Audience:** SW/Compiler Devs, Folks writing software
+
+Defines the architectural boundary between software and CoralNPU IP, specifying ISA extensions, register models, and custom hardware accelerators.
+
+## Supported instruction set architecture (ISA)
+
+CoralNPU core implements a 32-bit RISC-V architecture with standard and custom extensions.
+
+### Base and standard extensions
+
+| Extension | Name | Description |
+| :--- | :--- | :--- |
+| **RV32I** | Base Integer | Base 32-bit integer instruction set. |
+| **M** | Multiply/Divide | Standard integer multiplication and division. |
+| **A** | Atomics | Not supported. CoralNPU has no support for AMO (Atomic Memory Operations) instructions. |
+| **F** | Single-Precision FP | Single-precision floating-point instructions. |
+| **D** | Double-Precision FP | Double-precision floating-point instructions (Scalar only). |
+| **Zicsr** | CSR Access | Control and Status Register instructions. |
+| **Zifencei** | Instruction Fence | Instruction stream synchronization. |
+
+### Vector extension (RVV 1.0)
+
+Implements a subset of RISC-V Vector extension 1.0.
+
+- **VLEN**: 128 bits (Vector register length).
+- **ELEN**: 32 bits (Maximum element width).
+- **SEW**: 8, 16, 32 bits supported (64-bit SEW is not supported).
+- **Lanes**: 4 physical execution lanes.
+
+#### Supported vector instructions
+Supports standard integer and floating-point vector operations:
+- **Arithmetic**: `VADD`, `VSUB`, `VRSUB`, `VMIN`, `VMINU`, `VMAX`, `VMAXU`, `VSLL`, `VSRL`, `VSRA`, `VSSRL`, `VSSRA`, `VADC`, `VMADC`, `VSBC`, `VMSBC`.
+- **Logic**: `VAND`, `VOR`, `VXOR`.
+- **Fixed-point**: `VSADDU`, `VSADD`, `VSSUBU`, `VSSUB`, `VSMUL`, `VNSRL`, `VNSRA`, `VNCLIPU`, `VNCLIP`.
+- **Floating-point**: `VFREDUSUM`, `VFREDOSUM`, `VFREDMIN`, `VFREDMAX`, `VFWCVTBF16`, `VFNCVTBF16`, `VFWMACCBF16`.
+- **Permutation**: `VRGATHER`, `VRGATHEREI16`, `VSLIDEUP`, `VSLIDEDOWN`, `VMERGE`, `VMV`, `VMV1R`, `VMV2R`, `VMV4R`, `VMV8R`, `VMV.X.S`, `VFMV.F.S`.
+- **Comparison**: `VMSEQ`, `VMSNE`, `VMSLTU`, `VMSLT`, `VMSLEU`, `VMSLE`, `VMSGTU`, `VMSGT`.
+- **Reductions**: `VREDSUM`, `VREDAND`, `VREDOR`, `VREDXOR`, `VREDMINU`, `VREDMIN`, `VREDMAXU`, `VREDMAX`.
+- **Mask**: `VMSBF`, `VMSOF`, `VMSIF`, `VIOTA`, `VCOMPRESS`, `VCPOP`, `VFIRST`.
+
+[Source: `hdl/chisel/src/coralnpu/rvv/RvvDecode.scala`]
+
+## Custom IP extensions
+
+CoralNPU implements and supports custom Zvt (Tensor Processing Engine) extensions for high-throughput matrix operations. These extensions provide specialized instructions for tensor manipulation, matrix multiplication, and efficient data orchestration within the TPE.
+
+## Register model
+
+### General purpose registers
+- **Scalar**: 32 x 32-bit GPRs (x0..x31).
+- **Floating-point**: 32 x 64-bit FPRs (f0..f31, supporting single and double precision).
+- **Vector**: 32 x 128-bit VPRs (v0..v31).
+
+### Control and status registers (csrs)
+Supports standard RISC-V CSRs for floating-point (`fcsr`), vector (`vtype`, `vl`, `vstart`, `vxrm`, `vxsat`), and machine-level control.
+
+Complete memory-mapped register maps are detailed in:
+- [Core CSRs](../microarch/infrastructure/csr.md)
+- [DMA Control](../sw/dma.md)
+
+## Memory model and synchronization
+
+Utilizes Harvard architecture for internal TCM access and RISC-V Weak Memory Ordering (RVWMO) for external memory.
+
+- **Synchronization**: Software uses `FENCE` and `FENCE.I` for memory consistency and instruction stream coherency.
+- **Atomic Operations**: Not supported. CoralNPU has no support for AMO (Atomic Memory Operations) instructions.
+
+--------------------------------------------------------------------------------
+
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/rvv/RvvDecode.scala`, `hdl/chisel/src/coralnpu/rvv/RvvAlu.scala`, `hdl/chisel/src/coralnpu/Parameters.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

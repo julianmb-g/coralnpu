@@ -229,8 +229,9 @@ class TileLinkULInterface:
         a_ready.value = 1
         while True:
             await RisingEdge(self.clock)
+            await cocotb.triggers.ReadOnly()
             try:
-                if a_valid.value:
+                if a_valid.value and a_ready.value == 1:
                     txn = {"user": {}}
                     for prop in ["opcode", "param", "size", "source",
                                  "address", "mask", "data"]:

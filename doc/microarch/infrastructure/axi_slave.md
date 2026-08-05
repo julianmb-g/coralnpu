@@ -1,7 +1,5 @@
-# AXI4 Slave Interface
-
 <!--
- Copyright 2024 Google LLC
+ Copyright 2026 Google LLC
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -18,43 +16,50 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers, HW Integrators
+# AXI4 slave interface
 
-The `AxiSlave` module acts as the primary host-facing bridge, explicitly translating host transactions into the internal `FabricIO` protocol used by the CoralNPU. The interface implements the AXI4 protocol as the exclusive host interface. It manages read/write arbitration and backpressure handling.
+> **Intended Audience:** HW Devs, HW Integrators
 
-## Interface Specifications
+The `AxiSlave` module serves as the primary host-facing bridge, translating host transactions into the internal `FabricIO` protocol used by the CoralNPU.
 
-| Interface Group    | Description                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| `io.axi4`          | Flipped `Axi4MasterIO` representing the external AXI4 interface.                                       |
-| `io.fabric`        | Internal `FabricIO` interface connecting to the on-chip memory fabric.                                 |
-| `io.txnInProgress` | Output flag asserted while any AXI4 command is actively being processed.                               |
-| `io.periBusy`      | Input flag from the fabric. When asserted, the slave stalls and does not accept new AXI4 transactions. |
+## Interfaces
 
-## Operational Behavior
+| Interface Group | Type | Direction | Description |
+| :--- | :--- | :--- | :--- |
+| `io.axi4` | `Axi4MasterIO` | Flipped (Slave) | External host AXI4 interface. |
+| `io.fabric` | `FabricIO` | Master | Internal connection to the on-chip memory fabric. |
+| `io.txnInProgress` | `Bool` | Output | Asserted while any AXI4 transaction is actively processed. |
+| `io.periBusy` | `Bool` | Input | Busy flag from fabric. When asserted, stalls new transactions. |
 
-The `AxiSlave` implements the following mechanisms:
+## Supported AXI4 features
 
-### Arbitration and Dispatch
+* **Burst types**: Supports `FIXED`, `INCR`, and `WRAP` burst configurations.
 
-- **Read/Write Fairness**: Employs a 2-way Round-Robin Arbiter (`CoralNPURRArbiter`) to select between pending Read Address (`AR`) and Write Address (`AW`) requests.
-- **Backpressure Handling**: The slave evaluates `io.periBusy`. If the internal fabric asserts busy, AXI4 transfers are paused, and no read/write commands are issued internally until the fabric is ready.
+* **Error propagation**: Fabric operation failures propagate to the host as `SLVERR` read/write responses; successful transfers return `OKAY`.
 
-### Response Codes
+* **Arbitration**: Independently manages and arbitrates concurrent address read/write requests.
 
-AXI4 response codes (`BRESP` and `RRESP`) are mapped from the internal fabric validity signals:
+## Queue configurations and buffer depths
 
-- `OKAY` (0x0): Asserted when the fabric successfully acknowledges a write or returns valid read data.
-- `SLVERR` (0x2): Asserted if the fabric indicates an error condition during the transaction.
+To maintain high throughput and absorb bus latencies under full-load conditions, `AxiSlave` incorporates several independent hardware queues:
 
-<!-- mdformat off -->
+* **Address channels**: Incoming AXI read and write addresses are queued in separate 2-entry queues. The arbitrated address is stored in a 1-entry pipelined address command queue (`pipe = true`).
 
-<!-- prettier-ignore-start -->
+* **Write data path**: Incoming AXI write data is buffered in a 3-entry queue. Completed write responses (`bresp`, `bid`) are staged in a 2-entry write response queue.
+
+* **Read data path**: Read data returned from the internal fabric is buffered in a 3-entry read data queue before delivery to the host.
+
+## Throttling and backpressure
+
+Dynamic backpressure is managed via the `io.periBusy` input signal from the internal fabric:
+
+* **Write throttling**: When `io.periBusy` is high, write operations are stalled by gating off the `ready` signal of the write data buffer (`writeData.ready := maybeWriteData && !io.periBusy`). This propagates backpressure directly to the AXI write channels.
+
+* **Read throttling**: New fabric read transactions are blocked from issuing when `io.periBusy` is active (`issueRead := maybeIssueRead && !io.periBusy`), halting the AXI read address handshake until the fabric is clear.
 
 --------------------------------------------------------------------------------
 
-<!-- prettier-ignore-end -->
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/AxiSlave.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/AxiSlave.scala` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

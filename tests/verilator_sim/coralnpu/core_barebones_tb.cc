@@ -13,22 +13,24 @@
 // limitations under the License.
 
 #define STRINGIZE(x) #x
-#define STR(x) STRINGIZE(x)
-#define MODEL_HEADER_SUFFIX .h
-#define MODEL_HEADER STR(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
+#define STR_HEADER(x) STRINGIZE(x.h)
+#define MODEL_HEADER STR_HEADER(VERILATOR_MODEL)
 #include MODEL_HEADER
 
-#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
-#define PARAMS_HEADER_SUFFIX _parameters.h
-#define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
+#define STR_PARAMS_DETAIL(x) STRINGIZE(hdl/chisel/src/coralnpu/x)
+#define STR_PARAMS(x) STR_PARAMS_DETAIL(x)
+#define CONCAT_DETAIL(x, y) x##y
+#define CONCAT(x, y) CONCAT_DETAIL(x, y)
+#define PARAMS_HEADER STR_PARAMS(CONCAT(VERILATOR_MODEL, _parameters.h))
 #include PARAMS_HEADER
 
 #undef STRINGIZE
-#undef STR
-#undef MODEL_HEADER_SUFFIX
+#undef STR_HEADER
 #undef MODEL_HEADER
-#undef PARAMS_HEADER_PREFIX
-#undef PARAMS_HEADER_SUFFIX
+#undef STR_PARAMS_DETAIL
+#undef STR_PARAMS
+#undef CONCAT_DETAIL
+#undef CONCAT
 #undef PARAMS_HEADER
 
 #include <fcntl.h>
@@ -66,6 +68,7 @@ struct Core_tb : Sysc_tb {
 
   sc_in<bool> io_ibus_valid;
 
+#if KP_exposeDebugPorts
 #define DECLARE_RB_VALID(x) sc_in<bool> io_debug_rb_inst_##x##_valid;
   REPEAT_8(DECLARE_RB_VALID);
 #undef DECLARE_RB_VALID
@@ -73,6 +76,7 @@ struct Core_tb : Sysc_tb {
 #define DECLARE_RB_INST(x) sc_in<sc_bv<32>> io_debug_rb_inst_##x##_bits_inst;
   REPEAT_8(DECLARE_RB_INST);
 #undef DECLARE_RB_INST
+#endif
 
   bool ebreak_halt = false;
   bool had_deadlock = false;
@@ -119,10 +123,12 @@ struct Core_tb : Sysc_tb {
 
   void posedge() {
     bool ebreak_detected = false;
+#if KP_exposeDebugPorts
 #define CHECK_EBREAK(x) \
     if (io_debug_rb_inst_##x##_valid.read() && (io_debug_rb_inst_##x##_bits_inst.read().to_uint() == 0x00100073 || io_debug_rb_inst_##x##_bits_inst.read().to_uint() == 0x08000073)) ebreak_detected = true;
     REPEAT_8(CHECK_EBREAK);
 #undef CHECK_EBREAK
+#endif
 
     if (ebreak_detected) {
         ebreak_halt = true;
@@ -147,6 +153,7 @@ struct Core_tb : Sysc_tb {
     }
 
     uint64_t retiring_this_cycle = 0;
+#if KP_exposeDebugPorts
     if (io_debug_rb_inst_0_valid.read()) retiring_this_cycle++;
     if (io_debug_rb_inst_1_valid.read()) retiring_this_cycle++;
     if (io_debug_rb_inst_2_valid.read()) retiring_this_cycle++;
@@ -155,6 +162,7 @@ struct Core_tb : Sysc_tb {
     if (io_debug_rb_inst_5_valid.read()) retiring_this_cycle++;
     if (io_debug_rb_inst_6_valid.read()) retiring_this_cycle++;
     if (io_debug_rb_inst_7_valid.read()) retiring_this_cycle++;
+#endif
 
     instruction_count += retiring_this_cycle;
 
@@ -424,6 +432,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   testbench.io_fault(io_fault);
   testbench.io_ibus_valid(io_ibus_valid);
 
+#if KP_exposeDebugPorts
 #define BIND_RB_VALID(x) testbench.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid);
   REPEAT_8(BIND_RB_VALID);
 #undef BIND_RB_VALID
@@ -431,6 +440,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
 #define BIND_RB_INST(x) testbench.io_debug_rb_inst_##x##_bits_inst(io_debug_rb_inst_##x##_bits_inst);
   REPEAT_8(BIND_RB_INST);
 #undef BIND_RB_INST
+#endif
 
   core.clock(testbench.clock);
   core.reset(testbench.reset);
@@ -462,6 +472,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   core.io_dbus_adrx(io_dbus_adrx);
   core.io_dbus_pc(io_dbus_pc);
 
+#if KP_exposeDebugPorts
 #define BIND_RB_DEBUG_IO(x) \
   core.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid); \
   core.io_debug_rb_inst_##x##_bits_pc(io_debug_rb_inst_##x##_bits_pc); \
@@ -537,6 +548,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   core.io_debug_dbus_bits_addr(io_debug_dbus_bits_addr);
   core.io_debug_dbus_bits_wdata(io_debug_dbus_bits_wdata);
   core.io_debug_dbus_bits_write(io_debug_dbus_bits_write);
+#endif
 
   core.io_iflush_valid(io_iflush_valid);
   core.io_iflush_pcNext(io_iflush_pcNext);
@@ -597,6 +609,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
   REPEAT_13(BIND_CSR_IN);
 #undef BIND_CSR_IN
 
+#if KP_exposeDebugPorts
 #define BIND_DEBUG_DISPATCH(x) \
   core.io_debug_dispatch_##x##_instFire(io_debug_dispatch_##x##_instFire); \
   core.io_debug_dispatch_##x##_instAddr(io_debug_dispatch_##x##_instAddr); \
@@ -604,6 +617,7 @@ static int Core_run(const char* name, const char* bin, const int instruction_lim
 
   REPEAT_4(BIND_DEBUG_DISPATCH);
 #undef BIND_DEBUG_DISPATCH
+#endif
 
   memory_interface.clock(testbench.clock);
   memory_interface.reset(testbench.reset);

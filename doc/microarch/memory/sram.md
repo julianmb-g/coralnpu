@@ -1,7 +1,5 @@
-# SRAM Wrappers
-
 <!--
- Copyright 2024 Google LLC
+ Copyright 2026 Google LLC
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -18,49 +16,40 @@
 
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers
+# SRAM wrappers
+
+> **Intended Audience:** HW Devs
 
 The CoralNPU IP encapsulates standard memory macros within generic Chisel wrappers. These wrappers provide unified interfaces and handle the translation of internal interconnect protocols (like the Internal Memory Fabric) into physical SRAM signals (read/write enables, addresses, and byte masks).
 
-## Core Wrappers Overview
+## Core wrappers overview
 
 The SRAM abstraction is partitioned into three hierarchical layers to separate the interface protocol logic from the physical macro instantiations:
 
 1. **`SRAM` (Protocol Adapter)**: Translates the internal `FabricIO` request/response protocol into a raw memory interface (`SRAMIO`).
+
 2. **`Sram_Nx128` (Parameterizable Macro Array)**: Stitches together multiple physical SRAM blocks to achieve an arbitrary depth.
+
 3. **`SramBlock` (Physical Blackbox Wrapper)**: The lowest-level wrapper instantiating the simulated or synthesized blackbox Verilog model (`Sram.v`).
 
 ## Interfaces
 
-### SRAMIO (Raw Memory Interface)
+### SRAMIO (raw memory interface)
 
 The `SRAMIO` bundle defines the fundamental signals required by the physical memory macros.
 
 | Signal      | Direction | Width              | Description                                               |
 | :---------- | :-------- | :----------------- | :-------------------------------------------------------- |
-| `address`   | Output    | `sramAddressWidth` | The word-aligned memory address.                          |
-| `enable`    | Output    | 1-bit              | Chip enable; asserted for both read and write operations. |
-| `isWrite`   | Output    | 1-bit              | Write enable; asserted to write `writeData`.              |
-| `readData`  | Input     | `axi2DataBits`     | Data read from the memory array.                          |
-| `writeData` | Output    | `axi2DataBits`     | Data to be written to the memory array.                   |
-| `mask`      | Output    | `axi2DataBits / 8` | Byte-level write enable mask.                             |
+| `address`   | Output    | `sramAddressWidth` | Memory access address                                     |
+| `enable`    | Output    | `1`                | Memory enable / chip select                               |
+| `isWrite`   | Output    | `1`                | Write enable signal (1 = Write, 0 = Read)                 |
+| `readData`  | Input     | `axi2DataBits`     | Data read from the physical memory                        |
+| `writeData` | Output    | `axi2DataBits`     | Data to be written to the physical memory                 |
+| `mask`      | Output    | `axi2DataBits/8`   | Byte-level write enable mask                              |
 
-### Protocol Adaptation (`SRAM`)
-
-The `SRAM` module acts as a bridge, accepting `FabricIO` requests. It arbitrates internally, prioritizing writes over reads if both are valid (though the protocol typically expects one at a time), and translates the fabric address down to a word index for the SRAM macro. It also provides a registered read response (`readData` and `valid`) to satisfy the fabric protocol constraints.
-
-## Macro Instantiation (`Sram_Nx128`)
-
-The `Sram_Nx128` module allows the instantiation of a logical SRAM array of arbitrary depth by tiling smaller predefined physical blocks (macros).
-
-- **Block Sizing Strategy**: The module attempts to use the largest possible underlying `SramBlock` that evenly divides the requested `tcmEntries`. It selects from capacities of 2048, 512, or 128 entries.
-- **Address Decoding**: If multiple blocks are required (`nSramModules > 1`), the upper bits of the address are used to generate the specific `enable` signal for the selected block, while the lower bits address the block internally.
-- **Read Multiplexing**: During a read, the module registers the selected block index and uses a multiplexer to route the correct block's output to the `rdata` port on the following cycle.
-
-<!-- mdformat off -->
-<!-- prettier-ignore -->
 --------------------------------------------------------------------------------
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-06 - **Upstream Commit:** f5f6c88d3dff8cb198cd89420919b6863667f3e0 - **Primary Source(s):** `hdl/chisel/src/coralnpu/SRAM.scala:L31`, `hdl/chisel/src/coralnpu/Sram.scala:L16`, `hdl/chisel/src/coralnpu/SramNx128.scala:L16` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/chisel/src/coralnpu/SRAM.scala:L31`, `hdl/chisel/src/coralnpu/Sram.scala:L16`, `hdl/chisel/src/coralnpu/SramNx128.scala:L16` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

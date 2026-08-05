@@ -1,5 +1,3 @@
-# Vector MAC Engine (Tensor Processing)
-
 <!--
  Copyright 2026 Google LLC
 
@@ -16,25 +14,26 @@
  limitations under the License.
 -->
 
-
 > ⚠️ **Disclaimer:** This document was generated or modified by an AI model. While every effort is made to ensure technical accuracy, the underlying source code and hardware RTL implementation remain the absolute source of truth. Use at your own risk.
 
-> **Intended Audience:** Hardware Developers, SW/Compiler Devs
+# Vector MAC engine
+
+> **Intended Audience:** HW Devs, SW/Compiler Devs
 
 ## Overview
 
-The CoralNPU handles tensor processing and matrix multiplication workloads natively within the standard RISC-V Vector (RVV) pipeline. There is no dedicated, standalone "Tensor Processing Engine" (TPE). Instead, all vector multiply-accumulate operations are executed by the highly parallel `rvv_backend_mac_unit`.
+The CoralNPU features a standard vector Multiply-Accumulate (MAC) engine within its RISC-V Vector (RVV) pipeline. Implemented via the `rvv_backend_mac_unit`, this unit handles vector multiply, multiply-add, and fixed-point saturating arithmetic operations.
 
-## Architecture & Capabilities
+## Architecture & capabilities
 
-The MAC Engine is responsible for executing vector multiply (`vmul`), multiply-add (`vmacc`, `vmadd`), and saturating multiply (`vsmul`) operations.
+The MAC engine is responsible for executing vector multiply (`vmul`), multiply-add (`vmacc`, `vmadd`), and saturating multiply (`vsmul`) operations.
 
-### Execution Width & Throughput
+### Execution width & throughput
 
-- **Datapath**: The execution unit is fully `VLEN` wide.
+- **Datapath**: The execution unit is fully `VLEN` wide (VLEN = 128).
 - **Throughput**: The pipeline can sustain up to **256 MAC operations per cycle** for 8-bit elements.
 
-### Supported Precisions (EEW)
+### Supported precisions (EEW)
 
 The MAC unit internally partitions the `VLEN` datapath to support multiple element widths natively via dynamic configuration.
 
@@ -43,7 +42,7 @@ The MAC unit internally partitions the `VLEN` datapath to support multiple eleme
 - **EEW=16 (16-bit)**: Medium throughput for int16 models.
 - **EEW=32 (32-bit)**: High-precision accumulations.
 
-### Rounding & Saturation Semantics
+### Rounding & saturation semantics
 
 For quantized neural networks, exact rounding and clipping behavior is critical.
 
@@ -54,22 +53,19 @@ For quantized neural networks, exact rounding and clipping behavior is critical.
 
 | Signal              | Direction | Width             | Description                                                         |
 | :------------------ | :-------- | :---------------- | :------------------------------------------------------------------ |
-| `clk`               | Input     | 1-bit             | Clock signal.                                                       |
-| `rst_n`             | Input     | 1-bit             | Active-low reset signal.                                            |
-| `rs2mac_uop_valid`  | Input     | 1-bit             | Valid signal for the instruction from Reservation Station.          |
-| `rs2mac_uop_data`   | Input     | `MUL_RS_t` packet | Instruction data from Reservation Station (operands, opcode, etc.). |
-| `mac_pipe_vld_en`   | Input     | 1-bit             | Pipeline valid enable.                                              |
-| `mac_pipe_data_en`  | Input     | 1-bit             | Pipeline data enable.                                               |
-| `trap_flush_rvv`    | Input     | 1-bit             | Trap flush signal to clear pipeline.                                |
-| `mac2rob_uop_valid` | Output    | 1-bit             | Valid signal for the result sent to Reorder Buffer (ROB).           |
-| `mac2rob_uop_data`  | Output    | `PU2ROB_t` packet | Result data sent to ROB (write data, saturation flags, etc.).       |
-
-<!-- mdformat off -->
-<!-- prettier-ignore-start -->
+| `clk`               | Input     | 1 bit             | Global clock signal.                                                |
+| `rst_n`             | Input     | 1 bit             | Global active-low reset signal.                                     |
+| `rs2mac_uop_valid`  | Input     | 1 bit             | Valid signal indicating a new micro-operation from the RS.          |
+| `rs2mac_uop_data`   | Input     | `MUL_RS_t`        | Data payload of the micro-operation.                                |
+| `mac_pipe_vld_en`   | Input     | 1 bit             | Pipeline valid enable signal.                                       |
+| `mac_pipe_data_en`  | Input     | 1 bit             | Pipeline data enable signal.                                        |
+| `trap_flush_rvv`    | Input     | 1 bit             | Global trap/flush signal.                                           |
+| `mac2rob_uop_valid` | Output    | 1 bit             | Valid signal for the result submitted to the ROB.                   |
+| `mac2rob_uop_data`  | Output    | `PU2ROB_t`        | Output data payload submitted to the ROB.                           |
 
 --------------------------------------------------------------------------------
 
-<!-- prettier-ignore-end -->
+**Provenance & Traceability** - **Verified As Of:** 2026-08-03 - **Upstream Commit:** [1126ed3fa244b38ee06fa002a5c640df9dec36f4](https://github.com/google/coralnpu/commit/1126ed3fa244b38ee06fa002a5c640df9dec36f4) - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_mac_unit.sv` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
 
-> **Provenance & Traceability** - **Verified As Of:** 2026-07-03 - **Upstream Commit:** [f5f6c88d3dff8cb198cd89420919b6863667f3e0](https://github.com/google/coralnpu/commit/f5f6c88d3dff8cb198cd89420919b6863667f3e0) - **Primary Source(s):** `hdl/verilog/rvv/design/rvv_backend_mac_unit.sv:L1` - **Disclaimer:** AI-generated/assisted; RTL is the source of truth.
-<!-- mdformat on -->
+
+> **Traceability:** Generated by Gemini. Derived from upstream commit d9622642c63f7eba6e0c9baa7fea2188d32e28e3.

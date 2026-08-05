@@ -24,7 +24,7 @@
 #include "tests/verilator_sim/elf.h"
 
 int main() {
-  CoralNPUSimulator* simulator = CoralNPUSimulator::Create();
+  coralnpu::sim::CoralNPUSimulator* simulator = coralnpu::sim::CoralNPUSimulator::Create();
 
   // Load elf
   auto file_name = "hw_sim/mailbox_example.elf";
@@ -63,7 +63,7 @@ int main() {
     std::cout << "Didn't halt" << std::endl;
   }
 
-  CoralNPUMailbox m = simulator->ReadMailbox();
+  coralnpu::sim::CoralNPUMailbox m = simulator->ReadMailbox();
   std::cout << "Mailbox value[0]=0x" << std::hex << m.message[0] << std::endl;
   std::cout << "Mailbox value[1]=0x" << std::hex << m.message[1] << std::endl;
 

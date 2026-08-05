@@ -18,3 +18,4 @@ tmp_bazel_out/
 mpact_riscv_BUILD.orig
 fix_changelog.py
 fix_changelog2.py
+__pycache__/
