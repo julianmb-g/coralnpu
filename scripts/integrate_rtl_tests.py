@@ -35,8 +35,8 @@ def generate_test_patch(finalized_branch, branch_repo_path):
 
 
 def apply_translated_patch(patch_path, integration_repo_path):
-  """Applies patch without path translation."""
-  os.system(f'git -C {integration_repo_path} apply {patch_path}')
+  """Applies patch with path translation."""
+  os.system(f'git -C {integration_repo_path} apply -p1 --ignore-space-change --ignore-whitespace {patch_path}')
   # Clean up the patch file after application
   os.remove(patch_path)
   return True
