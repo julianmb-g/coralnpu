@@ -1,13 +1,13 @@
 // Copyright 2023 Google LLC
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Apache License, Version 2.0 (the \"License\");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
+// distributed under the License is distributed on an \"AS IS\" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -20,8 +20,12 @@
 
 #include <iostream>
 #include <string>
+#include <thread>
+#include <chrono>
+#include <atomic>
 
-#include "tests/verilator_sim/fifo.h"
+#include "absl/strings/string_view.h"
+#include "fifo.h"
 // sc_core needs to be included before verilator header
 using namespace sc_core;      // NOLINT(build/namespaces)
 #include "verilated_fst_c.h"  // NOLINT(build/include_subdir): From verilator.
@@ -34,14 +38,16 @@ using sc_dt::sc_bv;
   BIND(b, c)
 
 template <typename T>
-struct sc_signal_vrb {
+class ScSignalVrb {
+ public:
   sc_signal<bool> valid;
   sc_signal<bool> ready;
   sc_signal<T> bits;
 };
 
 template <typename T>
-struct sc_in_vrb {
+class ScInVrb {
+ public:
   sc_in<bool> valid;
   sc_out<bool> ready;
   sc_in<T> bits;
@@ -52,7 +58,7 @@ struct sc_in_vrb {
     bits.bind(b);
   }
 
-  void bind(sc_signal_vrb<T> &vrb) {
+  void bind(ScSignalVrb<T> &vrb) {
     valid.bind(vrb.valid);
     ready.bind(vrb.ready);
     bits.bind(vrb.bits);
@@ -62,11 +68,12 @@ struct sc_in_vrb {
     bind(v, r, b);
   }
 
-  void operator()(sc_signal_vrb<T> &vrb) { bind(vrb); }
+  void operator()(ScSignalVrb<T> &vrb) { bind(vrb); }
 };
 
 template <typename T>
-struct sc_out_vrb {
+class ScOutVrb {
+ public:
   sc_out<bool> valid;
   sc_in<bool> ready;
   sc_out<T> bits;
@@ -77,7 +84,7 @@ struct sc_out_vrb {
     bits.bind(b);
   }
 
-  void bind(sc_signal_vrb<T> &vrb) {
+  void bind(ScSignalVrb<T> &vrb) {
     valid.bind(vrb.valid);
     ready.bind(vrb.ready);
     bits.bind(vrb.bits);
@@ -87,35 +94,39 @@ struct sc_out_vrb {
     bind(v, r, b);
   }
 
-  void operator()(sc_signal_vrb<T> &vrb) { bind(vrb); }
+  void operator()(ScSignalVrb<T> &vrb) { bind(vrb); }
 };
 
-// eg. struct message : base {...};
-struct base {
-  inline bool operator==(const base &rhs) const { return false; }
+// eg. struct message : Base {...};
+struct Base {
+  inline bool operator==(const Base &rhs) const { return false; }
 
-  inline friend std::ostream &operator<<(std::ostream &os, base const &v) {
+  inline friend std::ostream &operator<<(std::ostream &os, Base const &v) {
     return os;
   }
 };
 
 // Base class for testbench {posedge & negedge}.
-struct Sysc_tb : public sc_module {
+class SyscTb : public sc_module {
+ public:
   sc_clock clock;
   sc_signal<bool> reset;
   sc_signal<bool> resetn;
 
-  SC_HAS_PROCESS(Sysc_tb);
+  SC_HAS_PROCESS(SyscTb);
 
-  Sysc_tb(sc_module_name n, int loops, bool random = true)
+  SyscTb(sc_module_name n, int loops, bool random = true)
       : sc_module(n),
         clock("clock", 1, SC_NS),
         reset("reset"),
         resetn("resetn"),
         random_(random),
-        loops_(loops) {
+        loops_(loops),
+        started_(false) {
     loop_ = 0;
     error_ = false;
+
+    clock_(clock);
 
     SC_METHOD(tb_posedge);
     sensitive << clock_.pos();
@@ -126,13 +137,13 @@ struct Sysc_tb : public sc_module {
     SC_METHOD(tb_stop);
     sensitive << clock_.neg();
 
-    clock_(clock);
-
     // Verilated::commandArgs(argc, argv);
     tf_ = new VerilatedFstC;
   }
 
-  ~Sysc_tb() {
+  bool Started() const { return started_; }
+
+  ~SyscTb() {
     if (tf_) {
       tf_->dump(sim_time_);  // last falling edge
       tf_->close();
@@ -144,28 +155,36 @@ struct Sysc_tb : public sc_module {
     }
   }
 
-  void start() {
-    init();
+  void Start(bool trace, int reset_cycles) {
+    Init();
 
+    if (trace) {
+      // Placeholder for trace setup, will be integrated with trace()
+    }
+
+    // Reset sequence
     reset = 1;
     resetn = 0;
-    sc_start(4.75, SC_NS);  // falling edge of clock
+    for (int i = 0; i < reset_cycles; ++i) {
+      sc_start(5, SC_NS);  // Posedge
+      sc_start(5, SC_NS);  // Negedge
+    }
     reset = 0;
     resetn = 1;
+    sc_start(5, SC_NS);  // Falling edge to ensure deassertion is seen.
 
     started_ = true;
     sc_start();
 
     if (tf_) {
       tf_->dump(sim_time_++);  // last falling edge
-      tf_->close();
-      delete tf_;
-      tf_ = nullptr;
     }
   }
 
+  void Start() { Start(false, 5); } // Default to no trace, 5 reset cycles
+
   template <typename T>
-  void trace(T* design, const char *name = "") {
+  void Trace(T* design, const char *name = "") {
     if (!strlen(name)) {
       name = design->name();
     }
@@ -185,23 +204,17 @@ struct Sysc_tb : public sc_module {
            path.c_str());
   }
 
-  static char *get_name(char *s) {
-    const int len = strlen(s);
-    char *p = s;
-    for (int i = 0; i < len; ++i) {
-      if (s[i] == '/') {
-        p = s + i + 1;
-      }
-    }
-    return p;
+  static absl::string_view GetName(absl::string_view s) {
+    size_t pos = s.find_last_of('/');
+    return (pos == absl::string_view::npos) ? s : s.substr(pos + 1);
   }
 
  protected:
-  virtual void init() {}
-  virtual void posedge() {}
-  virtual void negedge() {}
+  virtual void Init() {}
+  virtual void Posedge() {}
+  virtual void Negedge() {}
 
-  bool check(bool v, const char *s = "") {
+  bool Check(bool v, const char *s = "") {
     const char *KRED = "\x1B[31m";
     const char *KRST = "\033[0m";
     if (!v) {
@@ -218,31 +231,31 @@ struct Sysc_tb : public sc_module {
     return v;
   }
 
-  bool rand_bool() {
+  bool SyscTbRandBool() {
     // Do not allow any 'io_in_valid' controls to be set during reset.
     return !reset &&
            (!random_ || (rand() & 1));  // NOLINT(runtime/threadsafe_fn)
   }
 
   // Generates a number on the range [min, max].
-  int rand_int(int min = 0, int max = (1 << 31)) {
+  int RandInt(int min = 0, int max = (1 << 31)) {
     return (rand() % (max - min + 1)) + min;  // NOLINT(runtime/threadsafe_fn)
   }
 
-  uint32_t rand_uint32(uint32_t min = 0, uint32_t max = 0xffffffffu) {
+  uint32_t RandUint32(uint32_t min = 0, uint32_t max = 0xffffffffu) {
     uint32_t r = (rand() & 0xffff) |  // NOLINT(runtime/threadsafe_fn)
                  (rand() << 16);      // NOLINT(runtime/threadsafe_fn)
     if (min == 0 && max == 0xffffffff) return r;
     return (r % (max - min + 1)) + min;
   }
 
-  uint64_t rand_uint64(uint64_t min = 0, uint64_t max = 0xffffffffffffffffull) {
-    uint64_t r = rand_uint32() | (uint64_t(rand_uint32()) << 32);
+  uint64_t RandUint64(uint64_t min = 0, uint64_t max = 0xffffffffffffffffull) {
+    uint64_t r = RandUint32() | (uint64_t(RandUint32()) << 32);
     if (min == 0 && max == 0xffffffffffffffffull) return r;
     return (r % (max - min + 1)) + min;
   }
 
-  uint32_t cycle() {
+  uint32_t Cycle() {
     return sim_time_ / 2;  // posedge + negedge
   }
 
@@ -259,15 +272,17 @@ struct Sysc_tb : public sc_module {
   VerilatedFstC *tf_ = nullptr;
 
   void tb_posedge() {
-    if (tf_ && started_) { tf_->dump(sim_time_++); tf_->flush(); }
+    if (tf_ && started_) { tf_->dump(sim_time_); tf_->flush(); }
+    sim_time_++;
     if (reset) return;
-    posedge();
+    Posedge();
   }
 
   void tb_negedge() {
-    if (tf_ && started_) { tf_->dump(sim_time_++); tf_->flush(); }
+    if (tf_ && started_) { tf_->dump(sim_time_); tf_->flush(); }
+    sim_time_++;
     if (reset) return;
-    negedge();
+    Negedge();
   }
 
   void tb_stop() {

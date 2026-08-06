@@ -29,7 +29,7 @@ int sc_main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
   Verilated::commandArgs(v_argc, v_argv.data());
 
-  CoreMiniAxi_tb tb("CoreMiniAxi_tb", 1000, /* random= */ false,
+  CoreMiniAxiTb tb("CoreMiniAxiTb", 1000, /* random= */ false,
                     /*debug_axi=*/true, /*instr_trace=*/false,
                     /*backdoor_load=*/true,
                     /*wfi_cb=*/std::nullopt, std::nullopt);
@@ -46,7 +46,7 @@ int sc_main(int argc, char** argv) {
   tb.BackdoorLoad(0x10000, dtcm_data, 32);
 
   if (absl::GetFlag(FLAGS_trace)) {
-    tb.trace(tb.core());
+    tb.Trace(tb.core());
   }
 
   std::vector<DataTransfer> read_transfers;
@@ -57,7 +57,7 @@ int sc_main(int argc, char** argv) {
 
   tb.EnqueueTransactionAsync(read_transfers);
 
-  tb.start();
+  tb.Start();
 
   return 0;
 }

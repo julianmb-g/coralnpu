@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,281 +15,117 @@
 #ifndef TESTS_VERILATOR_SIM_CORALNPU_MEMORY_IF_H_
 #define TESTS_VERILATOR_SIM_CORALNPU_MEMORY_IF_H_
 
-#include <stdint.h>
-#include <stdio.h>
-
-#include <algorithm>
-#include <map>
+#include <systemc.h>
 #include <string>
-
-#include "absl/log/log.h"
+#include <vector>
+#include <cstdint>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
 #include "absl/strings/str_format.h"
-#include "tests/verilator_sim/sysc_module.h"
+#include "absl/strings/string_view.h"
 
-// A memory model base class
-struct Memory_if : Sysc_module {
-  static constexpr const char* kHighMem = "highmem";
-  const int kPageSize = 4 * 1024;
-  const int kPageMask = ~(kPageSize - 1);
-  std::string profile_;
+// Abstract base class for CoralNPU memory interfaces with bounds checking.
+class MemoryIf : public sc_module {
+ public:
+  sc_in<bool> clock;
+  sc_in<bool> reset;
 
-  virtual void eval() override {}
-
-  struct memory_page_t {
-    uint32_t addr;
-    uint8_t  data[4096];
-  };
-
-  bool IsValidAddress(uint32_t addr, uint32_t len) const {
-    if (addr > 0xFFFFFFFFU - len) return false;
-    uint32_t end_addr = addr + len;
-    if (profile_ == "default") {
-      // ITCM: 8KB at 0x0
-      bool in_itcm = (addr < 0x2000 && end_addr <= 0x2000);
-      // DTCM: 32KB at 0x10000
-      bool in_dtcm = (addr >= 0x10000 && end_addr <= 0x18000);
-      return in_itcm || in_dtcm;
-    } else if (profile_ == "highmem") {
-      // 1MB at 0x100000
-      return (addr >= 0x100000 && end_addr <= 0x200000);
+  MemoryIf(sc_module_name n, const char* bin, int limit, absl::string_view profile)
+      : sc_module(n), profile_(profile), pending_exit_code_(0) {
+    if (profile == "highmem") {
+      itcm_base_ = 0x00100000;
+      itcm_size_ = 1024 * 1024; // 1MB Unified
+      dtcm_base_ = 0x00100000;
+      dtcm_size_ = 0;
+    } else {
+      // default
+      itcm_base_ = 0x00000000;
+      itcm_size_ = 8 * 1024;   // 8KB
+      dtcm_base_ = 0x00010000;
+      dtcm_size_ = 32 * 1024;  // 32KB
     }
-    return true; // "all" or other profile
+    itcm_data_.resize(itcm_size_, 0);
+    dtcm_data_.resize(dtcm_size_, 0);
   }
 
+  virtual ~MemoryIf() = default;
+
+  int PendingExitCode() const { return pending_exit_code_; }
+  void SetPendingExitCode(int code) { pending_exit_code_ = code; }
+
+  // Reads 'bytes' from 'addr' into 'data'. Returns true on success.
+  virtual bool Read(uint32_t addr, int bytes, uint8_t* data) {
+    if (addr >= itcm_base_ && addr + bytes <= itcm_base_ + itcm_size_) {
+      std::memcpy(data, &itcm_data_[addr - itcm_base_], bytes);
+      return true;
+    }
+    if (addr >= dtcm_base_ && addr + bytes <= dtcm_base_ + dtcm_size_) {
+      std::memcpy(data, &dtcm_data_[addr - dtcm_base_], bytes);
+      return true;
+    }
+    return false;
+  }
+
+  bool Read(uint64_t addr, void* dest, size_t count) {
+    return Read(static_cast<uint32_t>(addr), static_cast<int>(count), reinterpret_cast<uint8_t*>(dest));
+  }
+
+  // Writes 'bytes' from 'data' to 'addr'. Returns true on success.
+  virtual bool Write(uint32_t addr, int bytes, const uint8_t* data) {
+    if (addr >= itcm_base_ && addr + bytes <= itcm_base_ + itcm_size_) {
+      std::memcpy(&itcm_data_[addr - itcm_base_], data, bytes);
+      return true;
+    }
+    if (addr >= dtcm_base_ && addr + bytes <= dtcm_base_ + dtcm_size_) {
+      std::memcpy(&dtcm_data_[addr - dtcm_base_], data, bytes);
+      return true;
+    }
+    return false;
+  }
+
+  bool Write(uint64_t addr, const void* src, size_t count) {
+    return Write(static_cast<uint32_t>(addr), static_cast<int>(count), reinterpret_cast<const uint8_t*>(src));
+  }
+
+  virtual void Eval() = 0;
+
+  // Returns a string representation of the current memory profile boundaries.
   std::string GetProfileBounds() const {
-    if (profile_ == "default") {
-      return "ITCM:[0x0 - 0x2000), DTCM:[0x10000 - 0x18000)";
-    } else if (profile_ == "highmem") {
-      return "[0x100000 - 0x200000)";
+    if (profile_ == "highmem") {
+      return absl::StrFormat("[0x%08x - 0x%08x] (Unified ITCM)", itcm_base_, itcm_base_ + itcm_size_);
+    } else {
+      return absl::StrFormat("[0x%08x - 0x%08x] (ITCM) and [0x%08x - 0x%08x] (DTCM)", 
+                             itcm_base_, itcm_base_ + itcm_size_,
+                             dtcm_base_, dtcm_base_ + dtcm_size_);
     }
-    return "[0x0 - 0xFFFFFFFF)";
   }
 
-  uint64_t GetOverflowDelta(uint32_t addr, uint32_t len) const {
-    if (addr > 0xFFFFFFFFU - len) return len - (0xFFFFFFFFU - addr + 1);
-    uint32_t end_addr = addr + len;
-    if (profile_ == "default") {
-      if (addr < 0x10000 && end_addr > 0x2000) return end_addr - 0x2000;
-      if (end_addr > 0x18000) return end_addr - 0x18000;
-    } else if (profile_ == "highmem") {
-      if (addr < 0x100000) return 0x100000 - addr;
-      if (end_addr > 0x200000) return end_addr - 0x200000;
-    }
+  // Helper to calculate the length of the intersection of two ranges [a1, a2) and [b1, b2).
+  static uint32_t GetRangeOverlap(uint32_t a1, uint32_t a2, uint32_t b1, uint32_t b2) {
+    uint32_t start = std::max(a1, b1);
+    uint32_t end = std::min(a2, b2);
+    if (start < end) return end - start;
     return 0;
   }
 
-  // Memory_if constructor.
-  // Note: File I/O in constructors is generally a style violation because it can fail silently
-  // or abort the program. In our barebones simulation targets, we explicitly pass `bin = nullptr`
-  // and load ELFs backdoor using `LoadElfToMemory`, making this constructor completely infallible at runtime.
-  // We keep the file loading path here for backward compatibility with older SystemC testbenches,
-  // but updated the error logging to use standard Abseil loggers.
-  Memory_if(sc_module_name n, const char* bin, int limit = -1, const std::string& profile = "all") :
-      Sysc_module(n), profile_(profile) {
-    FILE *f = (bin != nullptr && bin[0] != '\0') ? fopen(bin, "rb") : nullptr;
-
-    if (f != nullptr) {
-      fseek(f, 0, SEEK_END);
-      int64_t fsize = ftell(f);
-      fseek(f, 0, SEEK_SET);
-      uint8_t *fdata = new uint8_t[fsize];
-
-      fread(fdata, fsize, 1, f);
-      fclose(f);
-
-      if (limit > 0 && fsize > limit) {
-        LOG(ERROR) << absl::StrFormat("***ERROR Memory_if limit exceeded [%ld > %d]", fsize, limit);
-        exit(-1);
-      }
-
-      int addr = 0;
-      for (; addr < fsize; addr += kPageSize) {
-        const int64_t size = std::min(fsize - addr, int64_t(kPageSize));
-        AddPage(addr, size, fdata + addr);
-      }
-      // Create pages for the rest of our memory space, that was not created
-      // for inserting the binary.
-      if (profile == "default") {
-        for (; addr < 0x18000; addr += kPageSize) {
-           if (IsValidAddress(addr, kPageSize)) AddPage(addr, kPageSize, nullptr);
-        }
-      } else if (profile == "highmem") {
-        for (; addr < 0x200000; addr += kPageSize) {
-           if (IsValidAddress(addr, kPageSize)) AddPage(addr, kPageSize, nullptr);
-        }
-      } else {
-        for (; addr < 0x400000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-      }
-
-      delete [] fdata;
-    } else {
-      if (profile == "default") {
-        // ITCM: 8KB at 0x0
-        for (int addr = 0; addr < 0x2000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-        // DTCM: 32KB at 0x10000
-        for (int addr = 0x10000; addr < 0x18000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-      } else if (profile == "highmem") {
-        // 1MB at 0x100000
-        for (int addr = 0x100000; addr < 0x200000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-      } else {
-        // Create pages for the rest of our memory space (up to 4MB)
-        for (int addr = 0; addr < 0x400000; addr += kPageSize) {
-          AddPage(addr, kPageSize, nullptr);
-        }
-      }
-    }
-  }
-
-  bool Read(uint32_t addr, int bytes, uint8_t* data) {
-    if (!IsValidAddress(addr, bytes)) {
-      LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + bytes, GetProfileBounds(), GetOverflowDelta(addr, bytes));
-      return false;
-    }
-    while (bytes > 0) {
-      const uint32_t maddr = addr & kPageMask;
-      const uint32_t offset = addr - maddr;
-      const int limit = kPageSize - offset;
-      const int len = std::min(bytes, limit);
-
-      if (!IsValidAddress(addr, len)) {
-        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, GetProfileBounds(), GetOverflowDelta(addr, len));
-        return false;
-      }
-
-      if (!IsValidAddress(addr, len)) {
-        LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + len, GetProfileBounds(), GetOverflowDelta(addr, len));
-        return false;
-      }
-
-      if (!HasPage(maddr)) {
-        return false;
-      }
-
-      auto& p = page_[maddr];
-      uint8_t* d = p.data;
-      memcpy(data, d + offset, len);
-#if 0
-      printf("READ  %08x", addr);
-      for (int i = 0; i < len; i++) {
-        printf(" %02x", data[i]);
-      }
-      printf("\n");
-#endif
-      addr += len;
-      data += len;
-      bytes -= len;
-      assert(bytes >= 0);
-    }
-    return true;
-  }
-
-  bool Write(uint32_t addr, int bytes, const uint8_t* data) {
-    if (!IsValidAddress(addr, bytes)) {
-      LOG(ERROR) << absl::StrFormat("[FATAL] Runtime memory violation. Requested: [0x%08x - 0x%08x]. Available: %s. Delta: Exceeds bounds by 0x%lx bytes.", addr, addr + bytes, GetProfileBounds(), GetOverflowDelta(addr, bytes));
-      return false;
-    }
-    while (bytes > 0) {
-      const uint32_t maddr = addr & kPageMask;
-      const uint32_t offset = addr - maddr;
-      const int limit = kPageSize - offset;
-      const int len = std::min(bytes, limit);
-
-      if (!HasPage(maddr)) {
-        AddPage(maddr, kPageSize, nullptr);
-      }
-
-      auto& p = page_[maddr];
-      uint8_t* d = p.data;
-      memcpy(d + offset, data, len);
-#if 0
-      if (addr < 0x10010 || addr >= 0x11054) {
-        printf("WRITE %08x", addr);
-        for (int i = 0; i < len; i++) {
-          printf(" %02x", data[i]);
-        }
-        printf("\n");
-      }
-#endif
-      addr += len;
-      data += len;
-      bytes -= len;
-      assert(bytes >= 0);
-    }
-    return true;
+  // Calculates the number of bytes by which an access at 'addr' with 'bytes' exceeds bounds.
+  uint32_t GetOverflowDelta(uint32_t addr, int bytes) const {
+    uint32_t end_addr = addr + bytes;
+    uint32_t itcm_overlap = GetRangeOverlap(addr, end_addr, itcm_base_, itcm_base_ + itcm_size_);
+    uint32_t dtcm_overlap = GetRangeOverlap(addr, end_addr, dtcm_base_, dtcm_base_ + dtcm_size_);
+    return bytes - (itcm_overlap + dtcm_overlap);
   }
 
  protected:
-  void ReadSwizzle(const uint32_t addr, const int bytes, uint8_t* data) {
-    const int mask = bytes - 1;
-    const int alignment = (bytes - (addr & mask)) & mask;  // left shuffle
-    uint8_t tmp[512/8];
-
-    if (!alignment) return;
-
-    for (int i = 0; i < bytes; ++i) {
-      tmp[i] = data[i];
-    }
-
-    for (int i = 0; i < bytes; ++i) {
-      data[i] = tmp[(i + alignment) & mask];
-    }
-  }
-
-  void WriteSwizzle(const uint32_t addr, const int bytes, uint8_t* data) {
-    const int mask = bytes - 1;
-    const int alignment = addr & mask;  // right shuffle
-    uint8_t tmp[512/8];
-
-    if (!alignment) return;
-
-    for (int i = 0; i < bytes; ++i) {
-      tmp[i] = data[i];
-    }
-
-    for (int i = 0; i < bytes; ++i) {
-      data[i] = tmp[(i + alignment) & mask];
-    }
-  }
-
- private:
-  std::map<uint32_t, memory_page_t> page_;
-
-  bool HasPage(const uint32_t addr) {
-    return page_.find(addr) != page_.end();
-  }
-
-  void AddPage(const uint32_t addr, const int bytes,
-               const uint8_t* data = nullptr) {
-    const uint32_t addrbase = addr & kPageMask;
-    if (addr != addrbase) {
-      printf("AddPage(%08x, %d)\n", addr, bytes);
-      assert(false && "AddPage: address not page aligned");
-    }
-
-    if (HasPage(addr)) {
-      printf("AddPage(%08x, %d)\n", addr, bytes);
-      assert(false && "AddPage: address already populated");
-    }
-
-    auto& p = page_[addr];
-    uint8_t* d = p.data;
-
-    if (bytes < kPageSize || data == nullptr) {
-      memset(d, 0xcc, kPageSize);
-    }
-
-    if (data) {
-      memcpy(d, data, bytes);
-    }
-  }
+  std::string profile_;
+  uint32_t itcm_base_;
+  uint32_t itcm_size_;
+  uint32_t dtcm_base_;
+  uint32_t dtcm_size_;
+  std::vector<uint8_t> itcm_data_;
+  std::vector<uint8_t> dtcm_data_;
+  int pending_exit_code_;
 };
 
 #endif  // TESTS_VERILATOR_SIM_CORALNPU_MEMORY_IF_H_

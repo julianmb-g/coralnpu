@@ -12,61 +12,62 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define STRINGIZE(x)        #x
-#define STR(x)              STRINGIZE(x)
-#define CONCAT_HELPER(a, b) a##b
-#define CONCAT(a, b)        CONCAT_HELPER(a, b)
-
-#define MODEL_HEADER STR(VERILATOR_MODEL.h)
+#define STRINGIZE_INTERNAL(x) #x
+#define STRINGIZE(x) STRINGIZE_INTERNAL(x)
+#define STR_HEADER(x) STRINGIZE(x.h)
+#define MODEL_HEADER STR_HEADER(VERILATOR_MODEL)
 #include MODEL_HEADER
 
-// clang-format off
-#define PARAMS_HEADER STR(hdl/chisel/src/coralnpu/CONCAT(VERILATOR_MODEL, _parameters.h))
-// clang-format on
+#define CONCAT_TEMP(a, b) a##b
+#define CONCAT(a, b) CONCAT_TEMP(a, b)
+#define STR_PARAMS_HEADER_TEMP(x) STRINGIZE(hdl/chisel/src/coralnpu/CONCAT(x, _parameters.h))
+#define STR_PARAMS_HEADER(x) STR_PARAMS_HEADER_TEMP(x)
+#define PARAMS_HEADER STR_PARAMS_HEADER(VERILATOR_MODEL)
 #include PARAMS_HEADER
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/flags/usage.h"
-#include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 #include "tests/verilator_sim/coralnpu/core_if.h"
 #include "tests/verilator_sim/coralnpu/debug_if.h"
+#include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 #include "tests/verilator_sim/sysc_tb.h"
 #include "tests/verilator_sim/util.h"
 
 ABSL_FLAG(int, cycles, 100000000, "Simulation cycles");
 ABSL_FLAG(bool, trace, false, "Dump VCD trace");
 
-struct Core_tb : Sysc_tb {
+class CoreTb : public SyscTb {
+ public:
   sc_in<bool> io_halted;
   sc_in<bool> io_fault;
   sc_in<bool> io_ebus_dbus_valid;
-  sc_in<sc_bv<32>> io_ebus_dbus_addr;
+  sc_in<sc_bv<KP_lsuAddrBits>> io_ebus_dbus_addr;
   sc_out<bool> io_ebus_fault_valid;
   sc_out<bool> io_ebus_dbus_ready;
-  sc_out<sc_bv<32>> io_ebus_fault_bits_addr;
+  sc_out<sc_bv<KP_programCounterBits>> io_ebus_fault_bits_addr;
 
-  using Sysc_tb::Sysc_tb;  // constructor
+  using SyscTb::SyscTb;  // constructor
 
-  void posedge() {
-    check(!io_fault, "io_fault");
+  void Posedge() {
+    Check(!io_fault, "io_fault");
     if (io_ebus_dbus_valid) {
-      io_ebus_fault_valid     = true;
-      io_ebus_dbus_ready      = true;
+      io_ebus_fault_valid = true;
+      io_ebus_dbus_ready = true;
       io_ebus_fault_bits_addr = io_ebus_dbus_addr;
     } else {
       io_ebus_fault_valid = false;
     }
-    if (io_halted)
-      sc_stop();
+    if (io_halted) sc_stop();
   }
 };
 
-static void Core_run(const char *name, const char *bin, const int cycles, const bool trace) {
-  VERILATOR_MODEL core(name);
-  Core_tb tb("Core_tb", cycles, /* random= */ false);
-  Core_if mif("Core_if", bin);
-  Debug_if dbg("Debug_if", &mif);
+static void CoreRun(absl::string_view name, absl::string_view bin, const int cycles,
+                     const bool trace) {
+  VERILATOR_MODEL core(std::string(name).c_str());
+  CoreTb tb("CoreTb", cycles, /* random= */ false);
+  CoreIf mif("CoreIf", std::string(bin).c_str());
+  DebugIf dbg("DebugIf", &mif);
 
   sc_signal<bool> io_halted;
   sc_signal<bool> io_fault;
@@ -86,70 +87,70 @@ static void Core_run(const char *name, const char *bin, const int cycles, const 
   sc_signal<bool> io_ebus_fault_valid;
   sc_signal<bool> io_ebus_fault_bits_write;
   sc_signal<bool> io_iflush_valid;
-  sc_signal<sc_bv<KP_programCounterBits>> io_iflush_pcNext;
+  sc_signal<sc_bv<KP_programCounterBits> > io_iflush_pcNext;
   sc_signal<bool> io_iflush_ready;
   sc_signal<bool> io_dflush_valid;
   sc_signal<bool> io_dflush_ready;
   sc_signal<bool> io_dflush_all;
   sc_signal<bool> io_dflush_clean;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_0;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_1;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_2;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_3;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_4;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_5;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_6;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_7;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_8;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_9;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_10;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_11;
-  sc_signal<sc_bv<KP_xlen>> io_csr_in_value_12;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_0;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_1;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_2;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_3;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_4;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_5;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_6;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_7;
-  sc_signal<sc_bv<KP_xlen>> io_csr_out_value_8;
-  sc_signal<sc_bv<KP_programCounterBits>> io_ibus_addr;
-  sc_signal<sc_bv<KP_fetchDataBits>> io_ibus_rdata;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_0;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_1;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_2;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_3;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_4;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_5;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_6;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_7;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_8;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_9;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_10;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_11;
+  sc_signal<sc_bv<KP_xlen> > io_csr_in_value_12;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_0;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_1;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_2;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_3;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_4;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_5;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_6;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_7;
+  sc_signal<sc_bv<KP_xlen> > io_csr_out_value_8;
+  sc_signal<sc_bv<KP_programCounterBits> > io_ibus_addr;
+  sc_signal<sc_bv<KP_fetchDataBits> > io_ibus_rdata;
   sc_signal<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc;
   sc_signal<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_addr;
-  sc_signal<sc_bv<KP_lsuAddrBits>> io_dbus_addr;
-  sc_signal<sc_bv<KP_lsuAddrBits>> io_dbus_adrx;
-  sc_signal<sc_bv<32>> io_dbus_pc;
-  sc_signal<sc_bv<KP_dbusSize>> io_dbus_size;
-  sc_signal<sc_bv<KP_lsuDataBits>> io_dbus_wdata;
-  sc_signal<sc_bv<KP_lsuDataBits / 8>> io_dbus_wmask;
-  sc_signal<sc_bv<KP_lsuDataBits>> io_dbus_rdata;
-  sc_signal<sc_bv<KP_lsuAddrBits>> io_ebus_dbus_addr;
-  sc_signal<sc_bv<KP_lsuAddrBits>> io_ebus_dbus_adrx;
-  sc_signal<sc_bv<32>> io_ebus_dbus_pc;
+  sc_signal<sc_bv<KP_lsuAddrBits> > io_dbus_addr;
+  sc_signal<sc_bv<KP_lsuAddrBits> > io_dbus_adrx;
+  sc_signal<sc_bv<32> > io_dbus_pc;
+  sc_signal<sc_bv<KP_dbusSize> > io_dbus_size;
+  sc_signal<sc_bv<KP_lsuDataBits> > io_dbus_wdata;
+  sc_signal<sc_bv<KP_lsuDataBits / 8> > io_dbus_wmask;
+  sc_signal<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
+  sc_signal<sc_bv<KP_lsuAddrBits> > io_ebus_dbus_addr;
+  sc_signal<sc_bv<KP_lsuAddrBits> > io_ebus_dbus_adrx;
+  sc_signal<sc_bv<32> > io_ebus_dbus_pc;
   sc_signal<sc_bv<KP_programCounterBits>> io_ebus_fault_bits_epc;
   sc_signal<sc_bv<KP_programCounterBits>> io_ebus_fault_bits_addr;
-  sc_signal<sc_bv<KP_dbusSize>> io_ebus_dbus_size;
-  sc_signal<sc_bv<KP_lsuDataBits>> io_ebus_dbus_wdata;
-  sc_signal<sc_bv<KP_lsuDataBits / 8>> io_ebus_dbus_wmask;
-  sc_signal<sc_bv<KP_lsuDataBits>> io_ebus_dbus_rdata;
+  sc_signal<sc_bv<KP_dbusSize> > io_ebus_dbus_size;
+  sc_signal<sc_bv<KP_lsuDataBits> > io_ebus_dbus_wdata;
+  sc_signal<sc_bv<KP_lsuDataBits / 8> > io_ebus_dbus_wmask;
+  sc_signal<sc_bv<KP_lsuDataBits> > io_ebus_dbus_rdata;
   sc_signal<bool> io_ebus_internal;
 #if KP_exposeDebugPorts
-  sc_signal<sc_bv<4>> io_debug_en;
-  sc_signal<sc_bv<KP_xlen>> io_debug_cycles;
+  sc_signal<sc_bv<4> > io_debug_en;
+  sc_signal<sc_bv<KP_xlen> > io_debug_cycles;
   sc_signal<bool> io_debug_dbus_valid;
-  sc_signal<sc_bv<32>> io_debug_dbus_bits_addr;
+  sc_signal<sc_bv<KP_lsuAddrBits>> io_debug_dbus_bits_addr;
   sc_signal<sc_bv<KP_lsuDataBits>> io_debug_dbus_bits_wdata;
   sc_signal<bool> io_debug_dbus_bits_write;
   sc_signal<bool> io_debug_dispatch_0_instFire;
   sc_signal<bool> io_debug_dispatch_1_instFire;
   sc_signal<bool> io_debug_dispatch_2_instFire;
   sc_signal<bool> io_debug_dispatch_3_instFire;
-  sc_signal<sc_bv<32>> io_debug_dispatch_0_instAddr;
-  sc_signal<sc_bv<32>> io_debug_dispatch_1_instAddr;
-  sc_signal<sc_bv<32>> io_debug_dispatch_2_instAddr;
-  sc_signal<sc_bv<32>> io_debug_dispatch_3_instAddr;
+  sc_signal<sc_bv<KP_programCounterBits>> io_debug_dispatch_0_instAddr;
+  sc_signal<sc_bv<KP_programCounterBits>> io_debug_dispatch_1_instAddr;
+  sc_signal<sc_bv<KP_programCounterBits>> io_debug_dispatch_2_instAddr;
+  sc_signal<sc_bv<KP_programCounterBits>> io_debug_dispatch_3_instAddr;
   sc_signal<sc_bv<32>> io_debug_dispatch_0_instInst;
   sc_signal<sc_bv<32>> io_debug_dispatch_1_instInst;
   sc_signal<sc_bv<32>> io_debug_dispatch_2_instInst;
@@ -174,17 +175,18 @@ static void Core_run(const char *name, const char *bin, const int cycles, const 
   sc_signal<sc_bv<KP_scalarRegCountWidth>> io_debug_regfile_writeData_3_bits_addr;
   sc_signal<sc_bv<KP_scalarRegCountWidth>> io_debug_regfile_writeData_4_bits_addr;
   sc_signal<sc_bv<KP_scalarRegCountWidth>> io_debug_regfile_writeData_5_bits_addr;
-  sc_signal<sc_bv<32>> io_debug_regfile_writeData_0_bits_data;
-  sc_signal<sc_bv<32>> io_debug_regfile_writeData_1_bits_data;
-  sc_signal<sc_bv<32>> io_debug_regfile_writeData_2_bits_data;
-  sc_signal<sc_bv<32>> io_debug_regfile_writeData_3_bits_data;
-  sc_signal<sc_bv<32>> io_debug_regfile_writeData_4_bits_data;
-  sc_signal<sc_bv<32>> io_debug_regfile_writeData_5_bits_data;
+  sc_signal<sc_bv<KP_xlen>> io_debug_regfile_writeData_0_bits_data;
+  sc_signal<sc_bv<KP_xlen>> io_debug_regfile_writeData_1_bits_data;
+  sc_signal<sc_bv<KP_xlen>> io_debug_regfile_writeData_2_bits_data;
+  sc_signal<sc_bv<KP_xlen>> io_debug_regfile_writeData_3_bits_data;
+  sc_signal<sc_bv<KP_xlen>> io_debug_regfile_writeData_4_bits_data;
+  sc_signal<sc_bv<KP_xlen>> io_debug_regfile_writeData_5_bits_data;
 
-#define IO_DEBUG(x)                                         \
-  sc_signal<sc_bv<KP_programCounterBits>> io_debug_addr##x; \
-  sc_signal<sc_bv<32>> io_debug_inst##x;
-  REPEAT(IO_DEBUG, KP_instructionLanes);
+
+#define IO_DEBUG(x)                                  \
+  sc_signal<sc_bv<KP_programCounterBits> > io_debug_addr##x; \
+  sc_signal<sc_bv<32> > io_debug_inst##x;
+  CORALNPU_SIM_REPEAT(IO_DEBUG, KP_instructionLanes);
 #undef IO_DEBUG
 #endif
 
@@ -317,7 +319,7 @@ static void Core_run(const char *name, const char *bin, const int cycles, const 
 #define BIND_DEBUG(x)                       \
   core.io_debug_addr_##x(io_debug_addr##x); \
   core.io_debug_inst_##x(io_debug_inst##x);
-  REPEAT(BIND_DEBUG, KP_instructionLanes);
+  CORALNPU_SIM_REPEAT(BIND_DEBUG, KP_instructionLanes);
 #undef BIND_DEBUG
 #endif
 
@@ -345,24 +347,24 @@ static void Core_run(const char *name, const char *bin, const int cycles, const 
   dbg.reset(tb.reset);
 
   if (trace) {
-    tb.trace(&core);
+    tb.Trace(&core);
   }
 
-  tb.start();
+  tb.Start();
 }
 
 int sc_main(int argc, char *argv[]) {
   absl::SetProgramUsageMessage("CoralNPU SystemC simulation tool");
   auto out_args = absl::ParseCommandLine(argc, argv);
-  argc          = out_args.size();
-  argv          = &out_args[0];
+  argc = out_args.size();
+  argv = &out_args[0];
   if (argc != 2) {
     fprintf(stderr, "Need one binary input file\n");
     return 1;
   }
-  const char *path = argv[1];
+  const char* path = argv[1];
 
-  Core_run(Sysc_tb::get_name(argv[0]), path, absl::GetFlag(FLAGS_cycles),
+  CoreRun(SyscTb::GetName(argv[0]), path, absl::GetFlag(FLAGS_cycles),
            absl::GetFlag(FLAGS_trace));
   return 0;
 }

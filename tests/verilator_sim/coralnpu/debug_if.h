@@ -23,14 +23,16 @@
 #include "tests/verilator_sim/coralnpu/memory_if.h"
 
 // A core debug model.
-struct Debug_if : Sysc_module {
-
-  Debug_if(sc_module_name n, Memory_if* mm) : Sysc_module(n), mm_(mm) {
-    gettimeofday(&start_, NULL);
+class DebugIf : public SyscModule {
+ public:
+  DebugIf(sc_module_name n, MemoryIf* mm) : SyscModule(n), mm_(mm) {
+    SC_METHOD(Eval);
+    sensitive << reset << clock.pos();
   }
 
-  ~Debug_if() {
-    gettimeofday(&stop_, NULL);
+  ~DebugIf() {
+    struct timeval stop_;
+    gettimeofday(&stop_, nullptr);
     const float time_s =
         static_cast<float>(stop_.tv_sec - start_.tv_sec) +
         static_cast<float>(stop_.tv_usec - start_.tv_usec) / 1000000.0f;
@@ -46,14 +48,13 @@ struct Debug_if : Sysc_module {
     printf("Info: %s cycles  @%.2fK/s\n", s.c_str(), cycle_ / time_s / 1000.0f);
   }
 
-  void eval() {
+  void Eval() {
     if (reset) {
       cycle_ = 0;
     } else if (clock->posedge()) {
       cycle_++;
     }
   }
-
  private:
 #ifndef TIME_DISABLE
   const char* KNRM = "\x1B[0m";
@@ -76,7 +77,7 @@ struct Debug_if : Sysc_module {
 
   struct timeval stop_, start_;
 
-  Memory_if* mm_;
+  MemoryIf* mm_;
 
   bool newline_ = false;
   int cycle_ = 0;

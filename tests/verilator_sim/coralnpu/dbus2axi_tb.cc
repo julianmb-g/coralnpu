@@ -13,10 +13,30 @@
 // limitations under the License.
 
 #include "VDBus2AxiV2.h"
-#include "tests/verilator_sim/coralnpu/core_if.h"
 #include "tests/verilator_sim/sysc_tb.h"
 
-struct DBus2Axi_tb : Sysc_tb {
+template <typename T>
+struct get_port_width;
+
+template <typename T>
+struct get_port_width<T&> : get_port_width<T> {};
+
+template <int W>
+struct get_port_width<sc_core::sc_in<sc_dt::sc_bv<W>>> {
+  static const int value = W;
+};
+
+template <int W>
+struct get_port_width<sc_core::sc_out<sc_dt::sc_bv<W>>> {
+  static const int value = W;
+};
+
+class DBus2AxiTb : public SyscTb {
+ public:
+  static const int ADDR_WIDTH = get_port_width<decltype(VDBus2AxiV2::io_dbus_addr)>::value;
+  static const int FAULT_ADDR_WIDTH = get_port_width<decltype(VDBus2AxiV2::io_fault_bits_addr)>::value;
+  static const int FAULT_EPC_WIDTH = get_port_width<decltype(VDBus2AxiV2::io_fault_bits_epc)>::value;
+
   sc_out<bool> io_dbus_valid;
   sc_in<bool> io_dbus_ready;
   sc_out<bool> io_dbus_write;
@@ -30,17 +50,17 @@ struct DBus2Axi_tb : Sysc_tb {
   sc_in<bool> io_axi_read_addr_valid;
   sc_in<bool> io_axi_read_data_ready;
   sc_out<bool> io_axi_read_data_valid;
-  sc_out<sc_bv<32> > io_dbus_addr;
-  sc_out<sc_bv<32> > io_dbus_adrx;
+  sc_out<sc_bv<ADDR_WIDTH> > io_dbus_addr;
+  sc_out<sc_bv<ADDR_WIDTH> > io_dbus_adrx;
   sc_out<sc_bv<6> > io_dbus_size;
-  sc_out<sc_bv<KP_lsuDataBits> > io_dbus_wdata;
+  sc_out<sc_bv<256> > io_dbus_wdata;
   sc_out<sc_bv<32> > io_dbus_wmask;
-  sc_in<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
+  sc_in<sc_bv<256> > io_dbus_rdata;
   sc_in<sc_bv<32> > io_dbus_pc;
   sc_in<bool> io_fault_valid;
   sc_in<bool> io_fault_bits_write;
-  sc_in<sc_bv<32> > io_fault_bits_addr;
-  sc_in<sc_bv<32>> io_fault_bits_epc;
+  sc_in<sc_bv<FAULT_ADDR_WIDTH> > io_fault_bits_addr;
+  sc_in<sc_bv<FAULT_EPC_WIDTH>> io_fault_bits_epc;
   sc_in<sc_bv<32> > io_axi_write_addr_bits_addr;
   sc_in<sc_bv<6> > io_axi_write_addr_bits_id;
   sc_in<sc_bv<4> > io_axi_write_addr_bits_region;
@@ -51,7 +71,7 @@ struct DBus2Axi_tb : Sysc_tb {
   sc_in<sc_bv<2> > io_axi_write_addr_bits_burst;
   sc_in<sc_bv<3> > io_axi_write_addr_bits_size;
   sc_in<sc_bv<8> > io_axi_write_addr_bits_len;
-  sc_in<sc_bv<KP_lsuDataBits> > io_axi_write_data_bits_data;
+  sc_in<sc_bv<256> > io_axi_write_data_bits_data;
   sc_in<sc_bv<32> > io_axi_write_data_bits_strb;
   sc_in<bool> io_axi_write_data_bits_last;
   sc_out<sc_bv<6> > io_axi_write_resp_bits_id;
@@ -68,167 +88,167 @@ struct DBus2Axi_tb : Sysc_tb {
   sc_in<sc_bv<8> > io_axi_read_addr_bits_len;
   sc_out<sc_bv<2> > io_axi_read_data_bits_resp;
   sc_out<sc_bv<6> > io_axi_read_data_bits_id;
-  sc_out<sc_bv<KP_lsuDataBits> > io_axi_read_data_bits_data;
+  sc_out<sc_bv<256> > io_axi_read_data_bits_data;
   sc_out<bool> io_axi_read_data_bits_last;
 
-  using Sysc_tb::Sysc_tb;
+  using SyscTb::SyscTb;
 
-  void posedge() {
+  void Posedge() {
     sc_bv<32> dbus_wmask;
-    sc_bv<KP_lsuDataBits> dbus_wdata;
-    for (int i = 0; i < KP_lsuDataBits / 32; ++i) dbus_wdata.set_word(i, rand_uint32());
-    dbus_wmask.set_word(0, rand_uint32());
+    sc_bv<256> dbus_wdata;
+    for (int i = 0; i < 8; ++i) dbus_wdata.set_word(i, RandUint32());
+    dbus_wmask.set_word(0, RandUint32());
 
     if (!io_dbus_valid || io_dbus_ready) {
-      io_dbus_valid = rand_bool();
-      io_dbus_write = rand_bool();
-      io_dbus_addr = rand_uint32();
-      io_dbus_adrx = rand_uint32();
-      io_dbus_size = 1 << rand_int(0, 5);
+      io_dbus_valid = SyscTbRandBool();
+      io_dbus_write = SyscTbRandBool();
+      io_dbus_addr = RandUint32();
+      io_dbus_adrx = RandUint32();
+      io_dbus_size = 1 << RandInt(0, 5);
       io_dbus_wdata = dbus_wdata;
       io_dbus_wmask = dbus_wmask;
     }
 
-    io_axi_read_addr_ready = rand_bool();
+    io_axi_read_addr_ready = SyscTbRandBool();
 
-    const bool write_ready = rand_bool();
+    const bool write_ready = SyscTbRandBool();
     io_axi_write_addr_ready = write_ready;
     io_axi_write_data_ready = write_ready;
 
     // *************************************************************************
     // DBus Addr.
-    if (io_dbus_valid && !io_dbus_write && !dbus_read_ready_) {
-      dbus_read_ready_ = true;
+    if (io_dbus_valid && !io_dbus_write && !dbus_read_ready) {
+      dbus_read_ready = true;
       axi_read_addr_t r;
       r.addr = io_dbus_addr.read().get_word(0);
       r.id = 0x00;  // from RTL
-      axi_read_addr_.write(r);
+      axi_read_addr.Write(r);
     }
 
-    if (io_dbus_valid && io_dbus_write && !dbus_write_active_) {
-      dbus_write_active_ = true;
+    if (io_dbus_valid && io_dbus_write && !dbus_write_active) {
+      dbus_write_active = true;
       axi_write_addr_t a;
-      sc_bv<KP_lsuDataBits> data;
+      sc_bv<256> data;
       sc_bv<32> strb;
       a.addr = io_dbus_addr.read().get_word(0);
       a.id = 0x00;  // from RTL
-      axi_write_addr_.write(a);
+      axi_write_addr.Write(a);
 
       axi_write_data_t d;
       d.strb = io_dbus_wmask;
       d.data = io_dbus_wdata;
       d.last = true;
-      axi_write_data_.write(d);
+      axi_write_data.Write(d);
     }
 
     // *************************************************************************
     // DBus Read Data.
-    if (dbus_read_active_) {
-      dbus_read_active_ = false;
-      axi_read_fired_ = false;
+    if (dbus_read_active) {
+      dbus_read_active = false;
+      axi_read_fired = false;
       dbus_read_data_t ref, dut;
-      check(dbus_read_data_.read(ref), "dbus read data");
+      Check(dbus_read_data.Read(ref), "dbus read data");
       dut.data = io_dbus_rdata;
       if (ref != dut) {
         ref.print("ref::dbus_read_addr");
         dut.print("dut::dbus_read_addr");
-        check(false);
+        Check(false);
       }
     }
 
     if (io_dbus_valid && io_dbus_ready && !io_dbus_write) {
-      dbus_read_ready_ = false;
-      dbus_read_active_ = true;
+      dbus_read_ready = false;
+      dbus_read_active = true;
     }
 
     if (io_dbus_valid && io_dbus_ready && io_dbus_write) {
-      dbus_write_active_ = false;
-      dbus_write_resp_phase_ = false;
+      dbus_write_active = false;
+      dbus_write_resp_phase = false;
     }
 
     // *************************************************************************
     // AXI Read Addr.
-    if (io_axi_read_addr_valid && io_axi_read_addr_ready && !axi_read_fired_) {
-      axi_read_fired_ = true;
+    if (io_axi_read_addr_valid && io_axi_read_addr_ready && !axi_read_fired) {
+      axi_read_fired = true;
       axi_read_addr_t dut, ref;
-      check(axi_read_addr_.read(ref), "axi read addr");
+      Check(axi_read_addr.Read(ref), "axi read addr");
       dut.addr = io_axi_read_addr_bits_addr.read().get_word(0);
       dut.id = io_axi_read_addr_bits_id.read().get_word(0);
       if (ref != dut) {
         ref.print("ref::axi_read_addr");
         dut.print("dut::axi_read_addr");
-        check(false);
+        Check(false);
       }
 
-      sc_bv<KP_lsuDataBits> data;
-      for (int i = 0; i < KP_lsuDataBits / 32; ++i) data.set_word(i, rand_uint32());
+      sc_bv<256> data;
+      for (int i = 0; i < 8; ++i) data.set_word(i, RandUint32());
       axi_read_data_t raxi;
       raxi.id = dut.id;
       raxi.data = data;
-      raxi.resp = rand_int();
-      axi_read_data_.write(raxi);
+      raxi.resp = RandInt();
+      axi_read_data.Write(raxi);
 
       dbus_read_data_t dbus;
       dbus.data = data;
-      dbus_read_data_.write(dbus);
+      dbus_read_data.Write(dbus);
     }
 
     // *************************************************************************
     // AXI Read Data.
     if (io_axi_read_data_valid && io_axi_read_data_ready) {
-      check(axi_read_data_.remove(), "axi read data");
+      Check(axi_read_data.Remove(), "axi read data");
     }
 
     axi_read_data_t rdata;
-    bool read_data_valid = axi_read_data_.next(rdata);
-    io_axi_read_data_valid = read_data_valid && rand_bool();
+    bool read_data_valid = axi_read_data.Next(rdata);
+    io_axi_read_data_valid = read_data_valid && SyscTbRandBool();
     io_axi_read_data_bits_id = rdata.id;
     io_axi_read_data_bits_data = rdata.data;
     io_axi_read_data_bits_resp = rdata.resp;
 
     // *************************************************************************
     // AXI Write Addr.
-    if (io_axi_write_addr_valid && io_axi_write_addr_ready && !dbus_write_resp_phase_) {
+    if (io_axi_write_addr_valid && io_axi_write_addr_ready && !dbus_write_resp_phase) {
       axi_write_addr_t dut, ref;
-      check(axi_write_addr_.read(ref), "axi write addr");
+      Check(axi_write_addr.Read(ref), "axi write addr");
       dut.addr = io_axi_write_addr_bits_addr.read().get_word(0);
       dut.id = io_axi_write_addr_bits_id.read().get_word(0);
       if (ref != dut) {
         ref.print("ref::axi_write_addr");
         dut.print("dut::axi_write_addr");
-        check(false);
+        Check(false);
       }
     }
 
-    if (io_axi_write_data_valid && io_axi_write_data_ready && !dbus_write_resp_phase_) {
+    if (io_axi_write_data_valid && io_axi_write_data_ready && !dbus_write_resp_phase) {
       axi_write_data_t dut, ref;
-      check(axi_write_data_.read(ref), "axi write data");
+      Check(axi_write_data.Read(ref), "axi write data");
       dut.data = io_axi_write_data_bits_data;
       dut.strb = io_axi_write_data_bits_strb;
       dut.last = io_axi_write_data_bits_last;
       if (ref != dut) {
         ref.print("ref::axi_write_data");
         dut.print("dut::axi_write_data");
-        check(false);
+        Check(false);
       }
 
       if (dut.last) {
         axi_write_resp_t resp;
-        resp.id = rand_int(); // dut.id;
-        resp.resp = rand_int();
-        axi_write_resp_.write(resp);
-        dbus_write_resp_phase_ = true;
+        resp.id = RandInt(); // dut.id;
+        resp.resp = RandInt();
+        axi_write_resp.Write(resp);
+        dbus_write_resp_phase = true;
       }
     }
 
     // *************************************************************************
     // AXI Write Resp.
     if (io_axi_write_resp_valid && io_axi_write_resp_ready) {
-      check(axi_write_resp_.remove(), "axi write resp");
+      Check(axi_write_resp.Remove(), "axi write resp");
     }
 
     axi_write_resp_t wresp;
-    bool write_resp_valid = axi_write_resp_.next(wresp);
+    bool write_resp_valid = axi_write_resp.Next(wresp);
     io_axi_write_resp_valid = write_resp_valid;
     io_axi_write_resp_bits_id = wresp.id;
     io_axi_write_resp_bits_resp = wresp.resp;
@@ -254,7 +274,7 @@ struct DBus2Axi_tb : Sysc_tb {
   struct axi_read_data_t {
     uint32_t id : 7;
     uint32_t resp : 7;
-    sc_bv<KP_lsuDataBits> data;
+    sc_bv<256> data;
 
     bool operator!=(const axi_read_data_t& rhs) const {
       if (id != rhs.id) return true;
@@ -287,7 +307,7 @@ struct DBus2Axi_tb : Sysc_tb {
   };
 
   struct axi_write_data_t {
-    sc_bv<KP_lsuDataBits> data;
+    sc_bv<256> data;
     sc_bv<32> strb;
     bool last;
 
@@ -316,7 +336,7 @@ struct DBus2Axi_tb : Sysc_tb {
   };
 
   struct dbus_read_data_t {
-    sc_bv<KP_lsuDataBits> data;
+    sc_bv<256> data;
 
     bool operator!=(const dbus_read_data_t& rhs) const {
       if (data != rhs.data) return true;
@@ -332,20 +352,20 @@ struct DBus2Axi_tb : Sysc_tb {
     }
   };
 
-  bool dbus_read_ready_ = false;
-  bool dbus_read_active_ = false;
-  bool dbus_write_active_ = false;
-  bool dbus_write_resp_phase_ = false;
-  bool axi_read_fired_ = false;
-  fifo_t<axi_read_addr_t> axi_read_addr_;
-  fifo_t<axi_read_data_t> axi_read_data_;
-  fifo_t<axi_write_addr_t> axi_write_addr_;
-  fifo_t<axi_write_data_t> axi_write_data_;
-  fifo_t<axi_write_resp_t> axi_write_resp_;
-  fifo_t<dbus_read_data_t> dbus_read_data_;
+  bool dbus_read_ready = false;
+  bool dbus_read_active = false;
+  bool dbus_write_active = false;
+  bool dbus_write_resp_phase = false;
+  bool axi_read_fired = false;
+  Fifo<axi_read_addr_t> axi_read_addr;
+  Fifo<axi_read_data_t> axi_read_data;
+  Fifo<axi_write_addr_t> axi_write_addr;
+  Fifo<axi_write_data_t> axi_write_data;
+  Fifo<axi_write_resp_t> axi_write_resp;
+  Fifo<dbus_read_data_t> dbus_read_data;
 };
 
-static void DBus2Axi_test(char* name, int loops, bool trace) {
+static void DBus2AxiTest(absl::string_view name, int loops, bool trace) {
   sc_signal<bool> io_dbus_valid;
   sc_signal<bool> io_dbus_ready;
   sc_signal<bool> io_dbus_write;
@@ -359,17 +379,17 @@ static void DBus2Axi_test(char* name, int loops, bool trace) {
   sc_signal<bool> io_axi_read_addr_valid;
   sc_signal<bool> io_axi_read_data_ready;
   sc_signal<bool> io_axi_read_data_valid;
-  sc_signal<sc_bv<32> > io_dbus_addr;
-  sc_signal<sc_bv<32> > io_dbus_adrx;
+  sc_signal<sc_bv<DBus2AxiTb::ADDR_WIDTH> > io_dbus_addr;
+  sc_signal<sc_bv<DBus2AxiTb::ADDR_WIDTH> > io_dbus_adrx;
   sc_signal<sc_bv<6> > io_dbus_size;
-  sc_signal<sc_bv<KP_lsuDataBits> > io_dbus_wdata;
+  sc_signal<sc_bv<256> > io_dbus_wdata;
   sc_signal<sc_bv<32> > io_dbus_wmask;
-  sc_signal<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
+  sc_signal<sc_bv<256> > io_dbus_rdata;
   sc_signal<sc_bv<32> > io_dbus_pc;
   sc_signal<bool> io_fault_valid;
   sc_signal<bool> io_fault_bits_write;
-  sc_signal<sc_bv<32> > io_fault_bits_addr;
-  sc_signal<sc_bv<32> > io_fault_bits_epc;
+  sc_signal<sc_bv<DBus2AxiTb::FAULT_ADDR_WIDTH> > io_fault_bits_addr;
+  sc_signal<sc_bv<DBus2AxiTb::FAULT_EPC_WIDTH> > io_fault_bits_epc;
   sc_signal<sc_bv<32> > io_axi_write_addr_bits_addr;
   sc_signal<sc_bv<6> > io_axi_write_addr_bits_id;
   sc_signal<sc_bv<4> > io_axi_write_addr_bits_region;
@@ -380,7 +400,7 @@ static void DBus2Axi_test(char* name, int loops, bool trace) {
   sc_signal<sc_bv<2> > io_axi_write_addr_bits_burst;
   sc_signal<sc_bv<3> > io_axi_write_addr_bits_size;
   sc_signal<sc_bv<8> > io_axi_write_addr_bits_len;
-  sc_signal<sc_bv<KP_lsuDataBits> > io_axi_write_data_bits_data;
+  sc_signal<sc_bv<256> > io_axi_write_data_bits_data;
   sc_signal<sc_bv<32> > io_axi_write_data_bits_strb;
   sc_signal<bool> io_axi_write_data_bits_last;
   sc_signal<sc_bv<6> > io_axi_write_resp_bits_id;
@@ -397,11 +417,11 @@ static void DBus2Axi_test(char* name, int loops, bool trace) {
   sc_signal<sc_bv<8> > io_axi_read_addr_bits_len;
   sc_signal<sc_bv<2> > io_axi_read_data_bits_resp;
   sc_signal<sc_bv<6> > io_axi_read_data_bits_id;
-  sc_signal<sc_bv<KP_lsuDataBits> > io_axi_read_data_bits_data;
+  sc_signal<sc_bv<256> > io_axi_read_data_bits_data;
   sc_signal<bool> io_axi_read_data_bits_last;
 
-  DBus2Axi_tb tb("DBus2Axi_tb", loops, true /*random*/);
-  VDBus2AxiV2 d2a(name);
+  DBus2AxiTb tb("DBus2AxiTb", loops, true /*random*/);
+  VDBus2AxiV2 d2a(std::string(name).c_str());
 
   d2a.clock(tb.clock);
   d2a.reset(tb.reset);
@@ -460,13 +480,13 @@ static void DBus2Axi_test(char* name, int loops, bool trace) {
   BIND2(tb, d2a, io_axi_read_data_bits_last);
 
   if (trace) {
-    tb.trace(&d2a);
+    tb.Trace(&d2a);
   }
 
-  tb.start();
+  tb.Start();
 }
 
 int sc_main(int argc, char* argv[]) {
-  DBus2Axi_test(Sysc_tb::get_name(argv[0]), 1000000, false);
+  DBus2AxiTest(SyscTb::GetName(argv[0]), 1000000, false);
   return 0;
 }

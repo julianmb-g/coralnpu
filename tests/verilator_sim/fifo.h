@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,46 +15,47 @@
 #ifndef TESTS_VERILATOR_SIM_FIFO_H_
 #define TESTS_VERILATOR_SIM_FIFO_H_
 
+#include <cstdlib>
 #include <vector>
 
 // A SystemC CRT transaction queue.
 
 template <typename T>
-class fifo_t {
+class Fifo {
  public:
-  bool empty() { return entries_.empty(); }
+  bool Empty() { return entries_.empty(); }
 
-  void write(T v) { entries_.emplace_back(v); }
+  void Write(T v) { entries_.emplace_back(v); }
 
-  bool read(T& v) {
+  bool Read(T& v) {
     if (entries_.empty()) return false;
     v = entries_.at(0);
     entries_.erase(entries_.begin());
     return true;
   }
 
-  bool next(T& v, int index = 0) {
-    if (index >= count()) return false;
+  bool Next(T& v, int index = 0) {
+    if (index >= Count()) return false;
     v = entries_.at(index);
     return true;
   }
 
-  bool rand(T& v) {
+  bool Rand(T& v) {
     if (entries_.empty()) return false;
-    int index = ::rand() % count();
+    int index = ::rand() % Count();
     v = entries_.at(index);
     return true;
   }
 
-  void clear() { entries_.clear(); }
+  void Clear() { entries_.clear(); }
 
-  bool remove(int index = 0) {
-    if (index >= count()) return false;
+  bool Remove(int index = 0) {
+    if (index >= Count()) return false;
     entries_.erase(entries_.begin() + index);
     return true;
   }
 
-  void shuffle() {
+  void Shuffle() {
     const int count = entries_.size();
     if (count < 2) return;
     for (int i = 0; i < count; ++i) {
@@ -65,7 +66,7 @@ class fifo_t {
     }
   }
 
-  int count() { return entries_.size(); }
+  int Count() { return entries_.size(); }
 
  private:
   std::vector<T> entries_;

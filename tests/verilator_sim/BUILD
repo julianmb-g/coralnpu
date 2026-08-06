@@ -12,49 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//rules:coralnpu_v2.bzl", "collect_coralnpu_elfs", "coralnpu_v2_binary")
-load("//rules:utils.bzl", "template_rule")
-
-coralnpu_v2_binary(
-    name = "htif_semihosting_test",
-    srcs = ["coralnpu/htif_semihosting_test.cc"],
-    semihosting = True,
-    itcm_size_kbytes = 1024,
-    dtcm_size_kbytes = 1024,
-    visibility = ["//visibility:public"],
-)
+package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "elf",
-    srcs = [
-        "elf.cc",
-    ],
-    hdrs = [
-        "elf.h",
-    ],
+    name = "sim_libs",
     visibility = ["//visibility:public"],
+    deps = [
+        "@accellera_systemc//:systemc",
+        "@verilator//:verilator_lib",
+    ],
 )
 
 cc_library(
     name = "util",
     hdrs = [
         "util.h",
-    ],
-)
-
-cc_library(
-    name = "sim_libs",
-    hdrs = [
         "fifo.h",
         "sysc_module.h",
         "sysc_tb.h",
     ],
-    includes = [
-        "systemc/include",
-    ],
-    deps = [
-        "@accellera_systemc//:systemc",
-    ],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -62,250 +39,115 @@ cc_library(
     hdrs = [
         "coralnpu/core_if.h",
         "coralnpu/debug_if.h",
-        "coralnpu/coralnpu_cfg.h",
         "coralnpu/memory_if.h",
+        "coralnpu/coralnpu_cfg.h",
     ],
-    defines = ["CORALNPU_SIMD=256"],
+    defines = [
+        "CORALNPU_SIMD=128",
+    ],
+    visibility = ["//visibility:public"],
     deps = [
         ":sim_libs",
+        ":util",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
     ],
 )
 
-cc_binary(
-    name = "core_sim",
+cc_library(
+    name = "spsc_ring_buffer",
+    hdrs = ["rvvi/spsc_ring_buffer.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "register_value",
+    hdrs = ["rvvi/register_value.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "trace_packet",
+    hdrs = ["rvvi/trace_packet.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "trace_daemon",
+    hdrs = [
+        "rvvi/register_value.h",
+        "rvvi/trace_daemon.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
+        ":spsc_ring_buffer",
+        ":trace_packet",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "core_mini_axi_tb",
     srcs = [
-        "coralnpu/core_tb.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCore_parameters.h",
+        "coralnpu/core_mini_axi_tb.cc",
+        "//hdl/chisel/src/coralnpu:VRvvCoreMiniAxi_parameters.h",
     ],
+    hdrs = ["coralnpu/core_mini_axi_tb.h"],
     defines = [
-        "VERILATOR_MODEL=VCore",
+        "VERILATOR_MODEL=VRvvCoreMiniAxi",
     ],
+    
     deps = [
         ":coralnpu_if",
+        ":elf_adapter",
         ":sim_libs",
         ":util",
-        "//hdl/chisel/src/coralnpu:core_cc_library",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/flags:usage",
+        "//hdl/chisel/src/coralnpu:rvv_core_mini_axi_cc_library",
+        "//hdl/verilog:sram_backdoor",
+        "//tests/systemc:Xbar",
+        "//tests/systemc:instruction_trace",
+        "@accellera_systemc//:systemc",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:str_format",
+        "@libsystemctlm_soc",
     ],
 )
 
-CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS = [
-    "coralnpu/core_mini_axi_tb.cc",
-]
-
-CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS = [
-    ":elf",
-    ":sim_libs",
-    ":util",
-    "//hdl/verilog:sram_backdoor",
-    "//tests/systemc:Xbar",
-    "//tests/systemc:instruction_trace",
-    "@accellera_systemc//:systemc",
-    "@com_google_absl//absl/log",
-    "@com_google_absl//absl/log:check",
-    "@com_google_absl//absl/log:initialize",
-    "@com_google_absl//absl/status",
-    "@libsystemctlm_soc",
-]
-
-template_rule(
-    cc_library,
-    {
-        "core_mini_axi_tb": {
-            "srcs": [
-                "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreMiniAxi_parameters.h",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS,
-            "deps": [
-                "//hdl/chisel/src/coralnpu:core_mini_axi_cc_library",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS,
-            "defines": [
-                "VERILATOR_MODEL=VCoreMiniAxi",
-            ],
-        },
-        "core_mini_verification_axi_tb": {
-            "srcs": [
-                "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreMiniVerificationAxi_parameters.h",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS,
-            "deps": [
-                "//hdl/chisel/src/coralnpu:core_mini_verification_axi_cc_library",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS,
-            "defines": [
-                "VERILATOR_MODEL=VCoreMiniVerificationAxi",
-            ],
-        },
-        "core_mini_highmem_axi_tb": {
-            "srcs": [
-                "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreMiniHighmemAxi_parameters.h",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS,
-            "deps": [
-                "//hdl/chisel/src/coralnpu:core_mini_highmem_axi_cc_library",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS,
-            "defines": [
-                "VERILATOR_MODEL=VCoreMiniHighmemAxi",
-                "HIGHMEM_RTL",
-            ],
-        },
-        "core_mini_itcm512kb_dtcm512kb_axi_tb": {
-            "srcs": [
-                "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreMini_ITCM512KB_DTCM512KBAxi_parameters.h",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS,
-            "deps": [
-                "//hdl/chisel/src/coralnpu:core_mini_itcm512kb_dtcm512kb_axi_cc_library",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS,
-            "defines": [
-                "VERILATOR_MODEL=VCoreMini_ITCM512KB_DTCM512KBAxi",
-                "HIGHMEM_RTL",
-            ],
-        },
-        "rvv_core_mini_axi_tb": {
-            "srcs": [
-                "@coralnpu_hw//hdl/chisel/src/coralnpu:VRvvCoreMiniAxi_parameters.h",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS,
-            "deps": [
-                "//hdl/chisel/src/coralnpu:rvv_core_mini_axi_cc_library",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS,
-            "defines": [
-                "VERILATOR_MODEL=VRvvCoreMiniAxi",
-            ],
-        },
-        "rvv_core_mini_highmem_axi_tb": {
-            "srcs": [
-                "@coralnpu_hw//hdl/chisel/src/coralnpu:VRvvCoreMiniHighmemAxi_parameters.h",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS,
-            "deps": [
-                "//hdl/chisel/src/coralnpu:rvv_core_mini_highmem_axi_cc_library",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS,
-            "defines": [
-                "VERILATOR_MODEL=VRvvCoreMiniHighmemAxi",
-                "HIGHMEM_RTL",
-            ],
-        },
-        "rvv_core_mini_itcm512kb_dtcm512kb_axi_tb": {
-            "srcs": [
-                "@coralnpu_hw//hdl/chisel/src/coralnpu:VRvvCoreMini_ITCM512KB_DTCM512KBAxi_parameters.h",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS,
-            "deps": [
-                "//hdl/chisel/src/coralnpu:rvv_core_mini_itcm512kb_dtcm512kb_axi_cc_library",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS,
-            "defines": [
-                "VERILATOR_MODEL=VRvvCoreMini_ITCM512KB_DTCM512KBAxi",
-                "HIGHMEM_RTL",
-            ],
-        },
-        "rvv_core_mini_verification_axi_tb": {
-            "srcs": [
-                "@coralnpu_hw//hdl/chisel/src/coralnpu:VRvvCoreMiniVerificationAxi_parameters.h",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_SRCS,
-            "deps": [
-                "//hdl/chisel/src/coralnpu:rvv_core_mini_verification_axi_cc_library",
-            ] + CORE_MINI_AXI_TB_CC_LIBRARY_COMMON_DEPS,
-            "defines": [
-                "VERILATOR_MODEL=VRvvCoreMiniVerificationAxi",
-            ],
-        },
-    },
-    hdrs = [
-        "coralnpu/core_mini_axi_tb.h",
+cc_binary(
+    name = "core_mini_axi_sim",
+    srcs = ["coralnpu/core_mini_axi_sim.cc"],
+    defines = [
+        "VERILATOR_MODEL=VRvvCoreMiniAxi",
     ],
-)
-
-CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS = [
-    "@com_google_absl//absl/flags:flag",
-    "@com_google_absl//absl/flags:parse",
-    "@com_google_absl//absl/flags:usage",
-    "@com_google_absl//absl/log",
-    "@com_google_absl//absl/log:check",
-]
-
-template_rule(
-    cc_binary,
-    {
-        "core_mini_axi_sim": {
-            "deps": [
-                ":core_mini_axi_tb",
-            ] + CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS,
-        },
-        "core_mini_verification_axi_sim": {
-            "deps": [
-                ":core_mini_verification_axi_tb",
-            ] + CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS,
-        },
-        "core_mini_highmem_axi_sim": {
-            "deps": [
-                ":core_mini_highmem_axi_tb",
-            ] + CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS,
-        },
-        "core_mini_itcm512kb_dtcm512kb_axi_sim": {
-            "deps": [
-                ":core_mini_itcm512kb_dtcm512kb_axi_tb",
-            ] + CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS,
-        },
-        "rvv_core_mini_axi_sim": {
-            "deps": [
-                ":rvv_core_mini_axi_tb",
-            ] + CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS,
-        },
-        "rvv_core_mini_highmem_axi_sim": {
-            "deps": [
-                ":rvv_core_mini_highmem_axi_tb",
-            ] + CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS,
-        },
-        "rvv_core_mini_itcm512kb_dtcm512kb_axi_sim": {
-            "deps": [
-                ":rvv_core_mini_itcm512kb_dtcm512kb_axi_tb",
-            ] + CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS,
-        },
-        "rvv_core_mini_verification_axi_sim": {
-            "deps": [
-                ":rvv_core_mini_verification_axi_tb",
-            ] + CORE_MINI_AXI_SIM_CC_BINARY_COMMON_DEPS,
-        },
-    },
-    srcs = [
-        "coralnpu/core_mini_axi_sim.cc",
-    ],
-)
-
-cc_test(
-    name = "core_mini_axi_non_incr_tests",
-    srcs = [
-        "coralnpu/core_mini_axi_non_incr_tests.cc",
-    ],
+    
     deps = [
         ":core_mini_axi_tb",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/log:initialize",
     ],
 )
-
-cc_test(
-    name = "backdoor_load_test",
-    srcs = [
-        "coralnpu/backdoor_load_test.cc",
-    ],
-    deps = [
-        ":core_mini_axi_tb",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/log:initialize",
-    ],
-)
-
-
 
 cc_test(
     name = "core_barebones_tb_test",
     srcs = [
         "coralnpu/core_barebones_tb_test.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
+        "//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
     ],
+    defines = [
+        "VERILATOR_MODEL=VCoreBarebones",
+    ],
+    
     deps = [
         ":coralnpu_if",
-        ":elf",
+        ":elf_adapter",
         ":sim_libs",
         ":util",
         "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
@@ -319,8 +161,9 @@ cc_test(
         "coralnpu/core_rvvi_tb_test.cc",
     ],
     deps = [
-        
-        "//tests/verilator_sim/rvvi:rvvi_libs",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
+        ":spsc_ring_buffer",
+        ":trace_daemon",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -334,6 +177,7 @@ cc_binary(
     defines = [
         "VERILATOR_MODEL=VCoreScalar",
     ],
+    
     deps = [
         ":coralnpu_if",
         ":sim_libs",
@@ -349,14 +193,15 @@ cc_binary(
     name = "core_barebones_sim",
     srcs = [
         "coralnpu/core_barebones_tb.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
+        "//hdl/chisel/src/coralnpu:VCoreBarebones_parameters.h",
     ],
     defines = [
         "VERILATOR_MODEL=VCoreBarebones",
     ],
+    
     deps = [
         ":coralnpu_if",
-        ":elf",
+        ":elf_adapter",
         ":sim_libs",
         ":util",
         "//hdl/chisel/src/coralnpu:core_barebones_cc_library",
@@ -372,17 +217,18 @@ cc_binary(
     name = "core_rvvi_traced_sim",
     srcs = [
         "coralnpu/core_rvvi_traced_sim.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreVerification_parameters.h",
+        "//hdl/chisel/src/coralnpu:VCoreVerification_parameters.h",
     ],
     defines = [
         "VERILATOR_MODEL=VCoreVerification",
     ],
+    
     deps = [
         ":coralnpu_if",
-        ":elf",
+        ":elf_adapter",
         ":sim_libs",
-        
-        "//tests/verilator_sim/rvvi:rvvi_libs",
+        ":spsc_ring_buffer",
+        ":trace_daemon",
         ":util",
         "//hdl/chisel/src/coralnpu:core_verification_cc_library",
         "@com_google_absl//absl/flags:flag",
@@ -393,125 +239,40 @@ cc_binary(
     ],
 )
 
-
-
-
-
-cc_binary(
-    name = "core_mini_sim",
-    srcs = [
-        "coralnpu/core_tb.cc",
-        "@coralnpu_hw//hdl/chisel/src/coralnpu:VCoreMini_parameters.h",
-    ],
-    defines = [
-        "VERILATOR_MODEL=VCoreMini",
-    ],
+cc_test(
+    name = "spsc_ring_buffer_test",
+    srcs = ["rvvi/spsc_ring_buffer_test.cc"],
+    
     deps = [
-        ":coralnpu_if",
-        ":sim_libs",
-        ":util",
-        "//hdl/chisel/src/coralnpu:core_mini_cc_library",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/flags:usage",
+        ":spsc_ring_buffer",
+        ":trace_packet",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
-
+cc_test(
+    name = "trace_daemon_test",
+    srcs = ["rvvi/trace_daemon_test.cc"],
+    
+    deps = [
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
+        ":trace_daemon",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 
 cc_test(
-    name = "dbus2axi_tb",
-    srcs = [
-        "coralnpu/dbus2axi_tb.cc",
-    ],
+    name = "dbus2axi_test",
+    srcs = ["coralnpu/dbus2axi_tb.cc"],
     deps = [
-        ":coralnpu_if",
         ":sim_libs",
+        ":util",
         "//hdl/chisel/src/coralnpu:dbus2axi_cc_library",
-    ],
-)
-
-cc_test(
-    name = "l1dcache_tb",
-    size = "large",
-    srcs = [
-        "coralnpu/l1dcache_tb.cc",
-    ],
-    deps = [
-        ":coralnpu_if",
-        ":sim_libs",
-        "//hdl/chisel/src/coralnpu:l1dcache_cc_library",
-    ],
-)
-
-cc_test(
-    name = "l1dcachebank_tb",
-    size = "large",
-    srcs = [
-        "coralnpu/l1dcache_tb.cc",
-    ],
-    defines = [
-        "L1DCACHEBANK",
-    ],
-    deps = [
-        ":coralnpu_if",
-        ":sim_libs",
-        "//hdl/chisel/src/coralnpu:l1dcachebank_cc_library",
-    ],
-)
-
-cc_test(
-    name = "l1icache_tb",
-    srcs = [
-        "coralnpu/l1icache_tb.cc",
-    ],
-    deps = [
-        ":coralnpu_if",
-        ":sim_libs",
-        "//hdl/chisel/src/coralnpu:l1icache_cc_library",
-    ],
-)
-
-cc_test(
-    name = "memory_if_test",
-    srcs = [
-        "coralnpu/memory_if_test.cc",
-    ],
-    deps = [
-        ":coralnpu_if",
-        "@com_google_absl//absl/status",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/strings",
     ],
 )
 
 
-
-
-
-
-
-
-
-
-
-
-
-cc_test(
-    name = "core_rvvi_watchdog_test",
-    srcs = [
-        "coralnpu/core_rvvi_watchdog_test.cc",
-    ],
-    deps = [
-        "//tests/verilator_sim/rvvi:rvvi_libs",
-        ":sim_libs",
-        ":util",
-        "@com_google_googletest//:gtest_main",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/log:check",
-        "@com_google_absl//absl/flags:usage",
-    ],
-)
 
 cc_binary(
     name = "gen_elf",
@@ -521,4 +282,15 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
-collect_coralnpu_elfs()
+cc_library(
+    name = "elf_adapter",
+    hdrs = ["elf_loader_adapter.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":coralnpu_if",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)

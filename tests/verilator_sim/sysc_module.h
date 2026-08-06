@@ -18,14 +18,15 @@
 #include <systemc.h>
 using sc_dt::sc_bv;
 
-struct Sysc_module : sc_module {
+class SyscModule : public sc_module {
+ public:
   sc_in_clk clock;
   sc_in<bool> reset;
 
-  virtual void eval() = 0;
+  virtual void Eval() = 0;
 
-  SC_CTOR(Sysc_module) {
-    SC_METHOD(eval);
+  SC_CTOR(SyscModule) {
+    SC_METHOD(Eval);
     sensitive << reset << clock.pos();
   }
 };

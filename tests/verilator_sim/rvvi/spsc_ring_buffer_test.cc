@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
-#include "tests/verilator_sim/rvvi/trace_packet.h"
-#include "gtest/gtest.h"
 #include <thread>
 
-namespace coralnpu::sim::rvvi {
+#include "gtest/gtest.h"
+
+#include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
+#include "tests/verilator_sim/rvvi/trace_packet.h"
+
+namespace mpact::sim::riscv::rvvi {
 
 class SpscRingBufferTest : public ::testing::Test {
  protected:
@@ -70,7 +72,8 @@ TEST(SpscRingBufferConcurrentTest, ConcurrentStressTest) {
     for (int i = 0; i < kNumItems; ++i) {
       TracePacket packet;
       packet.type = 'I';
-      packet.inst.pc = i;
+      packet.pc = 0x80000000 + i * 4;
+      packet.inst = 0x00000013 + i;
       while (!buffer.Push(packet)) {
         std::this_thread::yield();
       }
@@ -84,7 +87,8 @@ TEST(SpscRingBufferConcurrentTest, ConcurrentStressTest) {
         std::this_thread::yield();
       }
       EXPECT_EQ(packet.type, 'I');
-      EXPECT_EQ(packet.inst.pc, i);
+      EXPECT_EQ(packet.pc, 0x80000000 + i * 4);
+      EXPECT_EQ(packet.inst, 0x00000013 + i);
     }
   });
 
@@ -94,4 +98,4 @@ TEST(SpscRingBufferConcurrentTest, ConcurrentStressTest) {
   EXPECT_TRUE(buffer.IsEmpty());
 }
 
-} // namespace coralnpu::sim::rvvi
+} // namespace mpact::sim::riscv::rvvi

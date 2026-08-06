@@ -16,30 +16,29 @@
 #define TESTS_VERILATOR_SIM_RVVI_TRACE_PACKET_H_
 
 #include <cstdint>
+#include <cstddef>
 
-namespace coralnpu::sim::rvvi {
+namespace mpact::sim::riscv::rvvi {
 
 struct alignas(64) TracePacket {
-  uint8_t type; // 'I' (Instruction), 'T' (Trap), 'R' (Register Update), 'E' (Terminate)
-  uint8_t padding[3];
-  uint32_t v_id; // Instruction/Retirement ID for reassembly
+  uint64_t pc;         // 64-bit Program Counter (for 'I' type)
   union {
-    struct {
-      uint64_t pc;
-      uint32_t instruction;
-      uint32_t padding;
-    } inst;
-    struct {
-      uint64_t value[4]; // Up to 256 bits of vector/float/GPR state
-      uint16_t index;
-      uint16_t offset;
-      uint16_t total_size;
-      uint8_t reg_type;  // 'X' (GPR), 'F' (FPR), 'V' (Vector), 'C' (CSR)
-      uint8_t size;      // in bytes
-    } reg;
+    uint8_t raw_bytes[32];  // 32-byte payload for register writes or disassembly string (type 'I')
+    uint64_t raw_words[4];
   };
+  uint32_t inst;       // 32-bit instruction opcode (for 'I' type)
+  uint16_t offset;     // Byte offset within the register (for multi-chunk writes)
+  uint16_t total_size; // Total size of the register in bytes
+  uint8_t type;        // 'I' (Instruction), 'R' (Register Chunk), 'E' (Terminate)
+  uint8_t reg_type;    // 'X' (GPR), 'F' (FPR), 'V' (Vector), or 0 if none
+  uint16_t reg_index;  // Register index (0-31 or 12-bit CSR address)
+  uint8_t chunk_size;  // Active length of the value chunk in bytes (up to 32)
+  uint8_t padding[11]; // Padding to ensure exactly 64 bytes size and cache alignment
 };
 
-} // namespace coralnpu::sim::rvvi
+static_assert(sizeof(TracePacket) == 64, "TracePacket must be exactly 64 bytes");
+static_assert(offsetof(TracePacket, pc) == 0, "TracePacket.pc must be at offset 0");
+
+} // namespace mpact::sim::riscv::rvvi
 
 #endif  // TESTS_VERILATOR_SIM_RVVI_TRACE_PACKET_H_

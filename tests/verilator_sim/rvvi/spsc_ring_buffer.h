@@ -18,9 +18,10 @@
 #include <atomic>
 #include <array>
 #include <cstddef>
-#include "tests/verilator_sim/rvvi/trace_packet.h"
+#include <thread>
+#include "trace_packet.h"
 
-namespace coralnpu::sim::rvvi {
+namespace mpact::sim::riscv::rvvi {
 
 template <typename T = TracePacket, size_t Size = 4096>
 class SpscRingBuffer {
@@ -55,8 +56,14 @@ class SpscRingBuffer {
     return head_.load(std::memory_order_acquire) == tail_.load(std::memory_order_acquire);
   }
 
-  bool IsFull() const {
-    return head_.load(std::memory_order_acquire) - tail_.load(std::memory_order_acquire) >= Size;
+  void WaitUntilEmpty() const {
+    while (!IsEmpty()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
+
+  void Flush() {
+    WaitUntilEmpty();
   }
 
  private:
@@ -66,6 +73,6 @@ class SpscRingBuffer {
   char padding_[64 - sizeof(std::atomic<size_t>)]; // Ensure tail_ is padded at the end.
 };
 
-} // namespace coralnpu::sim::rvvi
+} // namespace mpact::sim::riscv::rvvi
 
 #endif  // TESTS_VERILATOR_SIM_RVVI_SPSC_RING_BUFFER_H_

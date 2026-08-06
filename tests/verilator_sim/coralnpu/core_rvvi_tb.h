@@ -37,23 +37,27 @@
 #include "tests/verilator_sim/sysc_tb.h"
 #include "tests/verilator_sim/util.h"
 
-#define STRINGIZE(x) #x
-#define STR(x) STRINGIZE(x)
-#define MODEL_HEADER_SUFFIX .h
-#define MODEL_HEADER STR(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
+#define STRINGIZE_INTERNAL(x) #x
+#define STRINGIZE(x) STRINGIZE_INTERNAL(x)
+#define STR_HEADER(x) STRINGIZE(x.h)
+#define MODEL_HEADER STR_HEADER(VERILATOR_MODEL)
 #include MODEL_HEADER
 
-#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
-#define PARAMS_HEADER_SUFFIX _parameters.h
-#define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
+#define CONCAT_TEMP(a, b) a##b
+#define CONCAT(a, b) CONCAT_TEMP(a, b)
+#define STR_PARAMS_HEADER_TEMP(x) STRINGIZE(hdl/chisel/src/coralnpu/CONCAT(x, _parameters.h))
+#define STR_PARAMS_HEADER(x) STR_PARAMS_HEADER_TEMP(x)
+#define PARAMS_HEADER STR_PARAMS_HEADER(VERILATOR_MODEL)
 #include PARAMS_HEADER
 
+#undef STRINGIZE_INTERNAL
 #undef STRINGIZE
-#undef STR
-#undef MODEL_HEADER_SUFFIX
+#undef STR_HEADER
 #undef MODEL_HEADER
-#undef PARAMS_HEADER_PREFIX
-#undef PARAMS_HEADER_SUFFIX
+#undef CONCAT_TEMP
+#undef CONCAT
+#undef STR_PARAMS_HEADER_TEMP
+#undef STR_PARAMS_HEADER
 #undef PARAMS_HEADER
 
 #ifndef BUFFER_SIZE

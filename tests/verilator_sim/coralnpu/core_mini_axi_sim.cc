@@ -40,12 +40,12 @@ ABSL_FLAG(bool, debug_axi, false, "Enable AXI traffic debugging");
 ABSL_FLAG(bool, instr_trace, false, "Log instructions to console");
 ABSL_FLAG(bool, backdoor_load, false, "Enable high-speed backdoor code loading");
 
-static bool run(const char* name, const std::string binary, const int cycles,
+static bool run(absl::string_view name, absl::string_view binary, const int cycles,
                 const bool trace, const bool debug_axi, const bool instr_trace,
                 const bool backdoor_load) {
   absl::Mutex halted_mtx;
   absl::CondVar halted_cv;
-  CoreMiniAxi_tb tb(CoreMiniAxi_tb::kCoreMiniAxiModelName, cycles, /* random= */ false, debug_axi,
+  CoreMiniAxiTb tb(std::string(name).c_str(), cycles, /* random= */ false, debug_axi,
                     instr_trace, backdoor_load,
                     /*wfi_cb=*/std::nullopt,
                     /*halted_cb=*/[&halted_mtx, &halted_cv]() {
@@ -58,12 +58,12 @@ static bool run(const char* name, const std::string binary, const int cycles,
   sc_start(SC_ZERO_TIME);
 
   if (trace) {
-    tb.trace(tb.core());
+    tb.Trace(tb.core());
   }
 
-  std::thread sc_main_thread([&tb]() { tb.start(); });
+  std::thread sc_main_thread([&tb]() { tb.Start(); });
 
-  CHECK_OK(tb.LoadElfSync(binary));
+  CHECK_OK(tb.LoadElfSync(std::string(binary)));
   CHECK_OK(tb.ClockGateSync(false));
   CHECK_OK(tb.ResetAsync(false));
 
@@ -96,7 +96,7 @@ extern "C" int sc_main(int argc, char** argv) {
     return -1;
   }
 
-  return run(Sysc_tb::get_name(argv[0]), absl::GetFlag(FLAGS_binary),
+  return run(SyscTb::GetName(argv[0]), absl::GetFlag(FLAGS_binary),
       absl::GetFlag(FLAGS_cycles), absl::GetFlag(FLAGS_trace),
       absl::GetFlag(FLAGS_debug_axi), absl::GetFlag(FLAGS_instr_trace),
       absl::GetFlag(FLAGS_backdoor_load)) ? 0 : 1;

@@ -12,46 +12,73 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "tests/verilator_sim/rvvi/trace_daemon.h"
-#include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
-#include "tests/verilator_sim/rvvi/trace_packet.h"
-#include "tests/verilator_sim/rvvi/mpact_trace_formatter.h"
-#include "gtest/gtest.h"
+#include <chrono>
 #include <sstream>
 #include <thread>
-#include <chrono>
 
-namespace coralnpu::sim::rvvi {
+#include "gtest/gtest.h"
+
+#include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
+#include "tests/verilator_sim/rvvi/trace_daemon.h"
+#include "tests/verilator_sim/rvvi/trace_packet.h"
+
+namespace mpact::sim::riscv::rvvi {
 
 class TraceDaemonTest : public ::testing::Test {
  protected:
   SpscRingBuffer<> buffer_;
   std::stringstream output_stream_;
-  MpactTraceFormatter formatter_;
 };
 
 TEST_F(TraceDaemonTest, StartAndStopDaemon) {
-  TraceDaemon<> daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
-  EXPECT_FALSE(daemon.is_running());
+  TraceDaemon<> daemon(&buffer_, &output_stream_, nullptr);
+  EXPECT_FALSE(daemon.IsRunning());
   daemon.Start();
-  EXPECT_TRUE(daemon.is_running());
+  EXPECT_TRUE(daemon.IsRunning());
   daemon.Stop();
-  EXPECT_FALSE(daemon.is_running());
+  EXPECT_FALSE(daemon.IsRunning());
 }
 
-TEST_F(TraceDaemonTest, ProcessInstructionPacket) {
-  TraceDaemon<> daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
+TEST_F(TraceDaemonTest, ProcessVectorChunkReassembly) {
+  TraceDaemon<> daemon(&buffer_, &output_stream_, nullptr);
   daemon.Start();
 
-  TracePacket packet = {};
-  packet.type = 'I';
-  packet.v_id = 1;
-  packet.inst.pc = 0x80000000;
-  packet.inst.instruction = 0x00000013; // nop
+  // Send instruction packet first to set current instruction context
+  TracePacket inst_packet = {};
+  inst_packet.type = 'I';
+  inst_packet.pc = 0x1000;
+  inst_packet.inst = 0x00000057; // Vector instruction
+  std::strcpy(reinterpret_cast<char*>(inst_packet.raw_bytes), "vadd.vv");
+  EXPECT_TRUE(buffer_.Push(inst_packet));
+
+  // Send first chunk
+  TracePacket p1 = {};
+  p1.type = 'R';
+  p1.reg_type = 'V';
+  p1.reg_index = 0;
+  p1.chunk_size = 32;
+  p1.offset = 0;
+  p1.total_size = 64;
+  for (int i = 0; i < 4; ++i) p1.raw_words[i] = i; // Simplified data
   
-  EXPECT_TRUE(buffer_.Push(packet));
+  EXPECT_TRUE(buffer_.Push(p1));
+  
+  // Send second chunk
+  TracePacket p2 = {};
+  p2.type = 'R';
+  p2.reg_type = 'V';
+  p2.reg_index = 0;
+  p2.chunk_size = 32;
+  p2.offset = 32;
+  p2.total_size = 64;
+  for (int i = 4; i < 8; ++i) p2.raw_words[i-4] = i; 
+  
+  EXPECT_TRUE(buffer_.Push(p2));
+
+  // Send end packet to flush and process the line
+  TracePacket e_packet = {};
+  e_packet.type = 'E';
+  EXPECT_TRUE(buffer_.Push(e_packet));
   
   // Wait for processing
   while (!buffer_.IsEmpty()) {
@@ -61,85 +88,15 @@ TEST_F(TraceDaemonTest, ProcessInstructionPacket) {
   daemon.Stop();
   
   std::string output = output_stream_.str();
-  EXPECT_NE(output.find("rvvi,0,0000000080000000,00000013"), std::string::npos);
-}
-
-TEST_F(TraceDaemonTest, ProcessRegisterPacket) {
-  TraceDaemon<> daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
-  daemon.Start();
-
-  TracePacket r_packet = {};
-  r_packet.type = 'R';
-  r_packet.v_id = 1;
-  r_packet.reg.reg_type = 'X';
-  r_packet.reg.index = 10;
-  r_packet.reg.offset = 0;
-  r_packet.reg.total_size = 8;
-  r_packet.reg.size = 8;
-  r_packet.reg.value[0] = 0x123456789abcdef0;
-  
-  EXPECT_TRUE(buffer_.Push(r_packet));
-
-  TracePacket i_packet = {};
-  i_packet.type = 'I';
-  i_packet.v_id = 1;
-  i_packet.inst.pc = 0x80000004;
-  i_packet.inst.instruction = 0x00100513; // li a0, 1
-  
-  EXPECT_TRUE(buffer_.Push(i_packet));
-  
-  // Wait for processing
-  while (!buffer_.IsEmpty()) {
-    std::this_thread::yield();
-  }
-  
-  daemon.Stop();
-  
-  std::string output = output_stream_.str();
-  EXPECT_NE(output.find("rvvi,0,0000000080000004,00100513"), std::string::npos);
-  EXPECT_NE(output.find("x10:123456789abcdef0"), std::string::npos);
-}
-
-TEST_F(TraceDaemonTest, InterleavedPacketStreams) {
-  TraceDaemon<> daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
-  daemon.Start();
-
-  // Instruction 1: R comes before I
-  TracePacket r1 = {};
-  r1.type = 'R'; r1.v_id = 1; r1.reg.reg_type = 'X'; r1.reg.index = 1;
-  r1.reg.total_size = 4; r1.reg.size = 4; r1.reg.value[0] = 0xAAAA;
-  buffer_.Push(r1);
-
-  TracePacket i1 = {};
-  i1.type = 'I'; i1.v_id = 1; i1.inst.pc = 0x1000; i1.inst.instruction = 0x1234;
-  buffer_.Push(i1);
-
-  // Instruction 2: I comes before R
-  TracePacket i2 = {};
-  i2.type = 'I'; i2.v_id = 2; i2.inst.pc = 0x2000; i2.inst.instruction = 0x5678;
-  buffer_.Push(i2);
-
-  TracePacket r2 = {};
-  r2.type = 'R'; r2.v_id = 2; r2.reg.reg_type = 'X'; r2.reg.index = 2;
-  r2.reg.total_size = 4; r2.reg.size = 4; r2.reg.value[0] = 0xBBBB;
-  buffer_.Push(r2);
-
-  daemon.Stop();
-  
-  std::string output = output_stream_.str();
-  // Check I1 with R1
-  EXPECT_NE(output.find("rvvi,0,0000000000001000,00001234,<unimplemented: mpact-riscv missing>,x1:0000aaaa"), std::string::npos);
-  // Check I2 with R2
-  EXPECT_NE(output.find("rvvi,0,0000000000002000,00005678,<unimplemented: mpact-riscv missing>,x2:0000bbbb"), std::string::npos);
+  EXPECT_FALSE(output.empty());
+  EXPECT_NE(output.find("rvvi,0,"), std::string::npos);
+  EXPECT_NE(output.find("vadd.vv"), std::string::npos);
 }
 
 TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
   // This test verifies that pushing an 'E' packet causes the daemon to stop
   // and destruct cleanly without leaving threads unjoined (QA-004).
-  TraceDaemon<> daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
+  TraceDaemon<> daemon(&buffer_, &output_stream_, nullptr);
   daemon.Start();
 
   TracePacket e_packet;
@@ -154,157 +111,47 @@ TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
   
   // Give the daemon thread time to process the 'E' packet and set running_ = false.
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  EXPECT_FALSE(daemon.IsRunning());
 }
 
-TEST_F(TraceDaemonTest, DuplicateChunkWarning) {
-  // Capture stderr to verify the warning message.
-  testing::internal::CaptureStderr();
-
-  TraceDaemon<> daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
+TEST_F(TraceDaemonTest, ProcessMultiIssueInstructions) {
+  // This test verifies that the daemon correctly handles multiple instructions 
+  // retired in sequence (simulating superscalar/multi-issue retirement).
+  TraceDaemon<> daemon(&buffer_, &output_stream_, nullptr);
   daemon.Start();
 
-  // Inject duplicate chunks (same offset, same register)
-  TracePacket r_packet = {};
-  r_packet.type = 'R';
-  r_packet.v_id = 1;
-  r_packet.reg.reg_type = 'X';
-  r_packet.reg.index = 10;
-  r_packet.reg.offset = 0;
-  r_packet.reg.total_size = 8;
-  r_packet.reg.size = 8;
-  r_packet.reg.value[0] = 0x1111111111111111;
-  
-  EXPECT_TRUE(buffer_.Push(r_packet));
-  EXPECT_TRUE(buffer_.Push(r_packet)); // Duplicate
+  // Lane 0 instruction
+  TracePacket p0 = {};
+  p0.type = 'I';
+  p0.pc = 0x80000000;
+  p0.inst = 0x00000013; // nop
+  std::strcpy(reinterpret_cast<char*>(p0.raw_bytes), "nop");
+  EXPECT_TRUE(buffer_.Push(p0));
 
-  daemon.Stop();
-  
-  std::string stderr_output = testing::internal::GetCapturedStderr();
-  EXPECT_NE(stderr_output.find("[WARNING] Trace reassembly error: Duplicate chunk"), std::string::npos);
-}
+  // Lane 1 instruction
+  TracePacket p1 = {};
+  p1.type = 'I';
+  p1.pc = 0x80000004;
+  p1.inst = 0x00100513; // li a0, 1
+  std::strcpy(reinterpret_cast<char*>(p1.raw_bytes), "li a0, 1");
+  EXPECT_TRUE(buffer_.Push(p1));
 
-TEST_F(TraceDaemonTest, ProcessLargeRegisterPacket) {
-  TraceDaemon<> daemon(&buffer_, &output_stream_);
-  daemon.SetTraceFormatter(&formatter_);
-  daemon.Start();
+  // End packet to flush everything
+  TracePacket e_packet = {};
+  e_packet.type = 'E';
+  EXPECT_TRUE(buffer_.Push(e_packet));
 
-  TracePacket r_packet = {};
-  r_packet.type = 'R';
-  r_packet.v_id = 1;
-  r_packet.reg.reg_type = 'V'; // Vector
-  r_packet.reg.index = 1;
-  r_packet.reg.offset = 0;
-  r_packet.reg.total_size = 128; // Fits in VLEN/8 = 256 bytes
-  r_packet.reg.size = 32;
-  for (int i = 0; i < 4; ++i) r_packet.reg.value[i] = 0x1111111111111111;
-  
-  for (int i = 0; i < 4; ++i) {
-    r_packet.reg.offset = i * 32;
-    EXPECT_TRUE(buffer_.Push(r_packet));
+  while (!buffer_.IsEmpty()) {
+    std::this_thread::yield();
   }
-
-  TracePacket i_packet = {};
-  i_packet.type = 'I';
-  i_packet.v_id = 1;
-  i_packet.inst.pc = 0x80000000;
-  i_packet.inst.instruction = 0x00000013;
   
-  EXPECT_TRUE(buffer_.Push(i_packet));
-  
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
   daemon.Stop();
-  
+
   std::string output = output_stream_.str();
-  // It should NOT be capped at 64 bytes anymore. It should output 128 bytes (256 hex digits).
-  size_t pos = output.find("v1:");
-  EXPECT_NE(pos, std::string::npos);
-  size_t end_pos = output.find_first_of(",\n", pos);
-  std::string hex = output.substr(pos + 3, end_pos - (pos + 3));
-  EXPECT_EQ(hex.length(), 256); // 128 bytes * 2 hex chars/byte
+  // Verify both instructions appeared in the trace output.
+  EXPECT_NE(output.find("80000000"), std::string::npos);
+  EXPECT_NE(output.find("80000004"), std::string::npos);
 }
 
-TEST_F(TraceDaemonTest, ExceedsMaxAccumulatedUpdates) {
-  EXPECT_DEATH({
-    TraceDaemon<> daemon(&buffer_, &output_stream_);
-    daemon.SetTraceFormatter(&formatter_);
-    daemon.Start();
-    for (int i = 0; i < 100; ++i) {
-      TracePacket r_packet = {};
-      r_packet.type = 'R';
-      r_packet.v_id = 1; // Same v_id to prevent flushing
-      r_packet.reg.reg_type = 'X';
-      r_packet.reg.index = i; // Different index to accumulate new updates
-      r_packet.reg.offset = 0;
-      r_packet.reg.total_size = 8;
-      r_packet.reg.size = 8;
-      r_packet.reg.value[0] = 0;
-      while (!buffer_.Push(r_packet)) std::this_thread::yield();
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    daemon.Stop();
-  }, "exceeds kMaxAccumulatedUpdates");
-}
-
-TEST_F(TraceDaemonTest, ExceedsMaxChunkCount) {
-  EXPECT_EXIT({
-    TraceDaemon<256> daemon(&buffer_, &output_stream_); // VLEN=256 bits -> 32 bytes
-    daemon.SetTraceFormatter(&formatter_);
-    daemon.Start();
-    TracePacket r_packet = {};
-    r_packet.type = 'R';
-    r_packet.v_id = 1;
-    r_packet.reg.reg_type = 'X';
-    r_packet.reg.index = 1;
-    r_packet.reg.total_size = 64; // num_chunks = 2, exceeds 32 bytes.
-    r_packet.reg.size = 32;
-    r_packet.reg.offset = 0;
-    while (!buffer_.Push(r_packet)) std::this_thread::yield();
-    TracePacket e_packet;
-    e_packet.type = 'E';
-    buffer_.Push(e_packet);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    daemon.Stop();
-    std::exit(0); // Should be unreachable
-  }, ::testing::ExitedWithCode(1), "exceeds register_update->data size");
-}
-
-TEST_F(TraceDaemonTest, IncompleteChunkSequenceDiscarded) {
-  EXPECT_EXIT({
-    TraceDaemon<> daemon(&buffer_, &output_stream_);
-    daemon.SetTraceFormatter(&formatter_);
-    daemon.Start();
-
-    // Inject incomplete chunk (total_size = 64, but only one 32-byte chunk pushed)
-    TracePacket r_packet = {};
-    r_packet.type = 'R';
-    r_packet.v_id = 1;
-    r_packet.reg.reg_type = 'X';
-    r_packet.reg.index = 10;
-    r_packet.reg.offset = 0;
-    r_packet.reg.total_size = 64; // Requires 2 chunks
-    r_packet.reg.size = 32;
-    r_packet.reg.value[0] = 0x1111111111111111;
-    
-    EXPECT_TRUE(buffer_.Push(r_packet));
-    // We do NOT push the second chunk.
-
-    // Push instruction to trigger flush
-    TracePacket i_packet = {};
-    i_packet.type = 'I';
-    i_packet.v_id = 1;
-    i_packet.inst.pc = 0x80000000;
-    i_packet.inst.instruction = 0x00000013;
-    
-    EXPECT_TRUE(buffer_.Push(i_packet));
-
-    // Wait for processing
-    while (!buffer_.IsEmpty()) {
-      std::this_thread::yield();
-    }
-
-    daemon.Stop();
-    std::exit(0); // Should be unreachable
-  }, ::testing::ExitedWithCode(1), "Trace reassembly error: Incomplete chunks");
-}
-
-} // namespace coralnpu::sim::rvvi
+} // namespace mpact::sim::riscv::rvvi

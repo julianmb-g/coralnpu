@@ -13,24 +13,45 @@
 // limitations under the License.
 
 #include "tests/verilator_sim/sysc_tb.h"
-#include "tests/verilator_sim/coralnpu/core_if.h"
 
 #include "VL1ICache.h"
 
 #include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 
-struct L1ICache_tb : Sysc_tb {
+template <typename T>
+struct get_port_width;
+
+template <typename T>
+struct get_port_width<T&> : get_port_width<T> {};
+
+template <int W>
+struct get_port_width<sc_core::sc_in<sc_dt::sc_bv<W>>> {
+  static const int value = W;
+};
+
+template <int W>
+struct get_port_width<sc_core::sc_out<sc_dt::sc_bv<W>>> {
+  static const int value = W;
+};
+
+class L1ICacheTb : public SyscTb {
+ public:
+  static const int PC_WIDTH = get_port_width<decltype(VL1ICache::io_flush_pcNext)>::value;
+  static const int ADDR_WIDTH = get_port_width<decltype(VL1ICache::io_ibus_addr)>::value;
+  static const int FAULT_ADDR_WIDTH = get_port_width<decltype(VL1ICache::io_ibus_fault_bits_addr)>::value;
+  static const int FAULT_EPC_WIDTH = get_port_width<decltype(VL1ICache::io_ibus_fault_bits_epc)>::value;
+
   sc_out<bool> io_flush_valid;
-  sc_out<sc_bv<32> > io_flush_pcNext;
+  sc_out<sc_bv<PC_WIDTH> > io_flush_pcNext;
   sc_in<bool> io_flush_ready;
   sc_out<bool> io_ibus_valid;
   sc_in<bool> io_ibus_ready;
-  sc_out<sc_bv<32> > io_ibus_addr;
+  sc_out<sc_bv<ADDR_WIDTH> > io_ibus_addr;
   sc_in<sc_bv<kL1IAxiBits> > io_ibus_rdata;
   sc_in<bool> io_ibus_fault_valid;
   sc_in<bool> io_ibus_fault_bits_write;
-  sc_in<sc_bv<32>> io_ibus_fault_bits_addr;
-  sc_in<sc_bv<32>> io_ibus_fault_bits_epc;
+  sc_in<sc_bv<FAULT_ADDR_WIDTH>> io_ibus_fault_bits_addr;
+  sc_in<sc_bv<FAULT_EPC_WIDTH>> io_ibus_fault_bits_epc;
   sc_in<bool> io_axi_read_addr_valid;
   sc_out<bool> io_axi_read_addr_ready;
   sc_in<sc_bv<kL1IAxiId> > io_axi_read_addr_bits_id;
@@ -51,55 +72,55 @@ struct L1ICache_tb : Sysc_tb {
   sc_out<bool> io_axi_read_data_bits_last;
   sc_in<bool> io_volt_sel;
 
-  using Sysc_tb::Sysc_tb;
+  using SyscTb::SyscTb;
 
-  void posedge() {
+  void Posedge() override {
     // flush
-    io_flush_valid = rand_int(0, 255) == 0;
+    io_flush_valid = RandInt(0, 255) == 0;
 
     // ibus
-    if (ibus_resp_pipeline_) {
-      ibus_resp_pipeline_ = false;
-      for (int i = 0; i < ibusw_; ++i) {
-        uint32_t ref = ibus_resp_data_ + i * 4;
+    if (ibus_resp_pipeline) {
+      ibus_resp_pipeline = false;
+      for (int i = 0; i < ibusw; ++i) {
+        uint32_t ref = ibus_resp_data + i * 4;
         uint32_t dut = io_ibus_rdata.read().get_word(i);
-        check(ref == dut, "ibus read data");
+        Check(ref == dut, "ibus read data");
       }
     }
 
     if (io_ibus_valid && io_ibus_ready) {
-      ibus_resp_pipeline_ = true;
-      ibus_resp_data_ = io_ibus_addr.read().get_word(0) & ~(ibusb_ - 1);
+      ibus_resp_pipeline = true;
+      ibus_resp_data = io_ibus_addr.read().get_word(0) & ~(ibusb - 1);
 
       command_t cmd({io_ibus_addr.read().get_word(0)});
-      history_.write(cmd);
-      if (history_.count() > 16) {
-        history_.remove();
+      history.Write(cmd);
+      if (history.Count() > 16) {
+        history.Remove();
       }
     }
 
     if (!io_ibus_valid || io_ibus_ready) {  // latch transaction
       command_t cmd;
-      bool newaddr = rand_int(0, 3) == 0 || !history_.rand(cmd);
-      uint32_t addr = newaddr ? rand_uint32() : cmd.addr;
-      if (rand_int(0, 7) == 0) {
+      bool newaddr = RandInt(0, 3) == 0 || !history.Rand(cmd);
+      uint32_t addr = newaddr ? RandUint32() : cmd.addr;
+      if (RandInt(0, 7) == 0) {
         addr &= 0x3fff;
       }
-      io_ibus_valid = rand_bool();
+      io_ibus_valid = SyscTbRandBool();
       io_ibus_addr = addr;
     }
 
-    timeout_ = io_ibus_ready ? 0 : timeout_ + io_ibus_valid;
-    check(timeout_ < 100, "ibus timeout");
+    timeout = io_ibus_ready ? 0 : timeout + io_ibus_valid;
+    Check(timeout < 100, "ibus timeout");
 
     // kxi_read_addr
-    io_axi_read_addr_ready = rand_bool();
+    io_axi_read_addr_ready = SyscTbRandBool();
 
     if (io_axi_read_addr_valid && io_axi_read_addr_ready) {
       uint32_t id = io_axi_read_addr_bits_id.read().get_word(0);
       uint32_t addr = io_axi_read_addr_bits_addr.read().get_word(0);
-      response_t resp({id, addr});
-      resp_.write(resp);
+      response_t r({id, addr});
+      resp.Write(r);
     }
 
     // kxi_read_data
@@ -108,17 +129,17 @@ struct L1ICache_tb : Sysc_tb {
     io_axi_read_data_bits_data = 0;
 
     if (io_axi_read_data_valid && io_axi_read_data_ready) {
-      check(resp_.remove(), "no response to erase");
-      resp_.shuffle();
+      Check(resp.Remove(), "no response to erase");
+      resp.Shuffle();
     }
 
-    response_t resp;
-    if (resp_.next(resp)) {
-      io_axi_read_data_valid = rand_bool();
-      io_axi_read_data_bits_id = resp.id;
-      uint32_t data = resp.data;
+    response_t res;
+    if (resp.Next(res)) {
+      io_axi_read_data_valid = SyscTbRandBool();
+      io_axi_read_data_bits_id = res.id;
+      uint32_t data = res.data;
       sc_bv<kL1IAxiBits> out;
-      for (int i = 0; i < axiw_; ++i) {
+      for (int i = 0; i < axiw; ++i) {
         out.set_word(i, data);
         data += 4;
       }
@@ -136,31 +157,31 @@ struct L1ICache_tb : Sysc_tb {
     uint32_t data;
   };
 
-  const int ibusb_ = kL1IAxiBits / 8;
-  const int ibusw_ = kL1IAxiBits / 32;
-  const int axib_ = kL1IAxiBits / 8;
-  const int axiw_ = kL1IAxiBits / 32;
+  const int ibusb = kL1IAxiBits / 8;
+  const int ibusw = kL1IAxiBits / 32;
+  const int axib = kL1IAxiBits / 8;
+  const int axiw = kL1IAxiBits / 32;
 
-  int timeout_ = 0;
+  int timeout = 0;
 
-  bool ibus_resp_pipeline_ = false;
-  uint32_t ibus_resp_data_ = 0;
-  fifo_t<command_t> history_;
-  fifo_t<response_t> resp_;
+  bool ibus_resp_pipeline = false;
+  uint32_t ibus_resp_data = 0;
+  Fifo<command_t> history;
+  Fifo<response_t> resp;
 };
 
-static void L1ICache_test(char* name, int loops, bool trace) {
+static void L1ICacheTest(absl::string_view name, int loops, bool trace) {
   sc_signal<bool> io_flush_valid;
-  sc_signal<sc_bv<32> > io_flush_pcNext;
+  sc_signal<sc_bv<L1ICacheTb::PC_WIDTH> > io_flush_pcNext;
   sc_signal<bool> io_flush_ready;
   sc_signal<bool> io_ibus_valid;
   sc_signal<bool> io_ibus_ready;
-  sc_signal<sc_bv<32> > io_ibus_addr;
+  sc_signal<sc_bv<L1ICacheTb::ADDR_WIDTH> > io_ibus_addr;
   sc_signal<sc_bv<kL1IAxiBits> > io_ibus_rdata;
   sc_signal<bool> io_ibus_fault_valid;
   sc_signal<bool> io_ibus_fault_bits_write;
-  sc_signal<sc_bv<32>> io_ibus_fault_bits_addr;
-  sc_signal<sc_bv<32>> io_ibus_fault_bits_epc;
+  sc_signal<sc_bv<L1ICacheTb::FAULT_ADDR_WIDTH>> io_ibus_fault_bits_addr;
+  sc_signal<sc_bv<L1ICacheTb::FAULT_EPC_WIDTH>> io_ibus_fault_bits_epc;
   sc_signal<bool> io_axi_read_addr_valid;
   sc_signal<bool> io_axi_read_addr_ready;
   sc_signal<sc_bv<kL1IAxiId> > io_axi_read_addr_bits_id;
@@ -181,11 +202,11 @@ static void L1ICache_test(char* name, int loops, bool trace) {
   sc_signal<bool> io_axi_read_data_bits_last;
   sc_signal<bool> io_volt_sel;
 
-  L1ICache_tb tb("L1ICache_tb", loops, true /*random*/);
-  VL1ICache l1icache(name);
+  L1ICacheTb tb("L1ICacheTb", loops, true /*random*/);
+  VL1ICache l1icache(std::string(name).c_str());
 
   if (trace) {
-    tb.trace(&l1icache);
+    tb.Trace(&l1icache);
   }
 
   l1icache.clock(tb.clock);
@@ -221,10 +242,10 @@ static void L1ICache_test(char* name, int loops, bool trace) {
   BIND2(tb, l1icache, io_axi_read_data_bits_last);
   BIND2(tb, l1icache, io_volt_sel);
 
-  tb.start();
+  tb.Start();
 }
 
 int sc_main(int argc, char *argv[]) {
-  L1ICache_test(Sysc_tb::get_name(argv[0]), 1000000, false);
+  L1ICacheTest(SyscTb::GetName(argv[0]), 1000000, false);
   return 0;
 }

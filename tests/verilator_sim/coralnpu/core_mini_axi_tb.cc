@@ -14,10 +14,10 @@
 
 #include "tests/verilator_sim/coralnpu/core_mini_axi_tb.h"
 
-#include <elf.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <cstddef>
 #include <memory>
@@ -26,8 +26,9 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
-#include "tests/verilator_sim/elf.h"
 #include "tests/verilator_sim/sysc_tb.h"
+#include "mpact/sim/generic/core_debug_interface.h"
+#include "mpact/sim/util/program_loader/elf_program_loader.h"
 
 /* clang-format off */
 #include <systemc>
@@ -38,14 +39,14 @@ namespace internal {
 using namespace internal;
 /* clang-format on */
 
-const char* CoreMiniAxi_tb::kCoreMiniAxiModelName = STRINGIFY(VERILATOR_MODEL);
+const char* CoreMiniAxiTb::kCoreMiniAxiModelName = STRINGIFY(VERILATOR_MODEL);
 
-CoreMiniAxi_tb::CoreMiniAxi_tb(sc_module_name n, int loops, bool random,
+CoreMiniAxiTb::CoreMiniAxiTb(sc_module_name n, int loops, bool random,
                                bool debug_axi, bool instr_trace,
                                bool backdoor_load,
                                std::optional<std::function<void()>> wfi_cb,
                                std::optional<std::function<void()>> halted_cb)
-    : Sysc_tb(n, loops, random),
+    : SyscTb(n, loops, random),
       tg_("traffic_generator"),
       tlm2axi_bridge_("tlm2axi_bridge"),
       tlm_mux_("tlm_mux"),
@@ -59,10 +60,10 @@ CoreMiniAxi_tb::CoreMiniAxi_tb(sc_module_name n, int loops, bool random,
       halted_cb_(halted_cb),
       instr_trace_(instr_trace),
       backdoor_load_(backdoor_load) {
-  if (CoreMiniAxi_tb::singleton_ != nullptr) {
+  if (CoreMiniAxiTb::singleton_ != nullptr) {
     CHECK(false);
   }
-  CoreMiniAxi_tb::singleton_ = this;
+  CoreMiniAxiTb::singleton_ = this;
   core_ = std::make_unique<VERILATOR_MODEL>("core");
 
   // Initialize fd_map_.
@@ -88,7 +89,7 @@ CoreMiniAxi_tb::CoreMiniAxi_tb(sc_module_name n, int loops, bool random,
 
   Connect();
 
-  SC_HAS_PROCESS(CoreMiniAxi_tb);
+  SC_HAS_PROCESS(CoreMiniAxiTb);
   SC_THREAD(tohost_reader_thread);
 
   tg_.setStartDelay(sc_time(5, SC_NS));
@@ -99,9 +100,9 @@ CoreMiniAxi_tb::CoreMiniAxi_tb(sc_module_name n, int loops, bool random,
   axi2tlm_bridge_.socket.bind(xbar_.socket());
 }
 
-CoreMiniAxi_tb::~CoreMiniAxi_tb() { singleton_ = nullptr; }
+CoreMiniAxiTb::~CoreMiniAxiTb() { singleton_ = nullptr; }
 
-void CoreMiniAxi_tb::Connect() {
+void CoreMiniAxiTb::Connect() {
   // TLM sockets
   tg_.socket.bind(*tlm_mux_.t_sk[0]);
   tohost_initiator_socket_.bind(*tlm_mux_.t_sk[1]);
@@ -200,7 +201,7 @@ void CoreMiniAxi_tb::Connect() {
   core_->io_debug_rb_inst_##x##_bits_data(debug_io_.rb_inst_##x##_bits_data); \
   core_->io_debug_rb_inst_##x##_bits_trap(debug_io_.rb_inst_##x##_bits_trap); \
   BIND_RB_DEBUG_IO_VECS_8(x)
-  REPEAT(BIND_RB_DEBUG_IO, KP_retirementBufferSize);
+  CORALNPU_SIM_REPEAT(BIND_RB_DEBUG_IO, KP_retirementBufferSize);
 #undef BIND_RB_DEBUG_IO
 #undef BIND_RB_DEBUG_IO_VECS_8
 #undef BIND_RB_DEBUG_IO_VEC
@@ -306,16 +307,16 @@ void CoreMiniAxi_tb::Connect() {
   core_->io_axi_slave_write_resp_bits_resp(tlm2axi_signals_.bresp);
 }
 
-absl::Status CoreMiniAxi_tb::LoadElfSync(const std::string& file_name) {
+absl::Status CoreMiniAxiTb::LoadElfSync(absl::string_view file_name) {
   CHECK_OK(LoadElfAsync(file_name));
   absl::MutexLock lock(&transfer_queue_mtx_);
   transfer_queue_cv_.Wait(&transfer_queue_mtx_);
   return absl::OkStatus();
 }
 
-absl::Status CoreMiniAxi_tb::LoadElfAsync(const std::string& file_name) {
+absl::Status CoreMiniAxiTb::LoadElfAsync(absl::string_view file_name) {
   absl::MutexLock lock(&transfer_queue_mtx_);
-  int fd = open(file_name.c_str(), 0);
+  int fd = open(std::string(file_name).c_str(), 0);
   CHECK(fd > 0);
   struct stat sb;
   CHECK(fstat(fd, &sb) == 0);
@@ -328,55 +329,81 @@ absl::Status CoreMiniAxi_tb::LoadElfAsync(const std::string& file_name) {
   uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
   if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
     std::vector<DataTransfer> elf_transfers;
-    const Elf32_Ehdr* elf_header = reinterpret_cast<Elf32_Ehdr*>(file_data);
-    auto entry_point = elf_header->e_entry;
-    // Reserve space for write+read+expect for each section, and one additional
-    // for the entry point CSR.
-    elf_transfers.reserve(3 * elf_header->e_phnum + 1);
-    ::LoadElf(data8,
-              [this, &elf_transfers](void* dest, const void* src, size_t count) {
-                uint64_t addr = reinterpret_cast<uint64_t>(dest);
-                uint32_t itcm_size = KP_itcmSizeKBytes * 1024;
-                uint32_t dtcm_size = KP_dtcmSizeKBytes * 1024;
-                uint32_t dtcm_base = (KP_itcmSizeKBytes == 8 && KP_dtcmSizeKBytes == 32) ? 0x10000 : 0x100000;
-                bool in_tcm = (addr < itcm_size) || (addr >= dtcm_base && addr < dtcm_base + dtcm_size);
+    class AxiDebugAdapter : public mpact::sim::generic::CoreDebugInterface {
+     public:
+      CoreMiniAxiTb* tb_;
+      std::vector<DataTransfer>* transfers_;
+      AxiDebugAdapter(CoreMiniAxiTb* tb, std::vector<DataTransfer>* t) : tb_(tb), transfers_(t) {}
+      absl::Status Halt() override { return absl::UnimplementedError(""); }
+      absl::Status Halt(HaltReason halt_reason) override { return absl::UnimplementedError(""); }
+      absl::Status Halt(HaltReasonValueType halt_reason) override { return absl::UnimplementedError(""); }
+      absl::StatusOr<int> Step(int num) override { return absl::UnimplementedError(""); }
+      absl::Status Run() override { return absl::UnimplementedError(""); }
+      absl::Status Wait() override { return absl::UnimplementedError(""); }
+      absl::StatusOr<RunStatus> GetRunStatus() override { return RunStatus::kNone; }
+      absl::StatusOr<HaltReasonValueType> GetLastHaltReason() override { return 0; }
+      absl::StatusOr<uint64_t> ReadRegister(const std::string& name) override { return absl::UnimplementedError(""); }
+      absl::Status WriteRegister(const std::string& name, uint64_t value) override { return absl::UnimplementedError(""); }
+      absl::StatusOr<mpact::sim::generic::DataBuffer*> GetRegisterDataBuffer(const std::string& name) override { return absl::UnimplementedError(""); }
+      absl::StatusOr<size_t> ReadMemory(uint64_t address, void* buf, size_t length) override { return length; }
+      bool HasBreakpoint(uint64_t address) override { return false; }
+      absl::Status SetSwBreakpoint(uint64_t address) override { return absl::UnimplementedError(""); }
+      absl::Status ClearSwBreakpoint(uint64_t address) override { return absl::UnimplementedError(""); }
+      absl::Status ClearAllSwBreakpoints() override { return absl::UnimplementedError(""); }
+      absl::StatusOr<mpact::sim::generic::Instruction*> GetInstruction(uint64_t address) override { return absl::UnimplementedError(""); }
+      absl::StatusOr<std::string> GetDisassembly(uint64_t address) override { return absl::UnimplementedError(""); }
 
-                bool use_backdoor = this->backdoor_load_;
-                if (use_backdoor && in_tcm) {
-                  this->BackdoorLoad(addr, reinterpret_cast<const uint8_t*>(src), count);
-                } else {
-                  elf_transfers.push_back(utils::Write(
-                      reinterpret_cast<uint64_t>(dest),
-                      reinterpret_cast<uint8_t*>(const_cast<void*>(src)), count));
-                  elf_transfers.push_back(
-                      utils::Read(reinterpret_cast<uint64_t>(dest), count));
-                  elf_transfers.push_back(utils::Expect(
-                      reinterpret_cast<uint8_t*>(const_cast<void*>(src)), count));
-                }
-                return dest;
-              });
+      absl::StatusOr<size_t> WriteMemory(uint64_t address, const void* src, size_t count) override {
+        uint32_t itcm_size = KP_itcmSizeKBytes * 1024;
+        uint32_t dtcm_size = KP_dtcmSizeKBytes * 1024;
+        uint32_t dtcm_base = (KP_itcmSizeKBytes == 8 && KP_dtcmSizeKBytes == 32) ? 0x10000 : 0x100000;
+        bool in_tcm = (address < itcm_size) || (address >= dtcm_base && address < dtcm_base + dtcm_size);
+
+        bool use_backdoor = tb_->backdoor_load_;
+        if (use_backdoor && in_tcm) {
+          tb_->BackdoorLoad(address, reinterpret_cast<const uint8_t*>(src), count);
+        } else {
+          transfers_->push_back(utils::Write(
+              address,
+              reinterpret_cast<uint8_t*>(const_cast<void*>(src)), count));
+          transfers_->push_back(
+              utils::Read(address, count));
+          transfers_->push_back(utils::Expect(
+              reinterpret_cast<uint8_t*>(const_cast<void*>(src)), count));
+        }
+        return count;
+      }
+    };
+
+    AxiDebugAdapter adapter(this, &elf_transfers);
+    mpact::sim::util::ElfProgramLoader elf_loader(&adapter);
+    auto entry_point_or = elf_loader.LoadProgram(std::string(file_name));
+    CHECK_OK(entry_point_or.status());
+    uint32_t entry_point = entry_point_or.value();
+
     elf_transfers.push_back(utils::Write(
-      csr_addr_ + 0x4, reinterpret_cast<uint8_t*>(&entry_point), sizeof(entry_point)
+      kCsrAddr + 0x4, reinterpret_cast<uint8_t*>(&entry_point), sizeof(entry_point)
     ));
     transfer_queue_.push(
         std::make_unique<TrafficDesc>(utils::merge(elf_transfers)));
-    uint32_t tohost;
-    if (::LookupSymbol(data8, "tohost", &tohost)) {
-      // NB: This alignment requirement is to simplify the watchpoint implementation.
+    
+    auto tohost_or = elf_loader.GetSymbol("tohost");
+    if (tohost_or.ok()) {
+      uint32_t tohost = tohost_or.value().first;
       CHECK((tohost & 0xFFFFFFF0L) == tohost);
       tohost_addr_ = tohost;
     }
-    uint32_t tohost_ready;
-    if (::LookupSymbol(data8, "tohost_ready", &tohost_ready)) {
-      tohost_ready_addr_ = tohost_ready;
+    auto tohost_ready_or = elf_loader.GetSymbol("tohost_ready");
+    if (tohost_ready_or.ok()) {
+      tohost_ready_addr_ = tohost_ready_or.value().first;
     }
-    uint32_t fromhost;
-    if (::LookupSymbol(data8, "fromhost", &fromhost)) {
-      fromhost_addr_ = fromhost;
+    auto fromhost_or = elf_loader.GetSymbol("fromhost");
+    if (fromhost_or.ok()) {
+      fromhost_addr_ = fromhost_or.value().first;
     }
-    uint32_t fromhost_ready;
-    if (::LookupSymbol(data8, "fromhost_ready", &fromhost_ready)) {
-      fromhost_ready_addr_ = fromhost_ready;
+    auto fromhost_ready_or = elf_loader.GetSymbol("fromhost_ready");
+    if (fromhost_ready_or.ok()) {
+      fromhost_ready_addr_ = fromhost_ready_or.value().first;
     }
   } else {
     // Transaction to fill ITCM with the provided binary.
@@ -389,60 +416,60 @@ absl::Status CoreMiniAxi_tb::LoadElfAsync(const std::string& file_name) {
   return absl::OkStatus();
 }
 
-absl::Status CoreMiniAxi_tb::ClockGateSync(bool enable) {
+absl::Status CoreMiniAxiTb::ClockGateSync(bool enable) {
   CHECK_OK(ClockGateAsync(enable));
   absl::MutexLock lock(&transfer_queue_mtx_);
   transfer_queue_cv_.Wait(&transfer_queue_mtx_);
   return absl::OkStatus();
 }
 
-absl::Status CoreMiniAxi_tb::ClockGateAsync(bool enable) {
+absl::Status CoreMiniAxiTb::ClockGateAsync(bool enable) {
   absl::MutexLock lock(&transfer_queue_mtx_);
   uint8_t enable8 = enable ? 3 : 1;
   uint8_t enable_[4] = { enable8, 0, 0, 0 };;
   transfer_queue_.push(
       std::make_unique<TrafficDesc>(utils::merge(std::vector<DataTransfer>(
-          {utils::Write(csr_addr_, enable_),
-           utils::Read(csr_addr_, 4),
+          {utils::Write(kCsrAddr, enable_),
+           utils::Read(kCsrAddr, 4),
            utils::Expect(enable_, 4)}))));
   return absl::OkStatus();
 }
 
-absl::Status CoreMiniAxi_tb::ResetSync(bool enable) {
+absl::Status CoreMiniAxiTb::ResetSync(bool enable) {
   CHECK_OK(ResetAsync(enable));
   absl::MutexLock lock(&transfer_queue_mtx_);
   transfer_queue_cv_.Wait(&transfer_queue_mtx_);
   return absl::OkStatus();
 }
 
-absl::Status CoreMiniAxi_tb::ResetAsync(bool enable) {
+absl::Status CoreMiniAxiTb::ResetAsync(bool enable) {
   absl::MutexLock lock(&transfer_queue_mtx_);
   uint8_t enable8 = enable ? 1 : 0;
   uint8_t enable_[4] = { enable8, 0, 0, 0 };;
   transfer_queue_.push(
       std::make_unique<TrafficDesc>(utils::merge(std::vector<DataTransfer>(
-          {utils::Write(csr_addr_, enable_),
-           utils::Read(csr_addr_, 4),
+          {utils::Write(kCsrAddr, enable_),
+           utils::Read(kCsrAddr, 4),
            utils::Expect(enable_, 4)}))));
   return absl::OkStatus();
 }
 
-absl::Status CoreMiniAxi_tb::CheckStatusSync() {
+absl::Status CoreMiniAxiTb::CheckStatusSync() {
   CHECK_OK(CheckStatusAsync());
   absl::MutexLock lock(&transfer_queue_mtx_);
   transfer_queue_cv_.Wait(&transfer_queue_mtx_);
   return absl::OkStatus();
 }
 
-absl::Status CoreMiniAxi_tb::CheckStatusAsync() {
+absl::Status CoreMiniAxiTb::CheckStatusAsync() {
   absl::MutexLock lock(&transfer_queue_mtx_);
   transfer_queue_.push(std::make_unique<TrafficDesc>(utils::merge(
-      std::vector<DataTransfer>({utils::Read(csr_addr_ + 0x8, 4),
+      std::vector<DataTransfer>({utils::Read(kCsrAddr + 0x8, 4),
                                  utils::Expect(DATA(1, 0, 0, 0), 4)}))));
   return absl::OkStatus();
 }
 
-void CoreMiniAxi_tb::TraceInstructions() {
+void CoreMiniAxiTb::TraceInstructions() {
 #define TRACE_INSTRUCTION(x) do { \
   uint32_t pc, inst, idx; \
   pc = debug_io_.rb_inst_##x##_bits_pc.read().get_word(0); \
@@ -463,11 +490,11 @@ void CoreMiniAxi_tb::TraceInstructions() {
     tracer_.TraceInstructionRaw(pc, inst, idx, data_vec, trap); \
   } \
 } while (0);
-REPEAT(TRACE_INSTRUCTION, KP_retirementBufferSize);
+CORALNPU_SIM_REPEAT(TRACE_INSTRUCTION, KP_retirementBufferSize);
 #undef TRACE_INSTRUCTION
 }
 
-void CoreMiniAxi_tb::tohost_reader_thread() {
+void CoreMiniAxiTb::tohost_reader_thread() {
   while (true) {
     wait(tohost_read_event_);
     uint64_t addr = tohost_read_addr_;
@@ -828,9 +855,9 @@ void CoreMiniAxi_tb::tohost_reader_thread() {
   }
 }
 
-void CoreMiniAxi_tb::posedge() {
-  const bool core_io_dbus_valid = debug_io_.dbus_valid;
-  const bool core_io_dbus_write = debug_io_.dbus_bits_write;
+void CoreMiniAxiTb::Posedge() {
+  const bool core_io_dbus_valid = debug_io_.dbus_valid.read();
+  const bool core_io_dbus_write = debug_io_.dbus_bits_write.read();
   const uint32_t core_io_dbus_addr = debug_io_.dbus_bits_addr.read().get_word(0);
 
   // If we have tohost_ready, trigger only when it's written with 1.
@@ -867,7 +894,7 @@ void CoreMiniAxi_tb::posedge() {
   }
 
   static bool invoked_halted_cb = false;
-  if ((io_halted || io_fault || tohost_halt) && !invoked_halted_cb) {
+  if ((io_halted.read() || io_fault.read() || tohost_halt) && !invoked_halted_cb) {
     // If instruction tracing is enabled,
     // print the data about the instruction trace.
     if (instr_trace_) {
@@ -880,13 +907,13 @@ void CoreMiniAxi_tb::posedge() {
   }
 
   static bool wfi_seen = false;
-  if (io_wfi && !wfi_seen) {
+  if (io_wfi.read() && !wfi_seen) {
     io_irq = true;
     wfi_seen = true;
     if (wfi_cb_) {
       wfi_cb_.value()();
     }
-  } else if (!io_wfi && wfi_seen) {
+  } else if (!io_wfi.read() && wfi_seen) {
     io_irq = false;
     wfi_seen = false;
   } else {
@@ -898,31 +925,31 @@ void CoreMiniAxi_tb::posedge() {
     absl::MutexLock lock(&transfer_queue_mtx_);
     if (!transfer_queue_.empty()) {
       ITrafficDesc* transfer = transfer_queue_.front().get();
-      tg_.addTransfers(transfer, 0, CoreMiniAxi_tb::axi_transaction_done_cb);
+      tg_.addTransfers(transfer, 0, CoreMiniAxiTb::axi_transaction_done_cb);
       transfer_in_progress_ = true;
     }
   }
 }
 
-void CoreMiniAxi_tb::EnqueueTransactionSync(
+void CoreMiniAxiTb::EnqueueTransactionSync(
     std::vector<DataTransfer> transfers) {
   EnqueueTransactionAsync(transfers);
   absl::MutexLock lock(&transfer_queue_mtx_);
   transfer_queue_cv_.Wait(&transfer_queue_mtx_);
 }
 
-void CoreMiniAxi_tb::EnqueueTransactionAsync(
+void CoreMiniAxiTb::EnqueueTransactionAsync(
     std::vector<DataTransfer> transfers) {
   absl::MutexLock lock_(&transfer_queue_mtx_);
   transfer_queue_.push(std::make_unique<TrafficDesc>(utils::merge(transfers)));
 }
 
-void CoreMiniAxi_tb::axi_transaction_done_cb(TLMTrafficGenerator* gen,
+void CoreMiniAxiTb::axi_transaction_done_cb(TLMTrafficGenerator* gen,
                                              int threadId) {
   getSingleton()->axi_transaction_done_cb_(gen, threadId);
 }
 
-void CoreMiniAxi_tb::axi_transaction_done_cb_(TLMTrafficGenerator* gen,
+void CoreMiniAxiTb::axi_transaction_done_cb_(TLMTrafficGenerator* gen,
                                               int threadId) {
   absl::MutexLock lock(&transfer_queue_mtx_);
   CHECK(!transfer_queue_.empty());
@@ -931,8 +958,8 @@ void CoreMiniAxi_tb::axi_transaction_done_cb_(TLMTrafficGenerator* gen,
   transfer_queue_cv_.SignalAll();
 }
 
-CoreMiniAxi_tb* CoreMiniAxi_tb::singleton_ = nullptr;
+CoreMiniAxiTb* CoreMiniAxiTb::singleton_ = nullptr;
 
-void CoreMiniAxi_tb::BackdoorLoad(uint64_t addr, const uint8_t* data, size_t len) {
+void CoreMiniAxiTb::BackdoorLoad(uint64_t addr, const uint8_t* data, size_t len) {
   CHECK(coralnpu::SramBackdoorLoad(addr, data, len));
 }

@@ -16,12 +16,10 @@
 
 #include "absl/flags/parse.h"
 #include "absl/log/initialize.h"
-#include "tests/verilator_sim/coralnpu/core_mini_axi_tb.h"
 
-/* clang-format off */
-#include "traffic-generators/traffic-desc.h"
 #include "tests/test-modules/utils.h"
-/* clang-format on */
+#include "tests/verilator_sim/coralnpu/core_mini_axi_tb.h"
+#include "traffic-generators/traffic-desc.h"
 
 extern "C" int sc_main(int argc, char** argv) {
   absl::InitializeLog();
@@ -30,12 +28,12 @@ extern "C" int sc_main(int argc, char** argv) {
   char** v_argv = &args[0];
   Verilated::commandArgs(v_argc, v_argv);
 
-  CoreMiniAxi_tb tb("CoreMiniAxi_tb", 1000000, /* random= */ false,
+  CoreMiniAxiTb tb("CoreMiniAxiTb", 1000000, /* random= */ false,
                     /*debug_axi=*/true, /*instr_trace=*/false,
                     /*backdoor_load=*/false,
                     /*wfi_cb=*/std::nullopt, std::nullopt);
 
-  std::thread sc_main_thread([&tb]() { tb.start(); });
+  std::thread sc_main_thread([&tb]() { tb.Start(); });
 
   DataTransfer wrap_write, wrap_read, wrap_expect;
   /* WRAP */

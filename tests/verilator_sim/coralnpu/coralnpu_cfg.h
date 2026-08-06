@@ -15,6 +15,8 @@
 #ifndef TESTS_VERILATOR_SIM_CORALNPU_CORALNPU_CFG_H_
 #define TESTS_VERILATOR_SIM_CORALNPU_CORALNPU_CFG_H_
 
+#include <cstdint>
+
 #ifndef CORALNPU_SIMD
 #error CORALNPU_SIMD must be defined in Environment or Makefile.
 #elif (CORALNPU_SIMD == 128) || (CORALNPU_SIMD == 256) || (CORALNPU_SIMD == 512)
