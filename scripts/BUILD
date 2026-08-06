@@ -41,3 +41,14 @@ py_library(
     srcs = ["verify_active_branches_build.py"],
     deps = [":parse_active_branches"],
 )
+
+py_library(
+    name = "audit_rtl_patch",
+    srcs = ["audit_rtl_patch.py"],
+)
+
+py_library(
+    name = "integrate_rtl_tests",
+    srcs = ["integrate_rtl_tests.py"],
+    deps = [":audit_rtl_patch"],
+)

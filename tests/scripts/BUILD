@@ -36,3 +36,15 @@ py_test(
     srcs = ["test_verify_active_branches_build.py"],
     deps = ["//scripts:verify_active_branches_build"],
 )
+
+py_test(
+    name = "test_audit_rtl_patch",
+    srcs = ["test_audit_rtl_patch.py"],
+    deps = ["//scripts:audit_rtl_patch"],
+)
+
+py_test(
+    name = "test_integrate_rtl_tests",
+    srcs = ["test_integrate_rtl_tests.py"],
+    deps = ["//scripts:integrate_rtl_tests"],
+)

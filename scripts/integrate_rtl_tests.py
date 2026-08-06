@@ -1,4 +1,20 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
+import sys
+from audit_rtl_patch import audit_patch
 
 
 def parse_branches(file_path):
@@ -35,7 +51,14 @@ def generate_test_patch(finalized_branch, branch_repo_path):
 
 
 def apply_translated_patch(patch_path, integration_repo_path):
-  """Applies patch with path translation."""
+  """Applies patch with path translation after auditing."""
+  invalid = audit_patch(patch_path)
+  if invalid:
+    print(f"Error: Audit failed for {patch_path}. Found invalid files:")
+    for f in invalid:
+      print(f"  {f}")
+    return False
+
   os.system(f'git -C {integration_repo_path} apply -p1 --ignore-space-change --ignore-whitespace {patch_path}')
   # Clean up the patch file after application
   os.remove(patch_path)
@@ -51,4 +74,6 @@ if __name__ == '__main__':
   f_branches = parse_branches(tracker)
   for b_name in f_branches:
     patch = generate_test_patch(b_name, r_path)
-    apply_translated_patch(patch, i_repo)
+    if not apply_translated_patch(patch, i_repo):
+        print(f"Failed to apply patch for branch {b_name}")
+        sys.exit(1)

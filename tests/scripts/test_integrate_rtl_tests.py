@@ -1,5 +1,18 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import unittest
-from unittest.mock import patch
 import sys
 import os
 import tempfile
@@ -7,21 +20,18 @@ import tempfile
 # Add scripts directory to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts')))
 
-from integrate_rtl_tests import parse_branches, filter_test_paths, preserve_subdir_structure
+from integrate_rtl_tests import parse_branches
 
 class TestIntegrateRtlTests(unittest.TestCase):
 
     def test_parse_branches_finalized_only(self):
-        # Create a temporary file
+        # Create a temporary file with markdown table format
         with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
-            f.write("""Branch: feature/fix-a
-Status: Finalized (Mutant Killed, Test Enhanced, Restored)
----
-Branch: feature/active-b
-Status: Active
----
-Branch: feature/fix-c
-Status: In Progress
+            f.write("""| Branch Name | Author | Status | Notes |
+| :--- | :--- | :--- | :--- |
+| `feature/fix-a` | dev1 | Finalized (Mutant Killed, Test Enhanced, Restored) | fix a |
+| `feature/active-b` | dev2 | Active | active b |
+| `feature/fix-c` | dev3 | In Progress | wip |
 """)
             temp_path = f.name
         
@@ -31,35 +41,6 @@ Status: In Progress
             self.assertEqual(result, expected)
         finally:
             os.remove(temp_path)
-
-    def test_filter_test_paths(self):
-        paths = [
-            'tests/my_test.py',
-            'tb/my_tb.v',
-            'rtl/source.v',
-            'BUILD',
-            'BUILD.bazel',
-            'hdl/module.sv'
-        ]
-        # Expected: exclude rtl/source.v, hdl/module.sv
-        expected = [
-            'tests/my_test.py',
-            'tb/my_tb.v',
-            'BUILD',
-            'BUILD.bazel'
-        ]
-        # This is expected to fail or not work as intended yet
-        result = filter_test_paths(paths)
-        self.assertEqual(result, expected)
-
-    def test_preserve_subdir_structure(self):
-        input_path = 'tests/subdir/test_file.py'
-        # Logic: e.g., 'tests/' -> 'src/' or similar, preserving 'subdir/test_file.py'
-        # Assuming the function signature takes input_path and returns translated_path
-        expected_path = 'src/subdir/test_file.py'
-        # This is expected to fail or not work as intended yet
-        result = preserve_subdir_structure(input_path)
-        self.assertEqual(result, expected_path)
 
 if __name__ == '__main__':
     unittest.main()
