@@ -12,27 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define STRINGIZE_INTERNAL(x) #x
-#define STRINGIZE(x) STRINGIZE_INTERNAL(x)
-#define STR_HEADER(x) STRINGIZE(x.h)
-#define MODEL_HEADER STR_HEADER(VERILATOR_MODEL)
+#define STRINGIZE(x) #x
+#define STR(x) STRINGIZE(x)
+#define MODEL_HEADER_SUFFIX .h
+#define MODEL_HEADER STR(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
 #include MODEL_HEADER
 
-#define CONCAT_TEMP(a, b) a##b
-#define CONCAT(a, b) CONCAT_TEMP(a, b)
-#define STR_PARAMS_HEADER_TEMP(x) STRINGIZE(hdl/chisel/src/coralnpu/CONCAT(x, _parameters.h))
-#define STR_PARAMS_HEADER(x) STR_PARAMS_HEADER_TEMP(x)
-#define PARAMS_HEADER STR_PARAMS_HEADER(VERILATOR_MODEL)
+#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
+#define PARAMS_HEADER_SUFFIX _parameters.h
+#define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
 #include PARAMS_HEADER
 
-#undef STRINGIZE_INTERNAL
 #undef STRINGIZE
-#undef STR_HEADER
+#undef STR
+#undef MODEL_HEADER_SUFFIX
 #undef MODEL_HEADER
-#undef CONCAT_TEMP
-#undef CONCAT
-#undef STR_PARAMS_HEADER_TEMP
-#undef STR_PARAMS_HEADER
+#undef PARAMS_HEADER_PREFIX
+#undef PARAMS_HEADER_SUFFIX
 #undef PARAMS_HEADER
 
 #include <fcntl.h>
@@ -71,7 +67,6 @@ class BareCoreTb : public SyscTb {
 
   sc_in<bool> io_ibus_valid;
 
-#if KP_exposeDebugPorts
 #define DECLARE_RB_VALID(x) sc_in<bool> io_debug_rb_inst_##x##_valid;
   CORALNPU_SIM_REPEAT_8(DECLARE_RB_VALID);
 #undef DECLARE_RB_VALID
@@ -94,7 +89,6 @@ class BareCoreTb : public SyscTb {
   CORALNPU_SIM_REPEAT_8(DECLARE_VEC_WRITES_VALID_X);
 #undef DECLARE_VEC_WRITES_VALID_Y
 #undef DECLARE_VEC_WRITES_VALID_X
-#endif
 
   bool ebreak_halt = false;
   bool mpause_halt = false;
@@ -142,7 +136,6 @@ class BareCoreTb : public SyscTb {
   int fault_cycles_ = 0;
 
   void Posedge() {
-#if KP_exposeDebugPorts
 #define CHECK_EBREAK(x) \
     if (io_debug_rb_inst_##x##_valid.read()) { \
         uint32_t inst = io_debug_rb_inst_##x##_bits_inst.read().to_uint(); \
@@ -151,7 +144,6 @@ class BareCoreTb : public SyscTb {
     }
     CORALNPU_SIM_REPEAT_8(CHECK_EBREAK);
 #undef CHECK_EBREAK
-#endif
 
     if (ebreak_halt || mpause_halt) {
         fault_cycles_ = 0;
@@ -173,7 +165,6 @@ class BareCoreTb : public SyscTb {
     }
 
     uint64_t retiring_this_cycle = 0;
-#if KP_exposeDebugPorts
 #define PROCESS_LANE(x) \
     if (io_debug_rb_inst_##x##_valid.read()) { \
       retiring_this_cycle++; \
@@ -191,7 +182,6 @@ class BareCoreTb : public SyscTb {
     }
     CORALNPU_SIM_REPEAT_8(PROCESS_LANE);
 #undef PROCESS_LANE
-#endif
 
     instruction_count += retiring_this_cycle;
 
@@ -438,7 +428,6 @@ static int CoreRun(absl::string_view name, absl::string_view bin, const int inst
   testbench.io_fault(io_fault);
   testbench.io_ibus_valid(io_ibus_valid);
 
-#if KP_exposeDebugPorts
 #define BIND_RB_VALID(x) testbench.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid);
   CORALNPU_SIM_REPEAT_8(BIND_RB_VALID);
 #undef BIND_RB_VALID
@@ -461,7 +450,6 @@ static int CoreRun(absl::string_view name, absl::string_view bin, const int inst
   CORALNPU_SIM_REPEAT_8(BIND_TB_VEC_WRITES_VALID_X);
 #undef BIND_TB_VEC_WRITES_VALID_Y
 #undef BIND_TB_VEC_WRITES_VALID_X
-#endif
 
   core.clock(testbench.clock);
   core.reset(testbench.reset);
@@ -493,7 +481,6 @@ static int CoreRun(absl::string_view name, absl::string_view bin, const int inst
   core.io_dbus_adrx(io_dbus_adrx);
   core.io_dbus_pc(io_dbus_pc);
 
-#if KP_exposeDebugPorts
 #define BIND_RB_DEBUG_IO(x) \
   core.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid); \
   core.io_debug_rb_inst_##x##_bits_pc(io_debug_rb_inst_##x##_bits_pc); \
@@ -569,7 +556,6 @@ static int CoreRun(absl::string_view name, absl::string_view bin, const int inst
   core.io_debug_dbus_bits_addr(io_debug_dbus_bits_addr);
   core.io_debug_dbus_bits_wdata(io_debug_dbus_bits_wdata);
   core.io_debug_dbus_bits_write(io_debug_dbus_bits_write);
-#endif
 
   core.io_iflush_valid(io_iflush_valid);
   core.io_iflush_pcNext(io_iflush_pcNext);
@@ -621,7 +607,6 @@ static int CoreRun(absl::string_view name, absl::string_view bin, const int inst
   core.io_dm_float_rs_data_mantissa(io_dm_float_rs_data_mantissa);
   core.io_dm_float_rs_data_exponent(io_dm_float_rs_data_exponent);
 
-#if KP_exposeDebugPorts
 #define BIND_CSR_OUT(x) core.io_csr_out_value_##x(io_csr_out_value_##x);
   CORALNPU_SIM_REPEAT_17(BIND_CSR_OUT);
 #undef BIND_CSR_OUT
@@ -637,7 +622,6 @@ static int CoreRun(absl::string_view name, absl::string_view bin, const int inst
 
   CORALNPU_SIM_REPEAT_4(BIND_DEBUG_DISPATCH);
 #undef BIND_DEBUG_DISPATCH
-#endif
 
   memory_interface.clock(testbench.clock);
   memory_interface.reset(testbench.reset);
@@ -679,7 +663,7 @@ static int CoreRun(absl::string_view name, absl::string_view bin, const int inst
 
   if (testbench.ebreak_halt) {
     LOG(INFO) << "Simulation HALTED with ebreak.";
-    return 2;
+    return 0;
   }
 
   if (io_halted.read() || testbench.mpause_halt) {

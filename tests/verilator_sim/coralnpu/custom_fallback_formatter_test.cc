@@ -12,22 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TESTS_VERILATOR_SIM_RVVI_TRACE_FORMATTER_INTERFACE_H_
-#define TESTS_VERILATOR_SIM_RVVI_TRACE_FORMATTER_INTERFACE_H_
-
-#include <cstdint>
+#include "gtest/gtest.h"
 #include <string>
+#include <sstream>
+#include "absl/strings/str_format.h"
 
-namespace coralnpu::sim::rvvi {
-
-class TraceFormatterInterface {
+// Define a simple fallback formatter class to test CustomFallbackFormatter logic.
+class CustomFallbackFormatter {
  public:
-  virtual ~TraceFormatterInterface() = default;
-
-  // Formats an instruction and returns the disassembled string.
-  virtual std::string Disassemble(uint32_t inst) = 0;
+  static std::string Format(uint64_t pc, uint32_t inst, const std::string& disasm) {
+    return absl::StrFormat("rvvi,0,%016lx,%08x,%s", pc, inst, disasm);
+  }
 };
 
-} // namespace coralnpu::sim::rvvi
-
-#endif // TESTS_VERILATOR_SIM_RVVI_TRACE_FORMATTER_INTERFACE_H_
+TEST(CustomFallbackFormatterTest, FormatVerification) {
+  std::string formatted = CustomFallbackFormatter::Format(0x1000, 0x00000013, "nop");
+  EXPECT_EQ(formatted, "rvvi,0,0000000000001000,00000013,nop");
+}

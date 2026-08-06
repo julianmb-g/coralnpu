@@ -49,24 +49,14 @@
 
 #include "soc/interconnect/iconnect.h"
 #include "tests/verilator_sim/util.h"
-#define STR_HEADER(x) STRINGIFY(x.h)
-#define MODEL_HEADER STR_HEADER(VERILATOR_MODEL)
+#define MODEL_HEADER_SUFFIX .h
+#define MODEL_HEADER STRINGIFY(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
 #include MODEL_HEADER
 
-#define CONCAT_TEMP(a, b) a##b
-#define CONCAT(a, b) CONCAT_TEMP(a, b)
-#define STR_PARAMS_HEADER_TEMP(x) STRINGIFY(hdl/chisel/src/coralnpu/CONCAT(x, _parameters.h))
-#define STR_PARAMS_HEADER(x) STR_PARAMS_HEADER_TEMP(x)
-#define PARAMS_HEADER STR_PARAMS_HEADER(VERILATOR_MODEL)
+#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
+#define PARAMS_HEADER_SUFFIX _parameters.h
+#define PARAMS_HEADER STRINGIFY(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
 #include PARAMS_HEADER
-
-#undef STR_HEADER
-#undef MODEL_HEADER
-#undef CONCAT_TEMP
-#undef CONCAT
-#undef STR_PARAMS_HEADER_TEMP
-#undef STR_PARAMS_HEADER
-#undef PARAMS_HEADER
 
 class CoreMiniAxiTb : public SyscTb {
  public:

@@ -272,6 +272,15 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "custom_fallback_formatter_test",
+    srcs = ["coralnpu/custom_fallback_formatter_test.cc"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
 
 
 cc_binary(

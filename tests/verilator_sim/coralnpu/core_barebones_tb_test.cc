@@ -268,10 +268,8 @@ struct DummyModelSignals {
   sc_signal<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc{"io_ibus_fault_bits_epc"};
   sc_signal<sc_bv<32>> io_dbus_adrx{"io_dbus_adrx"};
   sc_signal<sc_bv<KP_programCounterBits>> io_dbus_pc{"io_dbus_pc"};
-#if KP_exposeDebugPorts
   sc_signal<sc_bv<4>> io_debug_en{"io_debug_en"};
   sc_signal<sc_bv<32>> io_debug_cycles{"io_debug_cycles"};
-#endif
   sc_signal<bool> io_iflush_valid{"io_iflush_valid"};
   sc_signal<sc_bv<KP_programCounterBits>> io_iflush_pcNext{"io_iflush_pcNext"};
   sc_signal<bool> io_dflush_valid{"io_dflush_valid"};
@@ -322,7 +320,6 @@ struct DummyModelSignals {
   sc_signal<bool> io_dm_float_rs_data_sign{"io_dm_float_rs_data_sign"};
   sc_signal<bool> io_dm_float_rs_valid{"io_dm_float_rs_valid"};
 
-#if KP_exposeDebugPorts
 #define DECLARE_DEBUG_ADDR(x) sc_signal<sc_bv<32>> io_debug_addr_##x{"io_debug_addr_" #x};
 #define DECLARE_DEBUG_INST(x) sc_signal<sc_bv<32>> io_debug_inst_##x{"io_debug_inst_" #x};
 #define DECLARE_DEBUG_DISPATCH(x) \
@@ -413,7 +410,6 @@ struct DummyModelSignals {
   sc_signal<sc_bv<32>> io_debug_dbus_bits_addr{"io_debug_dbus_bits_addr"};
   sc_signal<sc_bv<128>> io_debug_dbus_bits_wdata{"io_debug_dbus_bits_wdata"};
   sc_signal<bool> io_debug_dbus_bits_write{"io_debug_dbus_bits_write"};
-#endif
 
   void Bind(VCoreBarebones& core) {
     core.clock(clock);
@@ -445,10 +441,8 @@ struct DummyModelSignals {
     core.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
     core.io_dbus_adrx(io_dbus_adrx);
     core.io_dbus_pc(io_dbus_pc);
-#if KP_exposeDebugPorts
     core.io_debug_en(io_debug_en);
     core.io_debug_cycles(io_debug_cycles);
-#endif
     core.io_iflush_valid(io_iflush_valid);
     core.io_iflush_pcNext(io_iflush_pcNext);
     core.io_dflush_valid(io_dflush_valid);
@@ -499,7 +493,6 @@ struct DummyModelSignals {
     core.io_dm_float_rd_data_sign(io_dm_float_rd_data_sign);
     core.io_dm_float_rs_data_sign(io_dm_float_rs_data_sign);
 
-#if KP_exposeDebugPorts
     core.io_debug_float_writeAddr_valid(io_debug_float_writeAddr_valid);
     core.io_debug_float_writeData_0_valid(io_debug_float_writeData_0_valid);
     core.io_debug_float_writeData_1_valid(io_debug_float_writeData_1_valid);
@@ -590,7 +583,6 @@ struct DummyModelSignals {
 
   CORALNPU_SIM_REPEAT_8(BIND_DEBUG_RB_VEC_SLOT)
 #undef BIND_DEBUG_RB_VEC_SLOT
-#endif
   }
 };
 

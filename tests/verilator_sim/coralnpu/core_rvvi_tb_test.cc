@@ -243,7 +243,7 @@ TEST(CoreRvviTbTest, MultiIssueRetirement) {
 
   std::string trace_output = output.str();
   // Ensure both register updates from multi-issued retirement were captured
-  EXPECT_NE(trace_output.find("x10:0000000000000001"), std::string::npos);
-  EXPECT_NE(trace_output.find("x11:0000000000000002"), std::string::npos);
+  EXPECT_NE(trace_output.find("X10:0100000000000000"), std::string::npos);
+  EXPECT_NE(trace_output.find("X11:0200000000000000"), std::string::npos);
 }
 

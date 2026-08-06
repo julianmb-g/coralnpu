@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define STRINGIZE_INTERNAL(x) #x
-#define STRINGIZE(x) STRINGIZE_INTERNAL(x)
-#define STR_HEADER(x) STRINGIZE(x.h)
-#define MODEL_HEADER STR_HEADER(VERILATOR_MODEL)
+#define STRINGIZE(x) #x
+#define STR(x) STRINGIZE(x)
+#define MODEL_HEADER_SUFFIX .h
+#define MODEL_HEADER STR(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
 #include MODEL_HEADER
 
-#define CONCAT_TEMP(a, b) a##b
-#define CONCAT(a, b) CONCAT_TEMP(a, b)
-#define STR_PARAMS_HEADER_TEMP(x) STRINGIZE(hdl/chisel/src/coralnpu/CONCAT(x, _parameters.h))
-#define STR_PARAMS_HEADER(x) STR_PARAMS_HEADER_TEMP(x)
-#define PARAMS_HEADER STR_PARAMS_HEADER(VERILATOR_MODEL)
+#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
+#define PARAMS_HEADER_SUFFIX _parameters.h
+#define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
 #include PARAMS_HEADER
 
 #include "absl/flags/flag.h"
@@ -136,7 +134,6 @@ static void CoreRun(absl::string_view name, absl::string_view bin, const int cyc
   sc_signal<sc_bv<KP_lsuDataBits / 8> > io_ebus_dbus_wmask;
   sc_signal<sc_bv<KP_lsuDataBits> > io_ebus_dbus_rdata;
   sc_signal<bool> io_ebus_internal;
-#if KP_exposeDebugPorts
   sc_signal<sc_bv<4> > io_debug_en;
   sc_signal<sc_bv<KP_xlen> > io_debug_cycles;
   sc_signal<bool> io_debug_dbus_valid;
@@ -188,7 +185,6 @@ static void CoreRun(absl::string_view name, absl::string_view bin, const int cyc
   sc_signal<sc_bv<32> > io_debug_inst##x;
   CORALNPU_SIM_REPEAT(IO_DEBUG, KP_instructionLanes);
 #undef IO_DEBUG
-#endif
 
   io_iflush_ready = 1;
   io_dflush_ready = 1;
@@ -270,7 +266,6 @@ static void CoreRun(absl::string_view name, absl::string_view bin, const int cyc
   core.io_ebus_dbus_wmask(io_ebus_dbus_wmask);
   core.io_ebus_dbus_rdata(io_ebus_dbus_rdata);
   core.io_ebus_internal(io_ebus_internal);
-#if KP_exposeDebugPorts
   core.io_debug_en(io_debug_en);
   core.io_debug_cycles(io_debug_cycles);
   core.io_debug_dbus_valid(io_debug_dbus_valid);
@@ -321,7 +316,6 @@ static void CoreRun(absl::string_view name, absl::string_view bin, const int cyc
   core.io_debug_inst_##x(io_debug_inst##x);
   CORALNPU_SIM_REPEAT(BIND_DEBUG, KP_instructionLanes);
 #undef BIND_DEBUG
-#endif
 
   mif.clock(tb.clock);
   mif.reset(tb.reset);

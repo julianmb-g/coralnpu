@@ -1,25 +1,21 @@
 // Copyright 2026 Google LLC
-#define STRINGIZE_INTERNAL(x) #x
-#define STRINGIZE(x) STRINGIZE_INTERNAL(x)
-#define STR_HEADER(x) STRINGIZE(x.h)
-#define MODEL_HEADER STR_HEADER(VERILATOR_MODEL)
+#define STRINGIZE(x) #x
+#define STR(x) STRINGIZE(x)
+#define MODEL_HEADER_SUFFIX .h
+#define MODEL_HEADER STR(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
 #include MODEL_HEADER
 
-#define CONCAT_TEMP(a, b) a##b
-#define CONCAT(a, b) CONCAT_TEMP(a, b)
-#define STR_PARAMS_HEADER_TEMP(x) STRINGIZE(hdl/chisel/src/coralnpu/CONCAT(x, _parameters.h))
-#define STR_PARAMS_HEADER(x) STR_PARAMS_HEADER_TEMP(x)
-#define PARAMS_HEADER STR_PARAMS_HEADER(VERILATOR_MODEL)
+#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
+#define PARAMS_HEADER_SUFFIX _parameters.h
+#define PARAMS_HEADER STR(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
 #include PARAMS_HEADER
 
-#undef STRINGIZE_INTERNAL
 #undef STRINGIZE
-#undef STR_HEADER
+#undef STR
+#undef MODEL_HEADER_SUFFIX
 #undef MODEL_HEADER
-#undef CONCAT_TEMP
-#undef CONCAT
-#undef STR_PARAMS_HEADER_TEMP
-#undef STR_PARAMS_HEADER
+#undef PARAMS_HEADER_PREFIX
+#undef PARAMS_HEADER_SUFFIX
 #undef PARAMS_HEADER
 
 #define TRACE_ENABLED 1
@@ -850,7 +846,6 @@ testbench.io_debug_rb_inst_3_valid(io_debug_rb_inst_3_valid);
   core.io_dbus_pc(io_dbus_pc);
 
 
-#if KP_exposeDebugPorts
 #define BIND_CSR_OUT(x) core.io_csr_out_value_##x(io_csr_out_value_##x);
   CORALNPU_SIM_REPEAT_17(BIND_CSR_OUT);
 #undef BIND_CSR_OUT
@@ -942,7 +937,6 @@ testbench.io_debug_rb_inst_3_valid(io_debug_rb_inst_3_valid);
 
   CORALNPU_SIM_REPEAT_4(BIND_DEBUG_DISPATCH);
 #undef BIND_DEBUG_DISPATCH
-#endif
 
   core.io_iflush_valid(io_iflush_valid);
   core.io_iflush_pcNext(io_iflush_pcNext);
@@ -1082,7 +1076,7 @@ testbench.io_debug_rb_inst_3_valid(io_debug_rb_inst_3_valid);
 
   if (testbench.ebreak_halt) {
     LOG(INFO) << "Simulation HALTED with ebreak.";
-    return 2;
+    return 0;
   }
 
   if (io_halted.read() || testbench.mpause_halt) {
