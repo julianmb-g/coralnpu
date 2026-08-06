@@ -60,7 +60,6 @@ cocotb_test_suite(
         "//tests/cocotb:coverage_exclude.cfg",
         "//hdl/verilog:dpi_files",
     ],
-
     vcs_defines = VCS_DEFINES,
     vcs_test_args = VCS_TEST_ARGS,
     vcs_verilog_sources = ["//hdl/chisel/src/coralnpu:core_mini_axi_cc_library_verilog"],
@@ -93,7 +92,6 @@ cocotb_test_suite(
         "//tests/cocotb:coverage_exclude.cfg",
         "//hdl/verilog:dpi_files",
     ],
-
     vcs_defines = VCS_DEFINES,
     vcs_test_args = VCS_TEST_ARGS,
     vcs_verilog_sources = ["//hdl/chisel/src/coralnpu:core_mini_axi_cc_library_verilog"],
@@ -113,8 +111,8 @@ coralnpu_v2_binary(
         "tflite_micro_test.cc",
     ],
     hdrs = ["hello_world_tflite.h"],
-    itcm_size_kbytes = 1024,  # Highmem
     dtcm_size_kbytes = 1024,  # Highmem
+    itcm_size_kbytes = 1024,  # Highmem
     deps = [
         "@tflite_micro//tensorflow/lite/micro:micro_framework",
         "@tflite_micro//tensorflow/lite/micro:micro_log",

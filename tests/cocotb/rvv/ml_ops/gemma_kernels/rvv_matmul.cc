@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-
 #include <riscv_vector.h>
 #include <stddef.h>
 
 // 1D x 2D Decode MatMul (Register-Pinned GeMV)
 // A: [1, K] (row-major), B: [K, N] (row-major), C: [1, N] (row-major)
-extern "C" void rvv_gemv_1d_f32(const float* __restrict__ A,
-                                const float* __restrict__ B,
-                                float* __restrict__ C, int K, int N) {
+extern "C" void rvv_gemv_1d_f32(const float *__restrict__ A,
+                                const float *__restrict__ B,
+                                float *__restrict__ C, int K, int N) {
   int c = 0;
   while (c < N) {
     int remaining = N - c;
@@ -39,7 +37,7 @@ extern "C" void rvv_gemv_1d_f32(const float* __restrict__ A,
       vfloat32m4_t vacc3 = __riscv_vfmv_v_f_f32m4(0.0f, vl);
       vfloat32m4_t vacc4 = __riscv_vfmv_v_f_f32m4(0.0f, vl);
 
-      const float* rhs_ptr = B + c;
+      const float *rhs_ptr = B + c;
       for (int k = 0; k < K; k++) {
         float a = A[k];
 
@@ -72,7 +70,7 @@ extern "C" void rvv_gemv_1d_f32(const float* __restrict__ A,
       size_t vl = __riscv_vsetvl_e32m4(remaining);
       vfloat32m4_t vacc0 = __riscv_vfmv_v_f_f32m4(0.0f, vl);
 
-      const float* rhs_ptr = B + c;
+      const float *rhs_ptr = B + c;
       for (int k = 0; k < K; k++) {
         float a = A[k];
         vfloat32m4_t vb0 = __riscv_vle32_v_f32m4(rhs_ptr, vl);
@@ -85,9 +83,9 @@ extern "C" void rvv_gemv_1d_f32(const float* __restrict__ A,
   }
 }
 
-extern "C" void rvv_tiled_matmul_2d_f32(const float* __restrict__ A,
-                                        const float* __restrict__ B,
-                                        float* __restrict__ C, int M, int K,
+extern "C" void rvv_tiled_matmul_2d_f32(const float *__restrict__ A,
+                                        const float *__restrict__ B,
+                                        float *__restrict__ C, int M, int K,
                                         int N) {
   int m = 0;
   while (m < M) {

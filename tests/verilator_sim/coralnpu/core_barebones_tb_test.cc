@@ -24,8 +24,8 @@
 #include "VCoreBarebones.h"
 #include "hdl/chisel/src/coralnpu/VCoreBarebones_parameters.h"
 #include "tests/verilator_sim/coralnpu/memory_if.h"
-#include "tests/verilator_sim/sysc_tb.h"
 #include "tests/verilator_sim/elf_loader_adapter.h"
+#include "tests/verilator_sim/sysc_tb.h"
 #include "tests/verilator_sim/util.h"
 
 namespace {
@@ -59,19 +59,19 @@ struct LocalElf32_Phdr {
   uint32_t p_align;
 };
 
-constexpr uint8_t  ELFMAG0 = 0x7f;
-constexpr uint8_t  ELFMAG1 = 'E';
-constexpr uint8_t  ELFMAG2 = 'L';
-constexpr uint8_t  ELFMAG3 = 'F';
-constexpr uint8_t  ELFCLASS32 = 1;
-constexpr uint8_t  ELFDATA2LSB = 1;
-constexpr uint8_t  EV_CURRENT = 1;
+constexpr uint8_t ELFMAG0 = 0x7f;
+constexpr uint8_t ELFMAG1 = 'E';
+constexpr uint8_t ELFMAG2 = 'L';
+constexpr uint8_t ELFMAG3 = 'F';
+constexpr uint8_t ELFCLASS32 = 1;
+constexpr uint8_t ELFDATA2LSB = 1;
+constexpr uint8_t EV_CURRENT = 1;
 constexpr uint16_t ET_EXEC = 2;
 constexpr uint16_t EM_RISCV = 243;
 constexpr uint32_t PT_LOAD = 1;
 
 class TestMemoryIf : public MemoryIf {
- public:
+public:
   TestMemoryIf(sc_module_name n, absl::string_view profile)
       : MemoryIf(n, /* bin= */ nullptr, /* limit= */ 0, profile) {}
   void Eval() override {}
@@ -80,21 +80,21 @@ class TestMemoryIf : public MemoryIf {
 TEST(MemoryIfTest, GetOverflowDeltaDefault) {
   TestMemoryIf mem("mem", "default");
   // ITCM: [0x00000000 - 0x00002000], DTCM: [0x00010000 - 0x00018000]
-  
+
   // Valid ITCM
   EXPECT_EQ(mem.GetOverflowDelta(0x0000, 4), 0);
   EXPECT_EQ(mem.GetOverflowDelta(0x1FFC, 4), 0);
-  
+
   // Overflow ITCM
   EXPECT_EQ(mem.GetOverflowDelta(0x1FFC, 8), 4);
-  
+
   // Valid DTCM
   EXPECT_EQ(mem.GetOverflowDelta(0x10000, 4), 0);
   EXPECT_EQ(mem.GetOverflowDelta(0x17FFC, 4), 0);
-  
+
   // Overflow DTCM
   EXPECT_EQ(mem.GetOverflowDelta(0x17FFC, 8), 4);
-  
+
   // Gap Access
   EXPECT_EQ(mem.GetOverflowDelta(0x2000, 4), 4);
   EXPECT_EQ(mem.GetOverflowDelta(0x8000, 4), 4);
@@ -104,28 +104,29 @@ TEST(MemoryIfTest, GetOverflowDeltaDefault) {
 TEST(MemoryIfTest, GetOverflowDeltaHighMem) {
   TestMemoryIf mem("mem", "highmem");
   // ITCM: [0x00100000 - 0x00200000], DTCM: [0x00100000 - 0x00100000]
-  
+
   // Valid
   EXPECT_EQ(mem.GetOverflowDelta(0x100000, 4), 0);
   EXPECT_EQ(mem.GetOverflowDelta(0x1FFFFC, 4), 0);
-  
+
   // Overflow
   EXPECT_EQ(mem.GetOverflowDelta(0x1FFFFC, 8), 4);
-  EXPECT_EQ(mem.GetOverflowDelta(0x0FFFC, 8), 8); // Entirely before
+  EXPECT_EQ(mem.GetOverflowDelta(0x0FFFC, 8), 8);  // Entirely before
   EXPECT_EQ(mem.GetOverflowDelta(0x200000, 4), 4); // Entirely after
 }
 
 class MockMemory {
- public:
-  bool Write(uint64_t addr, size_t count, const uint8_t* src) {
+public:
+  bool Write(uint64_t addr, size_t count, const uint8_t *src) {
     if (addr + count > data_.size()) {
       data_.resize(addr + count, 0);
     }
     std::memcpy(data_.data() + addr, src, count);
     return true;
   }
-  const std::vector<uint8_t>& data() const { return data_; }
- private:
+  const std::vector<uint8_t> &data() const { return data_; }
+
+private:
   std::vector<uint8_t> data_;
 };
 
@@ -163,7 +164,7 @@ TEST(BarebonesMemoryTest, LoadElf) {
   std::memcpy(elf_data.data() + 512, &payload, sizeof(payload));
 
   std::ofstream ofs(dummy_elf, std::ios::binary);
-  ofs.write(reinterpret_cast<const char*>(elf_data.data()), elf_data.size());
+  ofs.write(reinterpret_cast<const char *>(elf_data.data()), elf_data.size());
   ofs.close();
 
   MockMemory mem;
@@ -176,9 +177,9 @@ TEST(BarebonesMemoryTest, LoadElf) {
   auto entry_point_or = loader.LoadProgram(dummy_elf);
   ASSERT_TRUE(entry_point_or.ok());
   EXPECT_EQ(entry_point_or.value(), 0x00010000);
-  
+
   uint32_t loaded_payload = 0;
-  mem_if.Read(0x00010000, 4, reinterpret_cast<uint8_t*>(&loaded_payload));
+  mem_if.Read(0x00010000, 4, reinterpret_cast<uint8_t *>(&loaded_payload));
   EXPECT_EQ(loaded_payload, 0xdeadbeef);
 }
 
@@ -186,7 +187,7 @@ TEST(BarebonesMemoryTest, LoadElfInvalid) {
   const std::string dummy_elf = "/tmp/invalid.elf";
   std::vector<uint8_t> elf_data(1024, 0); // Invalid data
   std::ofstream ofs(dummy_elf, std::ios::binary);
-  ofs.write(reinterpret_cast<const char*>(elf_data.data()), elf_data.size());
+  ofs.write(reinterpret_cast<const char *>(elf_data.data()), elf_data.size());
   ofs.close();
 
   MockMemory mem;
@@ -227,7 +228,7 @@ TEST(BarebonesMemoryTest, ElfLoaderExitOnViolation) {
   std::memcpy(elf_data.data() + sizeof(ehdr), &phdr, sizeof(phdr));
 
   std::ofstream ofs(dummy_elf, std::ios::binary);
-  ofs.write(reinterpret_cast<const char*>(elf_data.data()), elf_data.size());
+  ofs.write(reinterpret_cast<const char *>(elf_data.data()), elf_data.size());
   ofs.close();
 
   TestMemoryIf mem("mem", "default");
@@ -264,12 +265,16 @@ struct DummyModelSignals {
   sc_signal<sc_bv<KP_lsuDataBits>> io_dbus_rdata{"io_dbus_rdata"};
   sc_signal<bool> io_ibus_fault_valid{"io_ibus_fault_valid"};
   sc_signal<bool> io_ibus_fault_bits_write{"io_ibus_fault_bits_write"};
-  sc_signal<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_addr{"io_ibus_fault_bits_addr"};
-  sc_signal<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc{"io_ibus_fault_bits_epc"};
+  sc_signal<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_addr{
+      "io_ibus_fault_bits_addr"};
+  sc_signal<sc_bv<KP_programCounterBits>> io_ibus_fault_bits_epc{
+      "io_ibus_fault_bits_epc"};
   sc_signal<sc_bv<32>> io_dbus_adrx{"io_dbus_adrx"};
   sc_signal<sc_bv<KP_programCounterBits>> io_dbus_pc{"io_dbus_pc"};
+#if KP_exposeDebugPorts
   sc_signal<sc_bv<4>> io_debug_en{"io_debug_en"};
   sc_signal<sc_bv<32>> io_debug_cycles{"io_debug_cycles"};
+#endif
   sc_signal<bool> io_iflush_valid{"io_iflush_valid"};
   sc_signal<sc_bv<KP_programCounterBits>> io_iflush_pcNext{"io_iflush_pcNext"};
   sc_signal<bool> io_dflush_valid{"io_dflush_valid"};
@@ -290,7 +295,8 @@ struct DummyModelSignals {
   sc_signal<sc_bv<16>> io_ebus_dbus_wmask{"io_ebus_dbus_wmask"};
   sc_signal<sc_bv<128>> io_ebus_dbus_rdata{"io_ebus_dbus_rdata"};
   sc_signal<sc_bv<32>> io_ebus_fault_bits_addr{"io_ebus_fault_bits_addr"};
-  sc_signal<sc_bv<KP_programCounterBits>> io_ebus_fault_bits_epc{"io_ebus_fault_bits_epc"};
+  sc_signal<sc_bv<KP_programCounterBits>> io_ebus_fault_bits_epc{
+      "io_ebus_fault_bits_epc"};
 
   sc_signal<bool> io_dm_debug_req{"io_dm_debug_req"};
   sc_signal<bool> io_dm_resume_req{"io_dm_resume_req"};
@@ -310,22 +316,32 @@ struct DummyModelSignals {
   sc_signal<sc_bv<5>> io_dm_scalar_rs_idx{"io_dm_scalar_rs_idx"};
   sc_signal<sc_bv<32>> io_dm_scalar_rs_data{"io_dm_scalar_rs_data"};
   sc_signal<sc_bv<5>> io_dm_float_rd_addr{"io_dm_float_rd_addr"};
-  sc_signal<sc_bv<23>> io_dm_float_rd_data_mantissa{"io_dm_float_rd_data_mantissa"};
-  sc_signal<sc_bv<8>> io_dm_float_rd_data_exponent{"io_dm_float_rd_data_exponent"};
+  sc_signal<sc_bv<23>> io_dm_float_rd_data_mantissa{
+      "io_dm_float_rd_data_mantissa"};
+  sc_signal<sc_bv<8>> io_dm_float_rd_data_exponent{
+      "io_dm_float_rd_data_exponent"};
   sc_signal<sc_bv<5>> io_dm_float_rs_addr{"io_dm_float_rs_addr"};
-  sc_signal<sc_bv<23>> io_dm_float_rs_data_mantissa{"io_dm_float_rs_data_mantissa"};
-  sc_signal<sc_bv<8>> io_dm_float_rs_data_exponent{"io_dm_float_rs_data_exponent"};
+  sc_signal<sc_bv<23>> io_dm_float_rs_data_mantissa{
+      "io_dm_float_rs_data_mantissa"};
+  sc_signal<sc_bv<8>> io_dm_float_rs_data_exponent{
+      "io_dm_float_rs_data_exponent"};
   sc_signal<bool> io_dm_debug_mode{"io_dm_debug_mode"};
   sc_signal<bool> io_dm_float_rd_data_sign{"io_dm_float_rd_data_sign"};
   sc_signal<bool> io_dm_float_rs_data_sign{"io_dm_float_rs_data_sign"};
   sc_signal<bool> io_dm_float_rs_valid{"io_dm_float_rs_valid"};
 
-#define DECLARE_DEBUG_ADDR(x) sc_signal<sc_bv<32>> io_debug_addr_##x{"io_debug_addr_" #x};
-#define DECLARE_DEBUG_INST(x) sc_signal<sc_bv<32>> io_debug_inst_##x{"io_debug_inst_" #x};
-#define DECLARE_DEBUG_DISPATCH(x) \
-  sc_signal<bool> io_debug_dispatch_##x##_instFire{"io_debug_dispatch_" #x "_instFire"}; \
-  sc_signal<sc_bv<KP_programCounterBits>> io_debug_dispatch_##x##_instAddr{"io_debug_dispatch_" #x "_instAddr"}; \
-  sc_signal<sc_bv<32>> io_debug_dispatch_##x##_instInst{"io_debug_dispatch_" #x "_instInst"};
+#if KP_exposeDebugPorts
+#define DECLARE_DEBUG_ADDR(x)                                                  \
+  sc_signal<sc_bv<32>> io_debug_addr_##x{"io_debug_addr_" #x};
+#define DECLARE_DEBUG_INST(x)                                                  \
+  sc_signal<sc_bv<32>> io_debug_inst_##x{"io_debug_inst_" #x};
+#define DECLARE_DEBUG_DISPATCH(x)                                              \
+  sc_signal<bool> io_debug_dispatch_##x##_instFire{"io_debug_dispatch_" #x     \
+                                                   "_instFire"};               \
+  sc_signal<sc_bv<KP_programCounterBits>> io_debug_dispatch_##x##_instAddr{    \
+      "io_debug_dispatch_" #x "_instAddr"};                                    \
+  sc_signal<sc_bv<32>> io_debug_dispatch_##x##_instInst{                       \
+      "io_debug_dispatch_" #x "_instInst"};
 
   CORALNPU_SIM_REPEAT_4(DECLARE_DEBUG_ADDR)
   CORALNPU_SIM_REPEAT_4(DECLARE_DEBUG_INST)
@@ -335,14 +351,19 @@ struct DummyModelSignals {
 #undef DECLARE_DEBUG_INST
 #undef DECLARE_DEBUG_DISPATCH
 
-#define DECLARE_REGFILE_WRITE_ADDR(x) \
-  sc_signal<bool> io_debug_regfile_writeAddr_##x##_valid{"io_debug_regfile_writeAddr_" #x "_valid"}; \
-  sc_signal<sc_bv<5>> io_debug_regfile_writeAddr_##x##_bits{"io_debug_regfile_writeAddr_" #x "_bits"};
+#define DECLARE_REGFILE_WRITE_ADDR(x)                                          \
+  sc_signal<bool> io_debug_regfile_writeAddr_##x##_valid{                      \
+      "io_debug_regfile_writeAddr_" #x "_valid"};                              \
+  sc_signal<sc_bv<5>> io_debug_regfile_writeAddr_##x##_bits{                   \
+      "io_debug_regfile_writeAddr_" #x "_bits"};
 
-#define DECLARE_REGFILE_WRITE_DATA(x) \
-  sc_signal<bool> io_debug_regfile_writeData_##x##_valid{"io_debug_regfile_writeData_" #x "_valid"}; \
-  sc_signal<sc_bv<5>> io_debug_regfile_writeData_##x##_bits_addr{"io_debug_regfile_writeData_" #x "_bits_addr"}; \
-  sc_signal<sc_bv<32>> io_debug_regfile_writeData_##x##_bits_data{"io_debug_regfile_writeData_" #x "_bits_data"};
+#define DECLARE_REGFILE_WRITE_DATA(x)                                          \
+  sc_signal<bool> io_debug_regfile_writeData_##x##_valid{                      \
+      "io_debug_regfile_writeData_" #x "_valid"};                              \
+  sc_signal<sc_bv<5>> io_debug_regfile_writeData_##x##_bits_addr{              \
+      "io_debug_regfile_writeData_" #x "_bits_addr"};                          \
+  sc_signal<sc_bv<32>> io_debug_regfile_writeData_##x##_bits_data{             \
+      "io_debug_regfile_writeData_" #x "_bits_data"};
 
   CORALNPU_SIM_REPEAT_4(DECLARE_REGFILE_WRITE_ADDR)
   CORALNPU_SIM_REPEAT_6(DECLARE_REGFILE_WRITE_DATA)
@@ -350,68 +371,109 @@ struct DummyModelSignals {
 #undef DECLARE_REGFILE_WRITE_ADDR
 #undef DECLARE_REGFILE_WRITE_DATA
 
-#define DECLARE_CSR_OUT(x) sc_signal<sc_bv<32>> io_csr_out_value_##x{"io_csr_out_value_" #x};
+#define DECLARE_CSR_OUT(x)                                                     \
+  sc_signal<sc_bv<32>> io_csr_out_value_##x{"io_csr_out_value_" #x};
   CORALNPU_SIM_REPEAT_17(DECLARE_CSR_OUT)
 #undef DECLARE_CSR_OUT
 
-#define DECLARE_CSR_IN(x) sc_signal<sc_bv<32>> io_csr_in_value_##x{"io_csr_in_value_" #x};
+#define DECLARE_CSR_IN(x)                                                      \
+  sc_signal<sc_bv<32>> io_csr_in_value_##x{"io_csr_in_value_" #x};
   CORALNPU_SIM_REPEAT_13(DECLARE_CSR_IN)
 #undef DECLARE_CSR_IN
 
-#define DECLARE_DEBUG_RB(x) \
-  sc_signal<bool> io_debug_rb_inst_##x##_valid{"io_debug_rb_inst_" #x "_valid"}; \
-  sc_signal<sc_bv<KP_programCounterBits>> io_debug_rb_inst_##x##_bits_pc{"io_debug_rb_inst_" #x "_bits_pc"}; \
-  sc_signal<sc_bv<32>> io_debug_rb_inst_##x##_bits_inst{"io_debug_rb_inst_" #x "_bits_inst"}; \
-  sc_signal<sc_bv<7>> io_debug_rb_inst_##x##_bits_idx{"io_debug_rb_inst_" #x "_bits_idx"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_data{"io_debug_rb_inst_" #x "_bits_data"}; \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_trap{"io_debug_rb_inst_" #x "_bits_trap"};
+#define DECLARE_DEBUG_RB(x)                                                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_valid{"io_debug_rb_inst_" #x          \
+                                               "_valid"};                      \
+  sc_signal<sc_bv<KP_programCounterBits>> io_debug_rb_inst_##x##_bits_pc{      \
+      "io_debug_rb_inst_" #x "_bits_pc"};                                      \
+  sc_signal<sc_bv<32>> io_debug_rb_inst_##x##_bits_inst{"io_debug_rb_inst_" #x \
+                                                        "_bits_inst"};         \
+  sc_signal<sc_bv<7>> io_debug_rb_inst_##x##_bits_idx{"io_debug_rb_inst_" #x   \
+                                                      "_bits_idx"};            \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_data{                      \
+      "io_debug_rb_inst_" #x "_bits_data"};                                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_trap{"io_debug_rb_inst_" #x      \
+                                                   "_bits_trap"};
 
   CORALNPU_SIM_REPEAT_8(DECLARE_DEBUG_RB)
 #undef DECLARE_DEBUG_RB
 
-#define DECLARE_DEBUG_RB_VEC_SLOT(x) \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_0_valid{"io_debug_rb_inst_" #x "_bits_vecWrites_0_valid"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_0_bits_data{"io_debug_rb_inst_" #x "_bits_vecWrites_0_bits_data"}; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_0_bits_idx{"io_debug_rb_inst_" #x "_bits_vecWrites_0_bits_idx"}; \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_1_valid{"io_debug_rb_inst_" #x "_bits_vecWrites_1_valid"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_1_bits_data{"io_debug_rb_inst_" #x "_bits_vecWrites_1_bits_data"}; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_1_bits_idx{"io_debug_rb_inst_" #x "_bits_vecWrites_1_bits_idx"}; \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_2_valid{"io_debug_rb_inst_" #x "_bits_vecWrites_2_valid"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_2_bits_data{"io_debug_rb_inst_" #x "_bits_vecWrites_2_bits_data"}; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_2_bits_idx{"io_debug_rb_inst_" #x "_bits_vecWrites_2_bits_idx"}; \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_3_valid{"io_debug_rb_inst_" #x "_bits_vecWrites_3_valid"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_3_bits_data{"io_debug_rb_inst_" #x "_bits_vecWrites_3_bits_data"}; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_3_bits_idx{"io_debug_rb_inst_" #x "_bits_vecWrites_3_bits_idx"}; \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_4_valid{"io_debug_rb_inst_" #x "_bits_vecWrites_4_valid"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_4_bits_data{"io_debug_rb_inst_" #x "_bits_vecWrites_4_bits_data"}; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_4_bits_idx{"io_debug_rb_inst_" #x "_bits_vecWrites_4_bits_idx"}; \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_5_valid{"io_debug_rb_inst_" #x "_bits_vecWrites_5_valid"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_5_bits_data{"io_debug_rb_inst_" #x "_bits_vecWrites_5_bits_data"}; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_5_bits_idx{"io_debug_rb_inst_" #x "_bits_vecWrites_5_bits_idx"}; \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_6_valid{"io_debug_rb_inst_" #x "_bits_vecWrites_6_valid"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_6_bits_data{"io_debug_rb_inst_" #x "_bits_vecWrites_6_bits_data"}; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_6_bits_idx{"io_debug_rb_inst_" #x "_bits_vecWrites_6_bits_idx"}; \
-  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_7_valid{"io_debug_rb_inst_" #x "_bits_vecWrites_7_valid"}; \
-  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_7_bits_data{"io_debug_rb_inst_" #x "_bits_vecWrites_7_bits_data"}; \
-  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_7_bits_idx{"io_debug_rb_inst_" #x "_bits_vecWrites_7_bits_idx"};
+#define DECLARE_DEBUG_RB_VEC_SLOT(x)                                           \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_0_valid{               \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_0_valid"};                       \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_0_bits_data{     \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_0_bits_data"};                   \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_0_bits_idx{        \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_0_bits_idx"};                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_1_valid{               \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_1_valid"};                       \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_1_bits_data{     \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_1_bits_data"};                   \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_1_bits_idx{        \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_1_bits_idx"};                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_2_valid{               \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_2_valid"};                       \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_2_bits_data{     \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_2_bits_data"};                   \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_2_bits_idx{        \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_2_bits_idx"};                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_3_valid{               \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_3_valid"};                       \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_3_bits_data{     \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_3_bits_data"};                   \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_3_bits_idx{        \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_3_bits_idx"};                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_4_valid{               \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_4_valid"};                       \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_4_bits_data{     \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_4_bits_data"};                   \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_4_bits_idx{        \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_4_bits_idx"};                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_5_valid{               \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_5_valid"};                       \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_5_bits_data{     \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_5_bits_data"};                   \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_5_bits_idx{        \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_5_bits_idx"};                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_6_valid{               \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_6_valid"};                       \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_6_bits_data{     \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_6_bits_data"};                   \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_6_bits_idx{        \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_6_bits_idx"};                    \
+  sc_signal<bool> io_debug_rb_inst_##x##_bits_vecWrites_7_valid{               \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_7_valid"};                       \
+  sc_signal<sc_bv<128>> io_debug_rb_inst_##x##_bits_vecWrites_7_bits_data{     \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_7_bits_data"};                   \
+  sc_signal<sc_bv<5>> io_debug_rb_inst_##x##_bits_vecWrites_7_bits_idx{        \
+      "io_debug_rb_inst_" #x "_bits_vecWrites_7_bits_idx"};
 
   CORALNPU_SIM_REPEAT_8(DECLARE_DEBUG_RB_VEC_SLOT)
 #undef DECLARE_DEBUG_RB_VEC_SLOT
 
-  sc_signal<bool> io_debug_float_writeAddr_valid{"io_debug_float_writeAddr_valid"};
-  sc_signal<bool> io_debug_float_writeData_0_valid{"io_debug_float_writeData_0_valid"};
-  sc_signal<bool> io_debug_float_writeData_1_valid{"io_debug_float_writeData_1_valid"};
-  sc_signal<sc_bv<5>> io_debug_float_writeAddr_bits{"io_debug_float_writeAddr_bits"};
-  sc_signal<sc_bv<5>> io_debug_float_writeData_0_bits_addr{"io_debug_float_writeData_0_bits_addr"};
-  sc_signal<sc_bv<32>> io_debug_float_writeData_0_bits_data{"io_debug_float_writeData_0_bits_data"};
-  sc_signal<sc_bv<5>> io_debug_float_writeData_1_bits_addr{"io_debug_float_writeData_1_bits_addr"};
-  sc_signal<sc_bv<32>> io_debug_float_writeData_1_bits_data{"io_debug_float_writeData_1_bits_data"};
+  sc_signal<bool> io_debug_float_writeAddr_valid{
+      "io_debug_float_writeAddr_valid"};
+  sc_signal<bool> io_debug_float_writeData_0_valid{
+      "io_debug_float_writeData_0_valid"};
+  sc_signal<bool> io_debug_float_writeData_1_valid{
+      "io_debug_float_writeData_1_valid"};
+  sc_signal<sc_bv<5>> io_debug_float_writeAddr_bits{
+      "io_debug_float_writeAddr_bits"};
+  sc_signal<sc_bv<5>> io_debug_float_writeData_0_bits_addr{
+      "io_debug_float_writeData_0_bits_addr"};
+  sc_signal<sc_bv<32>> io_debug_float_writeData_0_bits_data{
+      "io_debug_float_writeData_0_bits_data"};
+  sc_signal<sc_bv<5>> io_debug_float_writeData_1_bits_addr{
+      "io_debug_float_writeData_1_bits_addr"};
+  sc_signal<sc_bv<32>> io_debug_float_writeData_1_bits_data{
+      "io_debug_float_writeData_1_bits_data"};
   sc_signal<bool> io_debug_dbus_valid{"io_debug_dbus_valid"};
   sc_signal<sc_bv<32>> io_debug_dbus_bits_addr{"io_debug_dbus_bits_addr"};
   sc_signal<sc_bv<128>> io_debug_dbus_bits_wdata{"io_debug_dbus_bits_wdata"};
   sc_signal<bool> io_debug_dbus_bits_write{"io_debug_dbus_bits_write"};
+#endif
 
-  void Bind(VCoreBarebones& core) {
+  void Bind(VCoreBarebones &core) {
     core.clock(clock);
     core.reset(reset);
     core.io_halted(io_halted);
@@ -441,6 +503,7 @@ struct DummyModelSignals {
     core.io_ibus_fault_bits_epc(io_ibus_fault_bits_epc);
     core.io_dbus_adrx(io_dbus_adrx);
     core.io_dbus_pc(io_dbus_pc);
+#if KP_exposeDebugPorts
     core.io_debug_en(io_debug_en);
     core.io_debug_cycles(io_debug_cycles);
     core.io_iflush_valid(io_iflush_valid);
@@ -497,10 +560,14 @@ struct DummyModelSignals {
     core.io_debug_float_writeData_0_valid(io_debug_float_writeData_0_valid);
     core.io_debug_float_writeData_1_valid(io_debug_float_writeData_1_valid);
     core.io_debug_float_writeAddr_bits(io_debug_float_writeAddr_bits);
-    core.io_debug_float_writeData_0_bits_addr(io_debug_float_writeData_0_bits_addr);
-    core.io_debug_float_writeData_0_bits_data(io_debug_float_writeData_0_bits_data);
-    core.io_debug_float_writeData_1_bits_addr(io_debug_float_writeData_1_bits_addr);
-    core.io_debug_float_writeData_1_bits_data(io_debug_float_writeData_1_bits_data);
+    core.io_debug_float_writeData_0_bits_addr(
+        io_debug_float_writeData_0_bits_addr);
+    core.io_debug_float_writeData_0_bits_data(
+        io_debug_float_writeData_0_bits_data);
+    core.io_debug_float_writeData_1_bits_addr(
+        io_debug_float_writeData_1_bits_addr);
+    core.io_debug_float_writeData_1_bits_data(
+        io_debug_float_writeData_1_bits_data);
     core.io_debug_dbus_valid(io_debug_dbus_valid);
     core.io_debug_dbus_bits_addr(io_debug_dbus_bits_addr);
     core.io_debug_dbus_bits_wdata(io_debug_dbus_bits_wdata);
@@ -508,81 +575,111 @@ struct DummyModelSignals {
 
 #define BIND_DEBUG_ADDR(x) core.io_debug_addr_##x(io_debug_addr_##x);
 #define BIND_DEBUG_INST(x) core.io_debug_inst_##x(io_debug_inst_##x);
-#define BIND_DEBUG_DISPATCH(x) \
-  core.io_debug_dispatch_##x##_instFire(io_debug_dispatch_##x##_instFire); \
-  core.io_debug_dispatch_##x##_instAddr(io_debug_dispatch_##x##_instAddr); \
+#define BIND_DEBUG_DISPATCH(x)                                                 \
+  core.io_debug_dispatch_##x##_instFire(io_debug_dispatch_##x##_instFire);     \
+  core.io_debug_dispatch_##x##_instAddr(io_debug_dispatch_##x##_instAddr);     \
   core.io_debug_dispatch_##x##_instInst(io_debug_dispatch_##x##_instInst);
 
-  CORALNPU_SIM_REPEAT_4(BIND_DEBUG_ADDR)
-  CORALNPU_SIM_REPEAT_4(BIND_DEBUG_INST)
-  CORALNPU_SIM_REPEAT_4(BIND_DEBUG_DISPATCH)
+    CORALNPU_SIM_REPEAT_4(BIND_DEBUG_ADDR)
+    CORALNPU_SIM_REPEAT_4(BIND_DEBUG_INST)
+    CORALNPU_SIM_REPEAT_4(BIND_DEBUG_DISPATCH)
 
 #undef BIND_DEBUG_ADDR
 #undef BIND_DEBUG_INST
 #undef BIND_DEBUG_DISPATCH
 
-#define BIND_REGFILE_WRITE_ADDR(x) \
-  core.io_debug_regfile_writeAddr_##x##_valid(io_debug_regfile_writeAddr_##x##_valid); \
-  core.io_debug_regfile_writeAddr_##x##_bits(io_debug_regfile_writeAddr_##x##_bits);
+#define BIND_REGFILE_WRITE_ADDR(x)                                             \
+  core.io_debug_regfile_writeAddr_##x##_valid(                                 \
+      io_debug_regfile_writeAddr_##x##_valid);                                 \
+  core.io_debug_regfile_writeAddr_##x##_bits(                                  \
+      io_debug_regfile_writeAddr_##x##_bits);
 
-#define BIND_REGFILE_WRITE_DATA(x) \
-  core.io_debug_regfile_writeData_##x##_valid(io_debug_regfile_writeData_##x##_valid); \
-  core.io_debug_regfile_writeData_##x##_bits_addr(io_debug_regfile_writeData_##x##_bits_addr); \
-  core.io_debug_regfile_writeData_##x##_bits_data(io_debug_regfile_writeData_##x##_bits_data);
+#define BIND_REGFILE_WRITE_DATA(x)                                             \
+  core.io_debug_regfile_writeData_##x##_valid(                                 \
+      io_debug_regfile_writeData_##x##_valid);                                 \
+  core.io_debug_regfile_writeData_##x##_bits_addr(                             \
+      io_debug_regfile_writeData_##x##_bits_addr);                             \
+  core.io_debug_regfile_writeData_##x##_bits_data(                             \
+      io_debug_regfile_writeData_##x##_bits_data);
 
-  CORALNPU_SIM_REPEAT_4(BIND_REGFILE_WRITE_ADDR)
-  CORALNPU_SIM_REPEAT_6(BIND_REGFILE_WRITE_DATA)
+    CORALNPU_SIM_REPEAT_4(BIND_REGFILE_WRITE_ADDR)
+    CORALNPU_SIM_REPEAT_6(BIND_REGFILE_WRITE_DATA)
 
 #undef BIND_REGFILE_WRITE_ADDR
 #undef BIND_REGFILE_WRITE_DATA
 
 #define BIND_CSR_OUT(x) core.io_csr_out_value_##x(io_csr_out_value_##x);
-  CORALNPU_SIM_REPEAT_17(BIND_CSR_OUT)
+    CORALNPU_SIM_REPEAT_17(BIND_CSR_OUT)
 #undef BIND_CSR_OUT
 
 #define BIND_CSR_IN(x) core.io_csr_in_value_##x(io_csr_in_value_##x);
-  CORALNPU_SIM_REPEAT_13(BIND_CSR_IN)
+    CORALNPU_SIM_REPEAT_13(BIND_CSR_IN)
 #undef BIND_CSR_IN
 
-#define BIND_DEBUG_RB(x) \
-  core.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid); \
-  core.io_debug_rb_inst_##x##_bits_pc(io_debug_rb_inst_##x##_bits_pc); \
-  core.io_debug_rb_inst_##x##_bits_inst(io_debug_rb_inst_##x##_bits_inst); \
-  core.io_debug_rb_inst_##x##_bits_idx(io_debug_rb_inst_##x##_bits_idx); \
-  core.io_debug_rb_inst_##x##_bits_data(io_debug_rb_inst_##x##_bits_data); \
+#define BIND_DEBUG_RB(x)                                                       \
+  core.io_debug_rb_inst_##x##_valid(io_debug_rb_inst_##x##_valid);             \
+  core.io_debug_rb_inst_##x##_bits_pc(io_debug_rb_inst_##x##_bits_pc);         \
+  core.io_debug_rb_inst_##x##_bits_inst(io_debug_rb_inst_##x##_bits_inst);     \
+  core.io_debug_rb_inst_##x##_bits_idx(io_debug_rb_inst_##x##_bits_idx);       \
+  core.io_debug_rb_inst_##x##_bits_data(io_debug_rb_inst_##x##_bits_data);     \
   core.io_debug_rb_inst_##x##_bits_trap(io_debug_rb_inst_##x##_bits_trap);
 
-  CORALNPU_SIM_REPEAT_8(BIND_DEBUG_RB)
+    CORALNPU_SIM_REPEAT_8(BIND_DEBUG_RB)
 #undef BIND_DEBUG_RB
 
-#define BIND_DEBUG_RB_VEC_SLOT(x) \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_0_valid(io_debug_rb_inst_##x##_bits_vecWrites_0_valid); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_0_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_0_bits_data); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_0_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_0_bits_idx); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_1_valid(io_debug_rb_inst_##x##_bits_vecWrites_1_valid); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_1_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_1_bits_data); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_1_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_1_bits_idx); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_2_valid(io_debug_rb_inst_##x##_bits_vecWrites_2_valid); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_2_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_2_bits_data); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_2_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_2_bits_idx); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_3_valid(io_debug_rb_inst_##x##_bits_vecWrites_3_valid); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_3_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_3_bits_data); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_3_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_3_bits_idx); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_4_valid(io_debug_rb_inst_##x##_bits_vecWrites_4_valid); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_4_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_4_bits_data); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_4_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_4_bits_idx); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_5_valid(io_debug_rb_inst_##x##_bits_vecWrites_5_valid); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_5_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_5_bits_data); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_5_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_5_bits_idx); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_6_valid(io_debug_rb_inst_##x##_bits_vecWrites_6_valid); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_6_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_6_bits_data); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_6_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_6_bits_idx); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_7_valid(io_debug_rb_inst_##x##_bits_vecWrites_7_valid); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_7_bits_data(io_debug_rb_inst_##x##_bits_vecWrites_7_bits_data); \
-  core.io_debug_rb_inst_##x##_bits_vecWrites_7_bits_idx(io_debug_rb_inst_##x##_bits_vecWrites_7_bits_idx);
+#define BIND_DEBUG_RB_VEC_SLOT(x)                                              \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_0_valid(                          \
+      io_debug_rb_inst_##x##_bits_vecWrites_0_valid);                          \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_0_bits_data(                      \
+      io_debug_rb_inst_##x##_bits_vecWrites_0_bits_data);                      \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_0_bits_idx(                       \
+      io_debug_rb_inst_##x##_bits_vecWrites_0_bits_idx);                       \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_1_valid(                          \
+      io_debug_rb_inst_##x##_bits_vecWrites_1_valid);                          \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_1_bits_data(                      \
+      io_debug_rb_inst_##x##_bits_vecWrites_1_bits_data);                      \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_1_bits_idx(                       \
+      io_debug_rb_inst_##x##_bits_vecWrites_1_bits_idx);                       \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_2_valid(                          \
+      io_debug_rb_inst_##x##_bits_vecWrites_2_valid);                          \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_2_bits_data(                      \
+      io_debug_rb_inst_##x##_bits_vecWrites_2_bits_data);                      \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_2_bits_idx(                       \
+      io_debug_rb_inst_##x##_bits_vecWrites_2_bits_idx);                       \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_3_valid(                          \
+      io_debug_rb_inst_##x##_bits_vecWrites_3_valid);                          \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_3_bits_data(                      \
+      io_debug_rb_inst_##x##_bits_vecWrites_3_bits_data);                      \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_3_bits_idx(                       \
+      io_debug_rb_inst_##x##_bits_vecWrites_3_bits_idx);                       \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_4_valid(                          \
+      io_debug_rb_inst_##x##_bits_vecWrites_4_valid);                          \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_4_bits_data(                      \
+      io_debug_rb_inst_##x##_bits_vecWrites_4_bits_data);                      \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_4_bits_idx(                       \
+      io_debug_rb_inst_##x##_bits_vecWrites_4_bits_idx);                       \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_5_valid(                          \
+      io_debug_rb_inst_##x##_bits_vecWrites_5_valid);                          \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_5_bits_data(                      \
+      io_debug_rb_inst_##x##_bits_vecWrites_5_bits_data);                      \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_5_bits_idx(                       \
+      io_debug_rb_inst_##x##_bits_vecWrites_5_bits_idx);                       \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_6_valid(                          \
+      io_debug_rb_inst_##x##_bits_vecWrites_6_valid);                          \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_6_bits_data(                      \
+      io_debug_rb_inst_##x##_bits_vecWrites_6_bits_data);                      \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_6_bits_idx(                       \
+      io_debug_rb_inst_##x##_bits_vecWrites_6_bits_idx);                       \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_7_valid(                          \
+      io_debug_rb_inst_##x##_bits_vecWrites_7_valid);                          \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_7_bits_data(                      \
+      io_debug_rb_inst_##x##_bits_vecWrites_7_bits_data);                      \
+  core.io_debug_rb_inst_##x##_bits_vecWrites_7_bits_idx(                       \
+      io_debug_rb_inst_##x##_bits_vecWrites_7_bits_idx);
 
-  CORALNPU_SIM_REPEAT_8(BIND_DEBUG_RB_VEC_SLOT)
+    CORALNPU_SIM_REPEAT_8(BIND_DEBUG_RB_VEC_SLOT)
 #undef BIND_DEBUG_RB_VEC_SLOT
+#endif
   }
 };
 
@@ -605,11 +702,9 @@ TEST(CoreBarebonesRtlTest, ModelInstantiationAndSimulation) {
   EXPECT_GT(sc_time_stamp().value(), 0);
 }
 
-
-
 } // namespace
 
-int sc_main(int argc, char* argv[]) {
+int sc_main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

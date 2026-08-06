@@ -15,31 +15,25 @@
 #ifndef TESTS_VERILATOR_SIM_CORALNPU_CORE_IF_H_
 #define TESTS_VERILATOR_SIM_CORALNPU_CORE_IF_H_
 
-#include <cstdlib>
-#include <cstring>
-#include "tests/verilator_sim/fifo.h"
 #include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 #include "tests/verilator_sim/coralnpu/memory_if.h"
+#include "tests/verilator_sim/fifo.h"
+#include <cstdlib>
+#include <cstring>
 
-static inline bool RandBool() {
-  return (std::rand() % 2) == 0;
-}
+static inline bool RandBool() { return (std::rand() % 2) == 0; }
 
-static inline bool RandBoolIbus() {
-  return RandBool();
-}
+static inline bool RandBoolIbus() { return RandBool(); }
 
-static inline bool RandBoolDbus() {
-  return RandBool();
-}
+static inline bool RandBoolDbus() { return RandBool(); }
 
 // ScalarCore Memory Interface.
 class CoreIf : public MemoryIf {
- public:
-  sc_in<bool>         io_ibus_valid;
-  sc_out<bool>        io_ibus_ready;
-  sc_in<sc_bv<KP_programCounterBits> >   io_ibus_addr;
-  sc_out<sc_bv<KP_fetchDataBits> > io_ibus_rdata;
+public:
+  sc_in<bool> io_ibus_valid;
+  sc_out<bool> io_ibus_ready;
+  sc_in<sc_bv<KP_programCounterBits>> io_ibus_addr;
+  sc_out<sc_bv<KP_fetchDataBits>> io_ibus_rdata;
 
   sc_out<bool> io_ibus_fault_valid;
   sc_out<bool> io_ibus_fault_bits_write;
@@ -49,19 +43,20 @@ class CoreIf : public MemoryIf {
   sc_in<bool> io_dbus_valid;
   sc_out<bool> io_dbus_ready;
   sc_in<bool> io_dbus_write;
-  sc_in<sc_bv<KP_lsuAddrBits> > io_dbus_addr;
-  sc_in<sc_bv<KP_lsuAddrBits> > io_dbus_adrx;
-  sc_in<sc_bv<KP_dbusSize> > io_dbus_size;
-  sc_in<sc_bv<KP_lsuDataBits> > io_dbus_wdata;
-  sc_in<sc_bv<KP_lsuDataBits / 8> > io_dbus_wmask;
-  sc_out<sc_bv<KP_lsuDataBits> > io_dbus_rdata;
+  sc_in<sc_bv<KP_lsuAddrBits>> io_dbus_addr;
+  sc_in<sc_bv<KP_lsuAddrBits>> io_dbus_adrx;
+  sc_in<sc_bv<KP_dbusSize>> io_dbus_size;
+  sc_in<sc_bv<KP_lsuDataBits>> io_dbus_wdata;
+  sc_in<sc_bv<KP_lsuDataBits / 8>> io_dbus_wmask;
+  sc_out<sc_bv<KP_lsuDataBits>> io_dbus_rdata;
 
   sc_out<bool> io_ebus_fault_valid;
   sc_out<bool> io_ebus_fault_bits_write;
   sc_out<sc_bv<32>> io_ebus_fault_bits_addr;
   sc_out<sc_bv<32>> io_ebus_fault_bits_epc;
 
-  CoreIf(sc_module_name n, const char* bin, absl::string_view profile = "all") : MemoryIf(n, bin, /* limit= */ -1, profile) {
+  CoreIf(sc_module_name n, const char *bin, absl::string_view profile = "all")
+      : MemoryIf(n, bin, /* limit= */ -1, profile) {
     for (int i = 0; i < KP_lsuDataBits / 32; ++i) {
       runused_.set_word(i, 0);
     }
@@ -70,7 +65,7 @@ class CoreIf : public MemoryIf {
   using MemoryIf::Read;
   using MemoryIf::Write;
 
-  bool Read(uint32_t addr, int bytes, uint8_t* data) override {
+  bool Read(uint32_t addr, int bytes, uint8_t *data) override {
     if (!MemoryIf::Read(addr, bytes, data)) {
       pending_exit_code_ = 65;
       last_fault_addr_ = addr;
@@ -80,7 +75,7 @@ class CoreIf : public MemoryIf {
     return true;
   }
 
-  bool Write(uint32_t addr, int bytes, const uint8_t* data) override {
+  bool Write(uint32_t addr, int bytes, const uint8_t *data) override {
     if (!MemoryIf::Write(addr, bytes, data)) {
       pending_exit_code_ = 65;
       last_fault_addr_ = addr;
@@ -105,7 +100,7 @@ class CoreIf : public MemoryIf {
         sc_bv<256> rdata;
         uint32_t addr = io_ibus_addr.read().get_word(0);
         uint32_t words[256 / 32];
-        if (Read(addr, 256 / 8, reinterpret_cast<uint8_t*>(words))) {
+        if (Read(addr, 256 / 8, reinterpret_cast<uint8_t *>(words))) {
           for (int i = 0; i < 256 / 32; ++i) {
             rdata.set_word(i, words[i]);
           }
@@ -123,13 +118,14 @@ class CoreIf : public MemoryIf {
       }
 
       // Data bus read.
-      if (io_dbus_valid.read() && io_dbus_ready.read() && !io_dbus_write.read()) {
+      if (io_dbus_valid.read() && io_dbus_ready.read() &&
+          !io_dbus_write.read()) {
         sc_bv<KP_lsuDataBits> rdata;
         uint32_t addr = io_dbus_addr.read().get_word(0);
         uint32_t dbus_size = io_dbus_size.read().get_word(0);
         constexpr int kLsuBytes = KP_lsuDataBits / 8;
         uint32_t words[kLsuBytes / 4] = {0};
-        uint8_t* data8 = reinterpret_cast<uint8_t*>(words);
+        uint8_t *data8 = reinterpret_cast<uint8_t *>(words);
         if (Read(addr, dbus_size, data8)) {
           for (int i = 0; i < KP_lsuDataBits / 32; ++i) {
             rdata.set_word(i, words[i]);
@@ -146,7 +142,8 @@ class CoreIf : public MemoryIf {
       }
 
       // Data bus write.
-      if (io_dbus_valid.read() && io_dbus_ready.read() && io_dbus_write.read()) {
+      if (io_dbus_valid.read() && io_dbus_ready.read() &&
+          io_dbus_write.read()) {
         uint32_t addr = io_dbus_addr.read().get_word(0);
         constexpr int kLsuBytes = KP_lsuDataBits / 8;
         uint8_t bytes[kLsuBytes] = {0};
@@ -177,7 +174,7 @@ class CoreIf : public MemoryIf {
   uint32_t LastFaultAddr() const { return last_fault_addr_; }
   int LastFaultSize() const { return last_fault_size_; }
 
- protected:
+protected:
   uint32_t cycle_ = 0;
   uint32_t last_fault_addr_ = 0;
   int last_fault_size_ = 0;
@@ -194,8 +191,9 @@ class CoreIf : public MemoryIf {
 
 // Zero-Latency Bare Core Interface.
 class BareCoreInterface : public CoreIf {
- public:
-  BareCoreInterface(sc_module_name n, const char* bin, absl::string_view profile = "all")
+public:
+  BareCoreInterface(sc_module_name n, const char *bin,
+                    absl::string_view profile = "all")
       : CoreIf(n, bin, profile) {}
 
   void Eval() override {
@@ -205,15 +203,15 @@ class BareCoreInterface : public CoreIf {
       cycle_++;
 
       io_ebus_fault_valid = false;
-      io_ibus_ready = true;  // Unconditional zero-latency ready response
-      io_dbus_ready = true;  // Unconditional zero-latency ready response
+      io_ibus_ready = true; // Unconditional zero-latency ready response
+      io_dbus_ready = true; // Unconditional zero-latency ready response
 
       // Instruction bus read.
       if (io_ibus_valid.read() && io_ibus_ready.read()) {
         sc_bv<256> rdata;
         uint32_t addr = io_ibus_addr.read().get_word(0);
         uint32_t words[256 / 32];
-        if (Read(addr, 256 / 8, reinterpret_cast<uint8_t*>(words))) {
+        if (Read(addr, 256 / 8, reinterpret_cast<uint8_t *>(words))) {
           for (int i = 0; i < 256 / 32; ++i) {
             rdata.set_word(i, words[i]);
           }
@@ -231,13 +229,14 @@ class BareCoreInterface : public CoreIf {
       }
 
       // Data bus read.
-      if (io_dbus_valid.read() && io_dbus_ready.read() && !io_dbus_write.read()) {
+      if (io_dbus_valid.read() && io_dbus_ready.read() &&
+          !io_dbus_write.read()) {
         sc_bv<KP_lsuDataBits> rdata;
         uint32_t addr = io_dbus_addr.read().get_word(0);
         uint32_t dbus_size = io_dbus_size.read().get_word(0);
         constexpr int kLsuBytes = KP_lsuDataBits / 8;
         uint32_t words[kLsuBytes / 4] = {0};
-        uint8_t* data8 = reinterpret_cast<uint8_t*>(words);
+        uint8_t *data8 = reinterpret_cast<uint8_t *>(words);
         if (Read(addr, dbus_size, data8)) {
           for (int i = 0; i < KP_lsuDataBits / 32; ++i) {
             rdata.set_word(i, words[i]);
@@ -254,7 +253,8 @@ class BareCoreInterface : public CoreIf {
       }
 
       // Data bus write.
-      if (io_dbus_valid.read() && io_dbus_ready.read() && io_dbus_write.read()) {
+      if (io_dbus_valid.read() && io_dbus_ready.read() &&
+          io_dbus_write.read()) {
         uint32_t addr = io_dbus_addr.read().get_word(0);
         constexpr int kLsuBytes = KP_lsuDataBits / 8;
         uint8_t bytes[kLsuBytes] = {0};
@@ -283,4 +283,4 @@ class BareCoreInterface : public CoreIf {
   }
 };
 
-#endif  // TESTS_VERILATOR_SIM_CORALNPU_CORE_IF_H_
+#endif // TESTS_VERILATOR_SIM_CORALNPU_CORE_IF_H_

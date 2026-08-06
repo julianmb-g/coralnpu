@@ -24,15 +24,17 @@ uint16_t input_index16[64] __attribute__((section(".data")));
 uint16_t output_value16[64] __attribute__((section(".data")));
 size_t n = 8;
 
-#define CREATE_VGATHER_FN(data_bits, data_lmul, index_bits, index_lmul)                         \
-  __attribute__((used,                                                                          \
-                 retain)) void vgather_d##data_bits##data_lmul##_i##index_bits##index_lmul() {  \
-    size_t vl = __riscv_vsetvl_e##data_bits##data_lmul(n);                                      \
-    auto vec  = __riscv_vle##data_bits##_v_u##data_bits##data_lmul(input_value##data_bits, vl); \
-    auto index =                                                                                \
-        __riscv_vle##index_bits##_v_u##index_bits##index_lmul(input_index##index_bits, vl);     \
-    auto op = __riscv_vrgather_vv_u##data_bits##data_lmul(vec, index, vl);                      \
-    __riscv_vse##data_bits##_v_u##data_bits##data_lmul(output_value##data_bits, op, vl);        \
+#define CREATE_VGATHER_FN(data_bits, data_lmul, index_bits, index_lmul)        \
+  __attribute__((used, retain)) void                                           \
+      vgather_d##data_bits##data_lmul##_i##index_bits##index_lmul() {          \
+    size_t vl = __riscv_vsetvl_e##data_bits##data_lmul(n);                     \
+    auto vec = __riscv_vle##data_bits##_v_u##data_bits##data_lmul(             \
+        input_value##data_bits, vl);                                           \
+    auto index = __riscv_vle##index_bits##_v_u##index_bits##index_lmul(        \
+        input_index##index_bits, vl);                                          \
+    auto op = __riscv_vrgather_vv_u##data_bits##data_lmul(vec, index, vl);     \
+    __riscv_vse##data_bits##_v_u##data_bits##data_lmul(                        \
+        output_value##data_bits, op, vl);                                      \
   }
 
 extern "C" {

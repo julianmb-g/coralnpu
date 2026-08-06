@@ -15,6 +15,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 
 exports_files(glob(["*.bzl"]))
+
 package(default_visibility = ["//visibility:public"])
 
 exports_files([

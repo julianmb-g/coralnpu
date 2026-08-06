@@ -18,16 +18,16 @@
 #include <cmath>
 #include <cstddef>
 
-extern "C" void rvv_tanh_gelu_mul_f32(const float* gate, const float* up,
-                                      float* output, size_t total_elements) {
-  const float CA = 0.79788456f;   // sqrt(2/pi)
-  const float CB = 0.035677408f;  // sqrt(2/pi) * 0.044715
+extern "C" void rvv_tanh_gelu_mul_f32(const float *gate, const float *up,
+                                      float *output, size_t total_elements) {
+  const float CA = 0.79788456f;  // sqrt(2/pi)
+  const float CB = 0.035677408f; // sqrt(2/pi) * 0.044715
   const float CC = 0.5f;
 
   size_t k = total_elements;
-  const float* x_ptr = gate;
-  const float* up_ptr = up;
-  float* out_ptr = output;
+  const float *x_ptr = gate;
+  const float *up_ptr = up;
+  float *out_ptr = output;
 
   while (k > 0) {
     size_t vl = __riscv_vsetvl_e32m4(k);
@@ -54,7 +54,7 @@ extern "C" void rvv_tanh_gelu_mul_f32(const float* gate, const float* up,
     vy = __riscv_vfmin_vf_f32m4(vy, 3.0f, vl);
 
     vfloat32m4_t vy2 = __riscv_vfmul_vv_f32m4(vy, vy, vl);
-    vfloat32m4_t v_num = __riscv_vfmul_vv_f32m4(vy2, vy, vl);  // y^3
+    vfloat32m4_t v_num = __riscv_vfmul_vv_f32m4(vy2, vy, vl); // y^3
 
     v_num = __riscv_vfmacc_vf_f32m4(v_num, 27.0f, vy, vl);
     vfloat32m4_t v_den = __riscv_vfmul_vf_f32m4(vy2, 9.0f, vl);

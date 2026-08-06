@@ -19,10 +19,10 @@
 #include <cstdint>
 
 #define CLINT_BASE 0x02000000u
-#define MTIMECMP_LO (*(volatile uint32_t*)(CLINT_BASE + 0x4000))
-#define MTIMECMP_HI (*(volatile uint32_t*)(CLINT_BASE + 0x4004))
-#define MTIME_LO (*(volatile uint32_t*)(CLINT_BASE + 0xBFF8))
-#define MTIME_HI (*(volatile uint32_t*)(CLINT_BASE + 0xBFFC))
+#define MTIMECMP_LO (*(volatile uint32_t *)(CLINT_BASE + 0x4000))
+#define MTIMECMP_HI (*(volatile uint32_t *)(CLINT_BASE + 0x4004))
+#define MTIME_LO (*(volatile uint32_t *)(CLINT_BASE + 0xBFF8))
+#define MTIME_HI (*(volatile uint32_t *)(CLINT_BASE + 0xBFFC))
 
 volatile int timer_fired = 0;
 
@@ -55,14 +55,14 @@ __attribute__((naked)) void isr_wrapper(void) {
 
       // Check mcause
       "csrr t0, mcause  \n"
-      "li t1, 0x80000007\n"  // Machine timer interrupt
+      "li t1, 0x80000007\n" // Machine timer interrupt
       "bne t0, t1, 1f   \n"
 
       // Timer interrupt: disable by setting mtimecmp to max
-      "li t0, 0x02004000\n"   // MTIMECMP_LO address
-      "li t1, -1         \n"  // 0xFFFFFFFF
-      "sw t1, 0(t0)     \n"   // mtimecmp_lo = 0xFFFFFFFF
-      "sw t1, 4(t0)     \n"   // mtimecmp_hi = 0xFFFFFFFF
+      "li t0, 0x02004000\n"  // MTIMECMP_LO address
+      "li t1, -1         \n" // 0xFFFFFFFF
+      "sw t1, 0(t0)     \n"  // mtimecmp_lo = 0xFFFFFFFF
+      "sw t1, 4(t0)     \n"  // mtimecmp_hi = 0xFFFFFFFF
 
       // Set timer_fired = 1
       "la t0, timer_fired\n"
@@ -98,7 +98,7 @@ __attribute__((naked)) void isr_wrapper(void) {
       "mret             \n");
 }
 
-}  // extern "C"
+} // extern "C"
 
 int main() {
   // 1. Set mtvec to our handler
@@ -113,7 +113,7 @@ int main() {
   uint32_t target_lo = mtime_lo + 100;
   uint32_t target_hi = mtime_hi;
   if (target_lo < mtime_lo) {
-    target_hi += 1;  // handle carry
+    target_hi += 1; // handle carry
   }
   // 3-step write to avoid spurious interrupts (RISC-V spec)
   MTIMECMP_LO = 0xFFFFFFFF;
@@ -125,7 +125,8 @@ int main() {
 
   // 5. Spin-wait for the ISR to set timer_fired
   for (volatile int i = 0; i < 10000; i++) {
-    if (timer_fired) break;
+    if (timer_fired)
+      break;
   }
 
   return !(timer_fired == 1);

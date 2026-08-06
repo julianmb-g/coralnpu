@@ -20,8 +20,8 @@ typedef uint32_t uint32x4_t __attribute__((vector_size(16)));
 // On zve32x ELEN is 32 so there should be no mf* support for 4-byte types.
 // As a result we don't need to worry nearly as much about over-reads and
 // over-writes.
-uint32_t in_buf[8] __attribute__((section(".data")));   // 7 in use.
-uint32_t out_buf[4] __attribute__((section(".data")));  // 4 in use.
+uint32_t in_buf[8] __attribute__((section(".data")));  // 7 in use.
+uint32_t out_buf[4] __attribute__((section(".data"))); // 4 in use.
 
 __attribute__((used, retain)) void test_intrinsic(const uint32_t *x,
                                                   uint32_t *y) {

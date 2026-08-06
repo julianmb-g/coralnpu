@@ -277,7 +277,7 @@ package coralnpu_test_pkg;
             int delay;
 
             wait (irq_vif.wfi == 1'b1);
-            if (!std::randomize(delay) with {delay inside {[0:1000]};}) begin
+            if (!std::randomize(delay) with {delay inside {[0 : 1000]};}) begin
               `uvm_error(get_type_name(), "Randomization of IRQ delay failed")
             end
             #(delay * 1ns);
@@ -515,7 +515,7 @@ package coralnpu_test_pkg;
                 forever begin
                   int delay;
                   wait (irq_vif.wfi == 1'b1);
-                  if (!std::randomize(delay) with {delay inside {[0:1000]};}) begin
+                  if (!std::randomize(delay) with {delay inside {[0 : 1000]};}) begin
                     `uvm_error(get_type_name(), "Randomization of IRQ delay failed")
                   end
                   #(delay * 1ns);

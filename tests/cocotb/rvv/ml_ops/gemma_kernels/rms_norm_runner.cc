@@ -39,8 +39,8 @@ __attribute__((aligned(16))) = 0;
 }
 
 extern "C" void RmsNormF(size_t seq_len, size_t hidden_size, float epsilon,
-                         const float* input, const float* weight,
-                         float* output);
+                         const float *input, const float *weight,
+                         float *output);
 
 extern "C" int main() {
   if ((active_seq_len * active_hidden_size) > MAX_INPUT_SIZE ||

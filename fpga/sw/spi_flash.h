@@ -58,32 +58,32 @@ void spi_flash_write_enable(void);
 
 // Poll status register until (status & mask) == expected.
 // If poll_limit is 0, polls indefinitely.
-bool spi_flash_poll_status(uint8_t mask, uint8_t expected, uint8_t* result,
+bool spi_flash_poll_status(uint8_t mask, uint8_t expected, uint8_t *result,
                            uint32_t poll_limit);
 
 // Read JEDEC ID
-void spi_flash_read_id(uint8_t* mfr, uint8_t* id1, uint8_t* id2);
+void spi_flash_read_id(uint8_t *mfr, uint8_t *id1, uint8_t *id2);
 
 // Erase a sector
 bool spi_flash_sector_erase(uint32_t addr);
 
 // Program a page (up to 256 bytes)
-bool spi_flash_page_program(uint32_t addr, const uint8_t* data, uint32_t len);
+bool spi_flash_page_program(uint32_t addr, const uint8_t *data, uint32_t len);
 
 // Read data from flash
-void spi_flash_read(uint32_t addr, uint8_t* data, uint32_t len);
+void spi_flash_read(uint32_t addr, uint8_t *data, uint32_t len);
 
 // Read data from flash using DMA in half-duplex RX mode.
-void spi_flash_read_dma(uint32_t addr, uint8_t* data, uint32_t len);
+void spi_flash_read_dma(uint32_t addr, uint8_t *data, uint32_t len);
 
 // Read SFDP data
-void spi_flash_read_sfdp(uint32_t addr, uint8_t* data, uint32_t len);
+void spi_flash_read_sfdp(uint32_t addr, uint8_t *data, uint32_t len);
 
 // Discover flash parameters using SFDP and ID-CFI
-bool spi_flash_discover(struct spi_flash_info* info);
+bool spi_flash_discover(struct spi_flash_info *info);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // FPGA_SW_SPI_FLASH_H_
+#endif // FPGA_SW_SPI_FLASH_H_

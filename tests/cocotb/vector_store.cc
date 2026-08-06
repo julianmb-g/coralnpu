@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <riscv_vector.h>
-int main(int argc, char** argv) {
-    vuint8m1_t vec = __riscv_vid_v_u8m1(16);
-    unsigned char* storage = reinterpret_cast<unsigned char*>(0xa0000000);
-    __riscv_vse8_v_u8m1(storage, vec, 16);
-    return 0;
+int main(int argc, char **argv) {
+  vuint8m1_t vec = __riscv_vid_v_u8m1(16);
+  unsigned char *storage = reinterpret_cast<unsigned char *>(0xa0000000);
+  __riscv_vse8_v_u8m1(storage, vec, 16);
+  return 0;
 }

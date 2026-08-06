@@ -36,28 +36,32 @@
 #include "tests/verilator_sim/rvvi/spsc_ring_buffer.h"
 #include "tests/verilator_sim/rvvi/trace_packet.h"
 
-#include <semaphore.h>
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
+#include <semaphore.h>
 
 namespace mpact::sim::riscv::rvvi {
 
 inline constexpr size_t kBufferSize = 4096;
 
-template<size_t VLEN = 128, size_t BufferSize = kBufferSize>
+template <size_t VLEN = 128, size_t BufferSize = kBufferSize>
 class TraceDaemon {
- public:
-  TraceDaemon(SpscRingBuffer<TracePacket, BufferSize>* buffer, std::ostream* output_stream, mpact::sim::util::ElfProgramLoader* elf_loader)
-    : buffer_(buffer), output_stream_(output_stream), elf_loader_(elf_loader), running_(false), sim_delay_ms_(0), first_line_(true) {
-      const char* sim_delay_env = std::getenv("SIM_DELAY_MS");
-      if (sim_delay_env) {
-        if (!absl::SimpleAtoi(sim_delay_env, &sim_delay_ms_)) {
-          LOG(WARNING) << "Invalid SIM_DELAY_MS environment variable, defaulting to 0";
-        }
+public:
+  TraceDaemon(SpscRingBuffer<TracePacket, BufferSize> *buffer,
+              std::ostream *output_stream,
+              mpact::sim::util::ElfProgramLoader *elf_loader)
+      : buffer_(buffer), output_stream_(output_stream), elf_loader_(elf_loader),
+        running_(false), sim_delay_ms_(0), first_line_(true) {
+    const char *sim_delay_env = std::getenv("SIM_DELAY_MS");
+    if (sim_delay_env) {
+      if (!absl::SimpleAtoi(sim_delay_env, &sim_delay_ms_)) {
+        LOG(WARNING)
+            << "Invalid SIM_DELAY_MS environment variable, defaulting to 0";
       }
-      sem_init(&step_sem_, 0, 0);
     }
+    sem_init(&step_sem_, 0, 0);
+  }
 
   ~TraceDaemon() {
     Stop();
@@ -89,13 +93,13 @@ class TraceDaemon {
     }
   }
 
- private:
+private:
   void DaemonLoop() {
     while (running_ || !buffer_->IsEmpty()) {
       if (sim_delay_ms_ < 0 && running_) {
         sem_wait(&step_sem_);
       }
-      
+
       TracePacket packet;
       if (buffer_->Pop(packet)) {
         ProcessPacket(packet);
@@ -103,74 +107,79 @@ class TraceDaemon {
           std::this_thread::sleep_for(std::chrono::milliseconds(sim_delay_ms_));
         }
       } else {
-        if (!running_) break;
+        if (!running_)
+          break;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
   }
 
-  void ProcessPacket(const TracePacket& packet) {
+  void ProcessPacket(const TracePacket &packet) {
     switch (packet.type) {
-      case 'I':
-        FlushLine();
-        current_pc_ = packet.pc;
-        current_inst_ = packet.inst;
-        std::memcpy(current_disasm_, packet.raw_bytes, 32);
-        current_disasm_[31] = '\0'; // Ensure null-termination
-        has_pending_inst_ = true;
-        break;
-      case 'R': {
-        RegisterValue* reg = nullptr;
-        for (size_t i = 0; i < num_pending_registers_; ++i) {
-          if (pending_registers_[i].RegType() == packet.reg_type &&
-              pending_registers_[i].Index() == packet.reg_index) {
-            reg = &pending_registers_[i];
-            break;
-          }
+    case 'I':
+      FlushLine();
+      current_pc_ = packet.pc;
+      current_inst_ = packet.inst;
+      std::memcpy(current_disasm_, packet.raw_bytes, 32);
+      current_disasm_[31] = '\0'; // Ensure null-termination
+      has_pending_inst_ = true;
+      break;
+    case 'R': {
+      RegisterValue *reg = nullptr;
+      for (size_t i = 0; i < num_pending_registers_; ++i) {
+        if (pending_registers_[i].RegType() == packet.reg_type &&
+            pending_registers_[i].Index() == packet.reg_index) {
+          reg = &pending_registers_[i];
+          break;
         }
-        
-        if (reg == nullptr) {
-          if (num_pending_registers_ < 32) {
-            reg = &pending_registers_[num_pending_registers_++];
-            reg->SetRegType(packet.reg_type);
-            reg->SetIndex(packet.reg_index);
-            reg->SetCurrentSize(packet.total_size);
-            std::memset(reg->DataPtr(), 0, 256);
-          } else {
-            LOG(ERROR) << "Too many pending registers";
-            return;
-          }
-        }
-
-        if (packet.offset + packet.chunk_size <= 256) {
-          std::memcpy(reg->DataPtr() + packet.offset, packet.raw_bytes, packet.chunk_size);
-        } else {
-          LOG(ERROR) << "Chunk out of bounds";
-        }
-        break;
       }
-      case 'E':
-        FlushLine();
-        running_ = false;
-        break;
-      default:
-        LOG(WARNING) << "Unknown packet type: " << packet.type;
-        break;
+
+      if (reg == nullptr) {
+        if (num_pending_registers_ < 32) {
+          reg = &pending_registers_[num_pending_registers_++];
+          reg->SetRegType(packet.reg_type);
+          reg->SetIndex(packet.reg_index);
+          reg->SetCurrentSize(packet.total_size);
+          std::memset(reg->DataPtr(), 0, 256);
+        } else {
+          LOG(ERROR) << "Too many pending registers";
+          return;
+        }
+      }
+
+      if (packet.offset + packet.chunk_size <= 256) {
+        std::memcpy(reg->DataPtr() + packet.offset, packet.raw_bytes,
+                    packet.chunk_size);
+      } else {
+        LOG(ERROR) << "Chunk out of bounds";
+      }
+      break;
+    }
+    case 'E':
+      FlushLine();
+      running_ = false;
+      break;
+    default:
+      LOG(WARNING) << "Unknown packet type: " << packet.type;
+      break;
     }
   }
 
   void FlushLine() {
-    if (!has_pending_inst_) return;
-    
+    if (!has_pending_inst_)
+      return;
+
     // Format: rvvi,0,PC,INST,DISASM[,REG:VAL]*
-    std::string line = absl::StrFormat("rvvi,0,%016lx,%08x,%s", current_pc_, current_inst_, current_disasm_);
-    
+    std::string line = absl::StrFormat("rvvi,0,%016lx,%08x,%s", current_pc_,
+                                       current_inst_, current_disasm_);
+
     for (size_t i = 0; i < num_pending_registers_; ++i) {
-      const auto& reg = pending_registers_[i];
-      line += absl::StrFormat(",%c%d:", std::tolower(reg.RegType()), reg.Index());
+      const auto &reg = pending_registers_[i];
+      line +=
+          absl::StrFormat(",%c%d:", std::tolower(reg.RegType()), reg.Index());
       auto data = reg.Data();
       for (int j = data.size(); j > 0; --j) {
-        line += absl::StrFormat("%02x", data[j-1]);
+        line += absl::StrFormat("%02x", data[j - 1]);
       }
     }
     *output_stream_ << line << "\n";
@@ -179,14 +188,14 @@ class TraceDaemon {
     has_pending_inst_ = false;
   }
 
-  SpscRingBuffer<TracePacket, BufferSize>* buffer_;
-  std::ostream* output_stream_;
-  mpact::sim::util::ElfProgramLoader* elf_loader_;
+  SpscRingBuffer<TracePacket, BufferSize> *buffer_;
+  std::ostream *output_stream_;
+  mpact::sim::util::ElfProgramLoader *elf_loader_;
   std::thread daemon_thread_;
   std::atomic<bool> running_;
   int sim_delay_ms_ = 0;
   sem_t step_sem_;
-  
+
   // Internal accumulation state
   uint64_t current_pc_ = 0;
   uint32_t current_inst_ = 0;

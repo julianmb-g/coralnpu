@@ -26,29 +26,29 @@ constexpr uint8_t kCsHigh = 0x08;
 constexpr uint8_t kCsLow = 0x00;
 
 class FtdiInterface {
- public:
+public:
   virtual ~FtdiInterface() = default;
-  virtual int write_data(const uint8_t* buf, int size) = 0;
-  virtual int read_data(uint8_t* buf, int size) = 0;
+  virtual int write_data(const uint8_t *buf, int size) = 0;
+  virtual int read_data(uint8_t *buf, int size) = 0;
   virtual int purge_buffers() = 0;
 };
 
 class SpiMaster {
-  FtdiInterface* ftdi_;
+  FtdiInterface *ftdi_;
 
-  void send_cmd(const std::vector<uint8_t>& cmd);
+  void send_cmd(const std::vector<uint8_t> &cmd);
   std::vector<uint8_t> read_data(size_t len);
 
- public:
-  SpiMaster(FtdiInterface* ftdi) : ftdi_(ftdi) {}
+public:
+  SpiMaster(FtdiInterface *ftdi) : ftdi_(ftdi) {}
 
-  void v2_write_lines(uint32_t addr, const uint8_t* data, uint16_t num_beats);
+  void v2_write_lines(uint32_t addr, const uint8_t *data, uint16_t num_beats);
   static constexpr size_t kBytesPerBeat = 17;
   static constexpr size_t kInitialLatencyPaddingBytes = 2048;
 
-  bool v2_read_lines(uint32_t addr, uint16_t num_beats, uint8_t* buf);
-  void v2_write_data(uint32_t addr, const uint8_t* data, size_t len);
-  bool v2_read_data(uint32_t addr, size_t len, uint8_t* out);
+  bool v2_read_lines(uint32_t addr, uint16_t num_beats, uint8_t *buf);
+  void v2_write_data(uint32_t addr, const uint8_t *data, size_t len);
+  bool v2_read_data(uint32_t addr, size_t len, uint8_t *out);
   void write_word(uint32_t addr, uint32_t val);
   void device_reset();
 };

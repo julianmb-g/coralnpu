@@ -21,7 +21,7 @@ size_t load_filler __attribute__((section(".data"))) = 0;
 uint8_t mask_data[16] __attribute__((section(".data")));
 uint8_t load_data[128] __attribute__((section(".data")));
 // Allow load_addr to be overwritten to exercise AXI memory
-uint8_t* load_addr __attribute__((section(".data"))) = load_data;
+uint8_t *load_addr __attribute__((section(".data"))) = load_data;
 uint8_t store_data[128] __attribute__((section(".data")));
 
 extern "C" {
@@ -34,7 +34,7 @@ __attribute__((used, retain)) void test_unit_load8() {
       : [store_data] "=A"(store_data)
       : [vl] "r"(vl), [vtype] "r"(vtype), [load_filler] "r"(load_filler),
         [mask_data] "A"(mask_data),
-        [load_addr] "A"(*reinterpret_cast<const uint8_t (*)[128]>(load_addr))
+        [load_addr] "A"(*reinterpret_cast<const uint8_t(*)[128]>(load_addr))
       : "v0", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",
         "vtype");
 }
@@ -48,7 +48,7 @@ __attribute__((used, retain)) void test_unit_load16() {
       : [store_data] "=A"(store_data)
       : [vl] "r"(vl), [vtype] "r"(vtype), [load_filler] "r"(load_filler),
         [mask_data] "A"(mask_data),
-        [load_addr] "A"(*reinterpret_cast<const uint16_t (*)[64]>(load_addr))
+        [load_addr] "A"(*reinterpret_cast<const uint16_t(*)[64]>(load_addr))
       : "v0", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",
         "vtype");
 }
@@ -62,7 +62,7 @@ __attribute__((used, retain)) void test_unit_load32() {
       : [store_data] "=A"(store_data)
       : [vl] "r"(vl), [vtype] "r"(vtype), [load_filler] "r"(load_filler),
         [mask_data] "A"(mask_data),
-        [load_addr] "A"(*reinterpret_cast<const uint32_t (*)[32]>(load_addr))
+        [load_addr] "A"(*reinterpret_cast<const uint32_t(*)[32]>(load_addr))
       : "v0", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",
         "vtype");
 }
@@ -70,7 +70,7 @@ __attribute__((used, retain)) void test_unit_load32() {
 
 void (*impl)() __attribute__((section(".data"))) = &test_unit_load8;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
 
   return 0;

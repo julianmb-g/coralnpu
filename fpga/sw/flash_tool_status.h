@@ -28,4 +28,4 @@ typedef enum {
   FLASH_TOOL_STATUS_TIMEOUT = 9,
 } flash_tool_status_t;
 
-#endif  // FPGA_SW_FLASH_TOOL_STATUS_H_
+#endif // FPGA_SW_FLASH_TOOL_STATUS_H_

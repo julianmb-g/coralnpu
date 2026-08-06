@@ -26,10 +26,10 @@ cc_library(
 cc_library(
     name = "util",
     hdrs = [
-        "util.h",
         "fifo.h",
         "sysc_module.h",
         "sysc_tb.h",
+        "util.h",
     ],
     visibility = ["//visibility:public"],
 )
@@ -37,10 +37,10 @@ cc_library(
 cc_library(
     name = "coralnpu_if",
     hdrs = [
+        "coralnpu/coralnpu_cfg.h",
         "coralnpu/core_if.h",
         "coralnpu/debug_if.h",
         "coralnpu/memory_if.h",
-        "coralnpu/coralnpu_cfg.h",
     ],
     defines = [
         "CORALNPU_SIMD=128",
@@ -81,13 +81,13 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
         ":spsc_ring_buffer",
         ":trace_packet",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/types:span",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )
 
@@ -101,7 +101,6 @@ cc_library(
     defines = [
         "VERILATOR_MODEL=VRvvCoreMiniAxi",
     ],
-    
     deps = [
         ":coralnpu_if",
         ":elf_adapter",
@@ -127,7 +126,6 @@ cc_binary(
     defines = [
         "VERILATOR_MODEL=VRvvCoreMiniAxi",
     ],
-    
     deps = [
         ":core_mini_axi_tb",
         "@com_google_absl//absl/flags:parse",
@@ -144,7 +142,6 @@ cc_test(
     defines = [
         "VERILATOR_MODEL=VCoreBarebones",
     ],
-    
     deps = [
         ":coralnpu_if",
         ":elf_adapter",
@@ -161,10 +158,10 @@ cc_test(
         "coralnpu/core_rvvi_tb_test.cc",
     ],
     deps = [
-        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
         ":spsc_ring_buffer",
         ":trace_daemon",
         "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )
 
@@ -177,7 +174,6 @@ cc_binary(
     defines = [
         "VERILATOR_MODEL=VCoreScalar",
     ],
-    
     deps = [
         ":coralnpu_if",
         ":sim_libs",
@@ -198,7 +194,6 @@ cc_binary(
     defines = [
         "VERILATOR_MODEL=VCoreBarebones",
     ],
-    
     deps = [
         ":coralnpu_if",
         ":elf_adapter",
@@ -222,7 +217,6 @@ cc_binary(
     defines = [
         "VERILATOR_MODEL=VCoreVerification",
     ],
-    
     deps = [
         ":coralnpu_if",
         ":elf_adapter",
@@ -242,7 +236,6 @@ cc_binary(
 cc_test(
     name = "spsc_ring_buffer_test",
     srcs = ["rvvi/spsc_ring_buffer_test.cc"],
-    
     deps = [
         ":spsc_ring_buffer",
         ":trace_packet",
@@ -253,11 +246,10 @@ cc_test(
 cc_test(
     name = "trace_daemon_test",
     srcs = ["rvvi/trace_daemon_test.cc"],
-    
     deps = [
-        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
         ":trace_daemon",
         "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )
 
@@ -276,12 +268,10 @@ cc_test(
     name = "custom_fallback_formatter_test",
     srcs = ["coralnpu/custom_fallback_formatter_test.cc"],
     deps = [
-        "@com_google_googletest//:gtest_main",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_googletest//:gtest_main",
     ],
 )
-
-
 
 cc_binary(
     name = "gen_elf",
@@ -297,9 +287,9 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":coralnpu_if",
-        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )

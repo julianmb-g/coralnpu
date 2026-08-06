@@ -23,11 +23,11 @@
 #include <queue>
 #include <vector>
 
-#include "svdpi.h"
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "hdl/verilog/sram_backdoor.h"
+#include "svdpi.h"
 #include "tests/systemc/Xbar.h"
 #include "tests/systemc/instruction_trace.h"
 #include "tests/verilator_sim/sysc_tb.h"
@@ -49,18 +49,25 @@
 
 #include "soc/interconnect/iconnect.h"
 #include "tests/verilator_sim/util.h"
-#define MODEL_HEADER_SUFFIX .h
-#define MODEL_HEADER STRINGIFY(VERILATOR_MODEL MODEL_HEADER_SUFFIX)
+#define CONCAT_HELPER(a, b) a##b
+#define CONCAT(a, b) CONCAT_HELPER(a, b)
+
+#define MODEL_HEADER STRINGIFY(VERILATOR_MODEL.h)
 #include MODEL_HEADER
 
-#define PARAMS_HEADER_PREFIX hdl/chisel/src/coralnpu/
-#define PARAMS_HEADER_SUFFIX _parameters.h
-#define PARAMS_HEADER STRINGIFY(PARAMS_HEADER_PREFIX VERILATOR_MODEL PARAMS_HEADER_SUFFIX)
+#define PARAMS_HEADER                                                          \
+  STRINGIFY(hdl / chisel / src / coralnpu /                                    \
+            CONCAT(VERILATOR_MODEL, _parameters.h))
 #include PARAMS_HEADER
 
+#undef CONCAT_HELPER
+#undef CONCAT
+#undef MODEL_HEADER
+#undef PARAMS_HEADER
+
 class CoreMiniAxiTb : public SyscTb {
- public:
-  static const char* kCoreMiniAxiModelName;
+public:
+  static const char *kCoreMiniAxiModelName;
   typedef iconnect<2, 1> TlmMux;
 
   struct DebugIO {
@@ -132,26 +139,29 @@ class CoreMiniAxiTb : public SyscTb {
 #endif
 #if (KP_enableRvv == true)
 #define RB_DEBUG_IO_DATA_WIDTH KP_rvvVlen
-#define RB_DEBUG_IO_VEC(x, y) \
-  sc_signal<bool> rb_inst_##x##_bits_vecWrites_##y##_valid; \
-  sc_signal<sc_bv<KP_rvvVlen>> rb_inst_##x##_bits_vecWrites_##y##_bits_data; \
-  sc_signal<sc_bv<KP_rvvRegCountWidth>> rb_inst_##x##_bits_vecWrites_##y##_bits_idx;
-#define RB_DEBUG_IO_VECS_8(x) \
-  RB_DEBUG_IO_VEC(x, 0) RB_DEBUG_IO_VEC(x, 1) RB_DEBUG_IO_VEC(x, 2) RB_DEBUG_IO_VEC(x, 3) \
-  RB_DEBUG_IO_VEC(x, 4) RB_DEBUG_IO_VEC(x, 5) RB_DEBUG_IO_VEC(x, 6) RB_DEBUG_IO_VEC(x, 7)
+#define RB_DEBUG_IO_VEC(x, y)                                                  \
+  sc_signal<bool> rb_inst_##x##_bits_vecWrites_##y##_valid;                    \
+  sc_signal<sc_bv<KP_rvvVlen>> rb_inst_##x##_bits_vecWrites_##y##_bits_data;   \
+  sc_signal<sc_bv<KP_rvvRegCountWidth>>                                        \
+      rb_inst_##x##_bits_vecWrites_##y##_bits_idx;
+#define RB_DEBUG_IO_VECS_8(x)                                                  \
+  RB_DEBUG_IO_VEC(x, 0)                                                        \
+  RB_DEBUG_IO_VEC(x, 1) RB_DEBUG_IO_VEC(x, 2) RB_DEBUG_IO_VEC(x, 3)            \
+      RB_DEBUG_IO_VEC(x, 4) RB_DEBUG_IO_VEC(x, 5) RB_DEBUG_IO_VEC(x, 6)        \
+          RB_DEBUG_IO_VEC(x, 7)
 #else
 #define RB_DEBUG_IO_DATA_WIDTH KP_xlen
 #define RB_DEBUG_IO_VECS_8(x)
 #endif
-#define RB_DEBUG_IO(x) \
-  sc_signal<bool> rb_inst_##x##_valid; \
-  sc_signal<sc_bv<KP_programCounterBits>> rb_inst_##x##_bits_pc; \
-  sc_signal<sc_bv<32>> rb_inst_##x##_bits_inst; \
-  sc_signal<sc_bv<KP_retirementBufferIdxWidth>> rb_inst_##x##_bits_idx; \
-  sc_signal<sc_bv<RB_DEBUG_IO_DATA_WIDTH>> rb_inst_##x##_bits_data; \
-  sc_signal<bool> rb_inst_##x##_bits_trap; \
+#define RB_DEBUG_IO(x)                                                         \
+  sc_signal<bool> rb_inst_##x##_valid;                                         \
+  sc_signal<sc_bv<KP_programCounterBits>> rb_inst_##x##_bits_pc;               \
+  sc_signal<sc_bv<32>> rb_inst_##x##_bits_inst;                                \
+  sc_signal<sc_bv<KP_retirementBufferIdxWidth>> rb_inst_##x##_bits_idx;        \
+  sc_signal<sc_bv<RB_DEBUG_IO_DATA_WIDTH>> rb_inst_##x##_bits_data;            \
+  sc_signal<bool> rb_inst_##x##_bits_trap;                                     \
   RB_DEBUG_IO_VECS_8(x)
-  CORALNPU_SIM_REPEAT(RB_DEBUG_IO, KP_retirementBufferSize);
+    CORALNPU_SIM_REPEAT(RB_DEBUG_IO, KP_retirementBufferSize);
 #undef RB_DEBUG_IO
 #undef RB_DEBUG_IO_VECS_8
 #undef RB_DEBUG_IO_VEC
@@ -171,18 +181,18 @@ class CoreMiniAxiTb : public SyscTb {
   };
 
   CoreMiniAxiTb(sc_module_name n, int loops, bool random, bool debug_axi,
-                 bool instr_trace, bool backdoor_load,
-                 std::optional<std::function<void()>> wfi_cb,
-                 std::optional<std::function<void()>> halted_cb);
+                bool instr_trace, bool backdoor_load,
+                std::optional<std::function<void()>> wfi_cb,
+                std::optional<std::function<void()>> halted_cb);
   ~CoreMiniAxiTb();
-  static void axi_transaction_done_cb(TLMTrafficGenerator* gen, int threadId);
+  static void axi_transaction_done_cb(TLMTrafficGenerator *gen, int threadId);
 
-  typedef AXISignals<KP_axi2AddrBits,  // ADDR_WIDTH
-                     KP_lsuDataBits,   // DATA_WIDTH
-                     KP_axi2IdBits,    // ID_WIDTH
-                     8,                // AxLEN_WIDTH
-                     1,                // AxLOCK_WIDTH
-                     0, 0, 0, 0, 0     // User
+  typedef AXISignals<KP_axi2AddrBits, // ADDR_WIDTH
+                     KP_lsuDataBits,  // DATA_WIDTH
+                     KP_axi2IdBits,   // ID_WIDTH
+                     8,               // AxLEN_WIDTH
+                     1,               // AxLOCK_WIDTH
+                     0, 0, 0, 0, 0    // User
                      >
       CoreMiniAxiSignals;
 
@@ -199,7 +209,7 @@ class CoreMiniAxiTb : public SyscTb {
 
   absl::Status LoadElfSync(absl::string_view file_name);
   absl::Status LoadElfAsync(absl::string_view file_name);
-  void BackdoorLoad(uint64_t addr, const uint8_t* data, size_t len);
+  void BackdoorLoad(uint64_t addr, const uint8_t *data, size_t len);
 
   // ClockGate and Reset should be done in the correct order:
   // ClockGate(false); Reset(false);
@@ -212,17 +222,17 @@ class CoreMiniAxiTb : public SyscTb {
   absl::Status CheckStatusSync();
   absl::Status CheckStatusAsync();
 
-  VERILATOR_MODEL* core() { return core_.get(); }
+  VERILATOR_MODEL *core() { return core_.get(); }
 
   void EnqueueTransactionSync(std::vector<DataTransfer> transfers);
   void EnqueueTransactionAsync(std::vector<DataTransfer> transfers);
 
   void tohost_reader_thread();
 
- protected:
+protected:
   void Posedge() override;
 
- private:
+private:
   void Connect();
   void TraceInstructions();
 
@@ -259,10 +269,10 @@ class CoreMiniAxiTb : public SyscTb {
   absl::CondVar transfer_queue_cv_;
   std::queue<std::unique_ptr<TrafficDesc>> transfer_queue_;
 
-  void axi_transaction_done_cb_(TLMTrafficGenerator* gen, int threadId);
+  void axi_transaction_done_cb_(TLMTrafficGenerator *gen, int threadId);
 
-  static CoreMiniAxiTb* singleton_;
-  static CoreMiniAxiTb* getSingleton() { return singleton_; }
+  static CoreMiniAxiTb *singleton_;
+  static CoreMiniAxiTb *getSingleton() { return singleton_; }
 #ifdef HIGHMEM_RTL
   static constexpr uint32_t kCsrAddr = 0x200000;
 #else
@@ -283,4 +293,4 @@ class CoreMiniAxiTb : public SyscTb {
   bool backdoor_load_ = false;
   InstructionTrace tracer_;
 };
-#endif  // TESTS_VERILATOR_SIM_CORALNPU_CORE_MINI_AXI_TB_H_
+#endif // TESTS_VERILATOR_SIM_CORALNPU_CORE_MINI_AXI_TB_H_

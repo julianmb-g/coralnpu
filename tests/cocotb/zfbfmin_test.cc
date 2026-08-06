@@ -18,7 +18,7 @@
 
 struct TestCase {
   uint32_t input;
-  uint32_t rounding_mode;  // 0-4 for static modes, 7 for dynamic
+  uint32_t rounding_mode; // 0-4 for static modes, 7 for dynamic
   uint32_t output;
   uint32_t fflags;
 };
@@ -45,15 +45,14 @@ void run_fcvt_s_bf16() {
     // Since we can't easily change the instruction's immediate RM field at
     // runtime without self-modifying code, we'll use dynamic rounding mode (7)
     // and set the FRM CSR.
-    asm volatile(
-        "csrw frm, %[rm];"
-        "fmv.w.x fa1, %[in];"
-        ".word 0x4485f553;"  // fcvt.s.bf16 fa0, fa1, dyn
-        "fmv.x.w %[out], fa0;"
-        "csrr %[flags], fflags;"
-        : [out] "=r"(out), [flags] "=r"(flags)
-        : [in] "r"(in), [rm] "r"(rm)
-        : "fa0", "fa1");
+    asm volatile("csrw frm, %[rm];"
+                 "fmv.w.x fa1, %[in];"
+                 ".word 0x4485f553;" // fcvt.s.bf16 fa0, fa1, dyn
+                 "fmv.x.w %[out], fa0;"
+                 "csrr %[flags], fflags;"
+                 : [out] "=r"(out), [flags] "=r"(flags)
+                 : [in] "r"(in), [rm] "r"(rm)
+                 : "fa0", "fa1");
 
     fcvt_s_bf16_cases[i].output = out;
     fcvt_s_bf16_cases[i].fflags = flags;
@@ -70,15 +69,14 @@ void run_fcvt_bf16_s() {
     asm volatile("csrw fflags, zero");
 
     // TODO: remove .word once compiler supports Zfbfmin
-    asm volatile(
-        "csrw frm, %[rm];"
-        "fmv.w.x fa1, %[in];"
-        ".word 0x4495f553;"  // fcvt.bf16.s fa0, fa1, dyn
-        "fmv.x.w %[out], fa0;"
-        "csrr %[flags], fflags;"
-        : [out] "=r"(out), [flags] "=r"(flags)
-        : [in] "r"(in), [rm] "r"(rm)
-        : "fa0", "fa1");
+    asm volatile("csrw frm, %[rm];"
+                 "fmv.w.x fa1, %[in];"
+                 ".word 0x4495f553;" // fcvt.bf16.s fa0, fa1, dyn
+                 "fmv.x.w %[out], fa0;"
+                 "csrr %[flags], fflags;"
+                 : [out] "=r"(out), [flags] "=r"(flags)
+                 : [in] "r"(in), [rm] "r"(rm)
+                 : "fa0", "fa1");
 
     fcvt_bf16_s_cases[i].output = out;
     fcvt_bf16_s_cases[i].fflags = flags;

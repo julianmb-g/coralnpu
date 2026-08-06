@@ -33,8 +33,8 @@ struct flash_tool_pkt {
   uint32_t addr;
   uint32_t len;
   union {
-    uint32_t crc32;   // Host provided CRC32 of the data in buffer
-    uint32_t status;  // Device provided status
+    uint32_t crc32;  // Host provided CRC32 of the data in buffer
+    uint32_t status; // Device provided status
   };
 } __attribute__((aligned(16)));
 
@@ -56,7 +56,7 @@ static const uint32_t crc32_nibble_table[16] = {
     0x4DB26158, 0x5005713C, 0xEDB88320, 0xF00F9344, 0xD6D6A3E8, 0xCB61B38C,
     0x9B64C2B0, 0x86D3D2D4, 0xA00AE278, 0xBDBDF21C};
 
-static uint32_t calculate_crc32(const uint8_t* data, uint32_t len) {
+static uint32_t calculate_crc32(const uint8_t *data, uint32_t len) {
   uint32_t crc = 0xFFFFFFFF;
   for (uint32_t i = 0; i < len; i++) {
     crc ^= data[i];
@@ -68,7 +68,7 @@ static uint32_t calculate_crc32(const uint8_t* data, uint32_t len) {
 
 static flash_tool_status_t handle_hello(void) { return FLASH_TOOL_STATUS_OK; }
 
-static flash_tool_status_t handle_get_info(struct spi_flash_info* info) {
+static flash_tool_status_t handle_get_info(struct spi_flash_info *info) {
   if (!spi_flash_discover(info)) {
     return FLASH_TOOL_STATUS_DISCOVERY_FAILED;
   }
@@ -77,7 +77,7 @@ static flash_tool_status_t handle_get_info(struct spi_flash_info* info) {
     return FLASH_TOOL_STATUS_BUFFER_TOO_SMALL;
   }
 
-  uint32_t* info_buf = (uint32_t*)flash_tool_buffer;
+  uint32_t *info_buf = (uint32_t *)flash_tool_buffer;
   info_buf[0] = info->capacity_bytes;
   info_buf[1] = info->sector_size_bytes;
   info_buf[2] = info->page_size_bytes;
@@ -85,7 +85,7 @@ static flash_tool_status_t handle_get_info(struct spi_flash_info* info) {
   return FLASH_TOOL_STATUS_OK;
 }
 
-static flash_tool_status_t handle_program_data(struct spi_flash_info* info,
+static flash_tool_status_t handle_program_data(struct spi_flash_info *info,
                                                uint32_t addr, uint32_t len,
                                                uint32_t host_crc) {
   uint32_t dev_crc = calculate_crc32(flash_tool_buffer, len);
@@ -157,19 +157,19 @@ int main() {
       resp.cmd = cmd;
 
       switch (cmd) {
-        case FLASH_TOOL_CMD_HELLO:
-          resp.status = handle_hello();
-          break;
-        case FLASH_TOOL_CMD_GET_INFO:
-          resp.status = handle_get_info(&info);
-          break;
-        case FLASH_TOOL_CMD_PROGRAM_DATA:
-          resp.status = handle_program_data(&info, addr, len, host_crc);
-          break;
-        default:
-          resp.status =
-              FLASH_TOOL_STATUS_NOT_INITIALIZED;  // Or some UNKNOWN status
-          break;
+      case FLASH_TOOL_CMD_HELLO:
+        resp.status = handle_hello();
+        break;
+      case FLASH_TOOL_CMD_GET_INFO:
+        resp.status = handle_get_info(&info);
+        break;
+      case FLASH_TOOL_CMD_PROGRAM_DATA:
+        resp.status = handle_program_data(&info, addr, len, host_crc);
+        break;
+      default:
+        resp.status =
+            FLASH_TOOL_STATUS_NOT_INITIALIZED; // Or some UNKNOWN status
+        break;
       }
 
       // Signal completion

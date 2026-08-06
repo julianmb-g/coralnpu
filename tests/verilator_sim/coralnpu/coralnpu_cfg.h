@@ -26,15 +26,24 @@ constexpr int kVector = CORALNPU_SIMD;
 #endif
 
 constexpr int ctz(int a) {
-  if (a == 1) return 0;
-  if (a == 2) return 1;
-  if (a == 4) return 2;
-  if (a == 8) return 3;
-  if (a == 16) return 4;
-  if (a == 32) return 5;
-  if (a == 64) return 6;
-  if (a == 128) return 7;
-  if (a == 256) return 8;
+  if (a == 1)
+    return 0;
+  if (a == 2)
+    return 1;
+  if (a == 4)
+    return 2;
+  if (a == 8)
+    return 3;
+  if (a == 16)
+    return 4;
+  if (a == 32)
+    return 5;
+  if (a == 64)
+    return 6;
+  if (a == 128)
+    return 7;
+  if (a == 256)
+    return 8;
   return -1;
 }
 
@@ -69,4 +78,4 @@ constexpr int kUncId = 6;
 
 constexpr int kAlignedLsb = ctz(kVector / 8);
 
-#endif  // TESTS_VERILATOR_SIM_CORALNPU_CORALNPU_CFG_H_
+#endif // TESTS_VERILATOR_SIM_CORALNPU_CORALNPU_CFG_H_

@@ -37,7 +37,8 @@ void coralnpu_exception_handler() {
   mcause = local_mcause;
 
   asm volatile("ebreak");
-  while (1) {}
+  while (1) {
+  }
 }
 }
 
@@ -48,7 +49,7 @@ int main(int argc, char **argv) {
 
   // Set configuration state
   uint32_t vtype_to_write = (vma << 7) | (vta << 6) | (sew << 3) | lmul;
-  asm volatile("vsetvl x0, %0, %1": : "r"(vl), "r"(vtype_to_write));
+  asm volatile("vsetvl x0, %0, %1" : : "r"(vl), "r"(vtype_to_write));
   uint32_t local_vstart = vstart;
   asm volatile("csrw vstart, %0" : : "r"(local_vstart));
 

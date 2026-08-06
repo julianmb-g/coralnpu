@@ -19,7 +19,7 @@ namespace {
 constexpr size_t scatter_count = 128;
 // Double sized so we can check trailing regions are not written.
 constexpr size_t buf_size = 512;
-}  // namespace
+} // namespace
 
 size_t vl __attribute__((section(".data"))) = 16;
 // Indices are always unsigned.
@@ -529,7 +529,7 @@ __attribute__((used, retain)) void vsoxseg8ei8_v_u8m1x8() {
 
 void (*impl)() __attribute__((section(".data"))) = &vsuxseg2ei8_v_u8m1x2;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

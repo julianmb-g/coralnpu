@@ -21,17 +21,17 @@
 #include "tests/verilator_sim/coralnpu/core_mini_axi_tb.h"
 #include "traffic-generators/traffic-desc.h"
 
-extern "C" int sc_main(int argc, char** argv) {
+extern "C" int sc_main(int argc, char **argv) {
   absl::InitializeLog();
   auto args = absl::ParseCommandLine(argc, argv);
   int v_argc = args.size();
-  char** v_argv = &args[0];
+  char **v_argv = &args[0];
   Verilated::commandArgs(v_argc, v_argv);
 
   CoreMiniAxiTb tb("CoreMiniAxiTb", 1000000, /* random= */ false,
-                    /*debug_axi=*/true, /*instr_trace=*/false,
-                    /*backdoor_load=*/false,
-                    /*wfi_cb=*/std::nullopt, std::nullopt);
+                   /*debug_axi=*/true, /*instr_trace=*/false,
+                   /*backdoor_load=*/false,
+                   /*wfi_cb=*/std::nullopt, std::nullopt);
 
   std::thread sc_main_thread([&tb]() { tb.Start(); });
 
@@ -57,19 +57,19 @@ extern "C" int sc_main(int argc, char** argv) {
   wrap_read.ext.gen_attr.enabled = true;
   wrap_read.ext.gen_attr.wrap = true;
   auto wrap_transfer = std::vector<DataTransfer>({
-      utils::Write(
-          0,
-          DATA(0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xa6, 0xa7, 0xa8,
-               0xa9, 0xaa, 0xab, 0xac, 0xad, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab,
-               0xac, 0xad, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad),
-          32),
+      utils::Write(0,
+                   DATA(0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xa6,
+                        0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xa6, 0xa7,
+                        0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xa6, 0xa7, 0xa8,
+                        0xa9, 0xaa, 0xab, 0xac, 0xad),
+                   32),
       wrap_write,
       wrap_read,
-      utils::Expect(
-          DATA(0xa1, 0xa2, 0xa3, 0xa4, 0x91, 0x92, 0x93, 0x94, 0xb1, 0xb2, 0xb3,
-               0xb4, 0xa1, 0xa2, 0xa3, 0xa4, 0xa1, 0xa2, 0xa3, 0xa4, 0x91, 0x92,
-               0x93, 0x94, 0xb1, 0xb2, 0xb3, 0xb4, 0xa1, 0xa2, 0xa3, 0xa4),
-          32),
+      utils::Expect(DATA(0xa1, 0xa2, 0xa3, 0xa4, 0x91, 0x92, 0x93, 0x94, 0xb1,
+                         0xb2, 0xb3, 0xb4, 0xa1, 0xa2, 0xa3, 0xa4, 0xa1, 0xa2,
+                         0xa3, 0xa4, 0x91, 0x92, 0x93, 0x94, 0xb1, 0xb2, 0xb3,
+                         0xb4, 0xa1, 0xa2, 0xa3, 0xa4),
+                    32),
   });
 
   tb.EnqueueTransactionSync(wrap_transfer);
@@ -78,7 +78,7 @@ extern "C" int sc_main(int argc, char** argv) {
   DataTransfer write32;
   write32.addr = 0;
   write32.cmd = DataTransfer::WRITE;
-  write32.data = reinterpret_cast<uint8_t*>(&dummy_data);
+  write32.data = reinterpret_cast<uint8_t *>(&dummy_data);
   write32.length = 4;
   write32.byte_enable = nullptr;
   write32.byte_enable_length = 0;
@@ -89,7 +89,7 @@ extern "C" int sc_main(int argc, char** argv) {
   DataTransfer read32;
   read32.addr = 0;
   read32.cmd = DataTransfer::READ;
-  read32.data = reinterpret_cast<uint8_t*>(&dummy_data);
+  read32.data = reinterpret_cast<uint8_t *>(&dummy_data);
   read32.length = 4;
   read32.byte_enable = nullptr;
   read32.byte_enable_length = 0;
@@ -101,21 +101,21 @@ extern "C" int sc_main(int argc, char** argv) {
   narrow_transfers.push_back(write32);
   narrow_transfers.push_back(read32);
   narrow_transfers.push_back(
-      utils::Expect(reinterpret_cast<uint8_t*>(&dummy_data), 4));
+      utils::Expect(reinterpret_cast<uint8_t *>(&dummy_data), 4));
 
   write32.addr = 4;
   read32.addr = 4;
   narrow_transfers.push_back(write32);
   narrow_transfers.push_back(read32);
   narrow_transfers.push_back(
-      utils::Expect(reinterpret_cast<uint8_t*>(&dummy_data), 4));
+      utils::Expect(reinterpret_cast<uint8_t *>(&dummy_data), 4));
 
   write32.addr = 8;
   read32.addr = 8;
   narrow_transfers.push_back(write32);
   narrow_transfers.push_back(read32);
   narrow_transfers.push_back(
-      utils::Expect(reinterpret_cast<uint8_t*>(&dummy_data), 4));
+      utils::Expect(reinterpret_cast<uint8_t *>(&dummy_data), 4));
   tb.EnqueueTransactionSync(utils::merge(narrow_transfers));
 
   sc_stop();

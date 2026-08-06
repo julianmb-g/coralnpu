@@ -28,11 +28,11 @@
 namespace coralnpu_v2::opt::litert_micro {
 
 void FullyConnected(
-    const tflite::FullyConnectedParams& params,
-    const tflite::RuntimeShape& input_shape, const int8_t* input_data,
-    const tflite::RuntimeShape& filter_shape, const int8_t* filter_data,
-    const tflite::RuntimeShape& bias_shape, const int32_t* bias_data,
-    const tflite::RuntimeShape& output_shape, int8_t* output_data) {
+    const tflite::FullyConnectedParams &params,
+    const tflite::RuntimeShape &input_shape, const int8_t *input_data,
+    const tflite::RuntimeShape &filter_shape, const int8_t *filter_data,
+    const tflite::RuntimeShape &bias_shape, const int32_t *bias_data,
+    const tflite::RuntimeShape &output_shape, int8_t *output_data) {
   const int32_t input_offset = params.input_offset;
   const int32_t filter_offset = params.weights_offset;
   const int32_t output_offset = params.output_offset;
@@ -97,17 +97,17 @@ void FullyConnected(
 }
 
 namespace {
-TfLiteStatus FullyConnectedEval(TfLiteContext* context, TfLiteNode* node) {
-  const auto& data =
-      *(static_cast<const tflite::OpDataFullyConnected*>(node->user_data));
+TfLiteStatus FullyConnectedEval(TfLiteContext *context, TfLiteNode *node) {
+  const auto &data =
+      *(static_cast<const tflite::OpDataFullyConnected *>(node->user_data));
 
-  const TfLiteEvalTensor* input = tflite::micro::GetEvalInput(
+  const TfLiteEvalTensor *input = tflite::micro::GetEvalInput(
       context, node, tflite::kFullyConnectedInputTensor);
-  const TfLiteEvalTensor* filter = tflite::micro::GetEvalInput(
+  const TfLiteEvalTensor *filter = tflite::micro::GetEvalInput(
       context, node, tflite::kFullyConnectedWeightsTensor);
-  const TfLiteEvalTensor* bias = tflite::micro::GetEvalInput(
+  const TfLiteEvalTensor *bias = tflite::micro::GetEvalInput(
       context, node, tflite::kFullyConnectedBiasTensor);
-  TfLiteEvalTensor* output = tflite::micro::GetEvalOutput(
+  TfLiteEvalTensor *output = tflite::micro::GetEvalOutput(
       context, node, tflite::kFullyConnectedOutputTensor);
 
   if (input->type == kTfLiteInt8 && filter->type == kTfLiteInt8) {
@@ -125,7 +125,7 @@ TfLiteStatus FullyConnectedEval(TfLiteContext* context, TfLiteNode* node) {
 
   return tflite::Register_FULLY_CONNECTED().invoke(context, node);
 }
-}  // namespace
+} // namespace
 
 TFLMRegistration Register_FULLY_CONNECTED() {
   auto registration = tflite::Register_FULLY_CONNECTED();
@@ -133,4 +133,4 @@ TFLMRegistration Register_FULLY_CONNECTED() {
   return registration;
 }
 
-}  // namespace coralnpu_v2::opt::litert_micro
+} // namespace coralnpu_v2::opt::litert_micro

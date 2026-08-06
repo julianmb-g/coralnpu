@@ -71,8 +71,8 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        ":core_mini_axi_wrapper",
         ":coralnpu_simulator_headers",
+        ":core_mini_axi_wrapper",
     ],
     alwayslink = True,
 )
@@ -84,8 +84,8 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        ":core_mini_axi_wrapper",
         ":coralnpu_simulator_headers",
+        ":core_mini_axi_wrapper",
     ],
     alwayslink = True,
 )

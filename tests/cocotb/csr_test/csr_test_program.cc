@@ -30,7 +30,7 @@ struct CsrTestResults {
 
 CsrTestResults csr_results __attribute__((section(".data"))) = {};
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   uint32_t test1_write = 0x00000005;
   asm volatile("csrw fcsr, %0" : : "r"(test1_write));
   uint32_t test1_read = 0;
@@ -72,10 +72,8 @@ int main(int argc, char** argv) {
 
   if ((test1_read & test1_write) == test1_write &&
       (test2_read & test2_write) == test2_write &&
-      (test3_read & test3_write) == test3_write &&
-      (test4_read == 0x00000000) &&
-      (mepc_before == mepc_init) &&
-      (mepc_after == mepc_before)) {
+      (test3_read & test3_write) == test3_write && (test4_read == 0x00000000) &&
+      (mepc_before == mepc_init) && (mepc_after == mepc_before)) {
     csr_results.test_status = 0;
   } else {
     csr_results.test_status = 1;

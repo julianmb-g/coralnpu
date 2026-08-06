@@ -23,14 +23,14 @@ namespace coralnpu {
 // Loads data into SRAMs via backdoor DPI pointers using global byte addresses.
 // This supports late binding; data can be "loaded" before the RTL SRAMs
 // have registered themselves.
-bool SramBackdoorLoad(uint64_t global_addr, const uint8_t* data, size_t len);
+bool SramBackdoorLoad(uint64_t global_addr, const uint8_t *data, size_t len);
 
-}  // namespace coralnpu
+} // namespace coralnpu
 
 extern "C" {
 // A C-ABI wrapper for SramBackdoorLoad to allow dynamic invocation from Python.
-__attribute__((visibility("default"))) bool sram_backdoor_load_c(
-    uint64_t global_addr, const uint8_t* data, size_t len);
+__attribute__((visibility("default"))) bool
+sram_backdoor_load_c(uint64_t global_addr, const uint8_t *data, size_t len);
 
 // Zero every registered SRAM. Safe to call only after SRAM modules have run
 // their `sram_init` DPI registration (i.e. after the simulator has executed
@@ -39,7 +39,7 @@ void sram_clear();
 
 // Parse an ELF file and call SramBackdoorLoad for each PT_LOAD segment.
 // Same timing constraint as sram_clear — call after SRAMs have registered.
-void sram_load_elf(const char* filename);
+void sram_load_elf(const char *filename);
 }
 
-#endif  // HDL_VERILOG_SRAM_BACKDOOR_H_
+#endif // HDL_VERILOG_SRAM_BACKDOOR_H_

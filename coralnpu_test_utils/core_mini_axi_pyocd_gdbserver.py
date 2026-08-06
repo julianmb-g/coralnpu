@@ -79,256 +79,150 @@ class CoreMiniAxiCore(object):
         self._core_registers = CoreRegistersIndex()
         self._core_registers.add_group([
             # Scalar registers
-            CoreRegisterInfo(
-                'x0', 0, 32, 'int', 'general', 0, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x1', 1, 32, 'int', 'general', 1, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x2', 2, 32, 'int', 'general', 2, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x3', 3, 32, 'int', 'general', 3, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x4', 4, 32, 'int', 'general', 4, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x5', 5, 32, 'int', 'general', 5, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x6', 6, 32, 'int', 'general', 6, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x7', 7, 32, 'int', 'general', 7, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x8', 8, 32, 'int', 'general', 8, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x9', 9, 32, 'int', 'general', 9, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x10', 10, 32, 'int', 'general', 10, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x11', 11, 32, 'int', 'general', 11, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x12', 12, 32, 'int', 'general', 12, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x13', 13, 32, 'int', 'general', 13, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x14', 14, 32, 'int', 'general', 14, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x15', 15, 32, 'int', 'general', 15, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x16', 16, 32, 'int', 'general', 16, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x17', 17, 32, 'int', 'general', 17, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x18', 18, 32, 'int', 'general', 18, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x19', 19, 32, 'int', 'general', 19, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x20', 20, 32, 'int', 'general', 20, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x21', 21, 32, 'int', 'general', 21, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x22', 22, 32, 'int', 'general', 22, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x23', 23, 32, 'int', 'general', 23, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x24', 24, 32, 'int', 'general', 24, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x25', 25, 32, 'int', 'general', 25, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x26', 26, 32, 'int', 'general', 26, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x27', 27, 32, 'int', 'general', 27, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x28', 28, 32, 'int', 'general', 28, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x29', 29, 32, 'int', 'general', 29, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x30', 30, 32, 'int', 'general', 30, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'x31', 31, 32, 'int', 'general', 31, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'pc', 32, 32, 'int', 'general', 32, 'org.gnu.gdb.riscv.cpu'
-            ),
-            CoreRegisterInfo(
-                'f0', 33, 32, 'ieee_single', 'float', 33,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f1', 34, 32, 'ieee_single', 'float', 34,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f2', 35, 32, 'ieee_single', 'float', 35,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f3', 36, 32, 'ieee_single', 'float', 36,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f4', 37, 32, 'ieee_single', 'float', 37,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f5', 38, 32, 'ieee_single', 'float', 38,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f6', 39, 32, 'ieee_single', 'float', 39,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f7', 40, 32, 'ieee_single', 'float', 40,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f8', 41, 32, 'ieee_single', 'float', 41,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f9', 42, 32, 'ieee_single', 'float', 42,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f10', 43, 32, 'ieee_single', 'float', 43,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f11', 44, 32, 'ieee_single', 'float', 44,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f12', 45, 32, 'ieee_single', 'float', 45,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f13', 46, 32, 'ieee_single', 'float', 46,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f14', 47, 32, 'ieee_single', 'float', 47,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f15', 48, 32, 'ieee_single', 'float', 48,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f16', 49, 32, 'ieee_single', 'float', 49,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f17', 50, 32, 'ieee_single', 'float', 50,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f18', 51, 32, 'ieee_single', 'float', 51,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f19', 52, 32, 'ieee_single', 'float', 52,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f20', 53, 32, 'ieee_single', 'float', 53,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f21', 54, 32, 'ieee_single', 'float', 54,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f22', 55, 32, 'ieee_single', 'float', 55,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f23', 56, 32, 'ieee_single', 'float', 56,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f24', 57, 32, 'ieee_single', 'float', 57,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f25', 58, 32, 'ieee_single', 'float', 58,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f26', 59, 32, 'ieee_single', 'float', 59,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f27', 60, 32, 'ieee_single', 'float', 60,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f28', 61, 32, 'ieee_single', 'float', 61,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f29', 62, 32, 'ieee_single', 'float', 62,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f30', 63, 32, 'ieee_single', 'float', 63,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'f31', 64, 32, 'ieee_single', 'float', 64,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'fflags', 65, 32, 'ieee_single', 'float', 65,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'frm', 66, 32, 'ieee_single', 'float', 65,
-                'org.gnu.gdb.riscv.fpu'
-            ),
-            CoreRegisterInfo(
-                'fcsr', 67, 32, 'ieee_single', 'float', 65,
-                'org.gnu.gdb.riscv.fpu'
-            ),
+            CoreRegisterInfo('x0', 0, 32, 'int', 'general', 0,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x1', 1, 32, 'int', 'general', 1,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x2', 2, 32, 'int', 'general', 2,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x3', 3, 32, 'int', 'general', 3,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x4', 4, 32, 'int', 'general', 4,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x5', 5, 32, 'int', 'general', 5,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x6', 6, 32, 'int', 'general', 6,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x7', 7, 32, 'int', 'general', 7,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x8', 8, 32, 'int', 'general', 8,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x9', 9, 32, 'int', 'general', 9,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x10', 10, 32, 'int', 'general', 10,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x11', 11, 32, 'int', 'general', 11,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x12', 12, 32, 'int', 'general', 12,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x13', 13, 32, 'int', 'general', 13,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x14', 14, 32, 'int', 'general', 14,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x15', 15, 32, 'int', 'general', 15,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x16', 16, 32, 'int', 'general', 16,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x17', 17, 32, 'int', 'general', 17,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x18', 18, 32, 'int', 'general', 18,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x19', 19, 32, 'int', 'general', 19,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x20', 20, 32, 'int', 'general', 20,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x21', 21, 32, 'int', 'general', 21,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x22', 22, 32, 'int', 'general', 22,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x23', 23, 32, 'int', 'general', 23,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x24', 24, 32, 'int', 'general', 24,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x25', 25, 32, 'int', 'general', 25,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x26', 26, 32, 'int', 'general', 26,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x27', 27, 32, 'int', 'general', 27,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x28', 28, 32, 'int', 'general', 28,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x29', 29, 32, 'int', 'general', 29,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x30', 30, 32, 'int', 'general', 30,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('x31', 31, 32, 'int', 'general', 31,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('pc', 32, 32, 'int', 'general', 32,
+                             'org.gnu.gdb.riscv.cpu'),
+            CoreRegisterInfo('f0', 33, 32, 'ieee_single', 'float', 33,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f1', 34, 32, 'ieee_single', 'float', 34,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f2', 35, 32, 'ieee_single', 'float', 35,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f3', 36, 32, 'ieee_single', 'float', 36,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f4', 37, 32, 'ieee_single', 'float', 37,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f5', 38, 32, 'ieee_single', 'float', 38,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f6', 39, 32, 'ieee_single', 'float', 39,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f7', 40, 32, 'ieee_single', 'float', 40,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f8', 41, 32, 'ieee_single', 'float', 41,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f9', 42, 32, 'ieee_single', 'float', 42,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f10', 43, 32, 'ieee_single', 'float', 43,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f11', 44, 32, 'ieee_single', 'float', 44,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f12', 45, 32, 'ieee_single', 'float', 45,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f13', 46, 32, 'ieee_single', 'float', 46,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f14', 47, 32, 'ieee_single', 'float', 47,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f15', 48, 32, 'ieee_single', 'float', 48,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f16', 49, 32, 'ieee_single', 'float', 49,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f17', 50, 32, 'ieee_single', 'float', 50,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f18', 51, 32, 'ieee_single', 'float', 51,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f19', 52, 32, 'ieee_single', 'float', 52,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f20', 53, 32, 'ieee_single', 'float', 53,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f21', 54, 32, 'ieee_single', 'float', 54,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f22', 55, 32, 'ieee_single', 'float', 55,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f23', 56, 32, 'ieee_single', 'float', 56,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f24', 57, 32, 'ieee_single', 'float', 57,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f25', 58, 32, 'ieee_single', 'float', 58,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f26', 59, 32, 'ieee_single', 'float', 59,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f27', 60, 32, 'ieee_single', 'float', 60,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f28', 61, 32, 'ieee_single', 'float', 61,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f29', 62, 32, 'ieee_single', 'float', 62,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f30', 63, 32, 'ieee_single', 'float', 63,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('f31', 64, 32, 'ieee_single', 'float', 64,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('fflags', 65, 32, 'ieee_single', 'float', 65,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('frm', 66, 32, 'ieee_single', 'float', 65,
+                             'org.gnu.gdb.riscv.fpu'),
+            CoreRegisterInfo('fcsr', 67, 32, 'ieee_single', 'float', 65,
+                             'org.gnu.gdb.riscv.fpu'),
 
             # Stub out some ARM-named registers for pyOCD.
-            CoreRegisterInfo(
-                'lr', 1, 32, 'int', 'general', 1, 'org.gnu.gdb.arm.core'
-            ),
-            CoreRegisterInfo(
-                'sp', 2, 32, 'int', 'general', 2, 'org.gnu.gdb.arm.core'
-            ),
-            CoreRegisterInfo(
-                'r7', 7, 32, 'int', 'general', 7, 'org.gnu.gdb.arm.core'
-            ),
+            CoreRegisterInfo('lr', 1, 32, 'int', 'general', 1,
+                             'org.gnu.gdb.arm.core'),
+            CoreRegisterInfo('sp', 2, 32, 'int', 'general', 2,
+                             'org.gnu.gdb.arm.core'),
+            CoreRegisterInfo('r7', 7, 32, 'int', 'general', 7,
+                             'org.gnu.gdb.arm.core'),
         ])
         self._memory_map = MemoryMap([
             RamRegion(0, 0x1FFF, 0x2000),
@@ -427,24 +321,20 @@ class CoreMiniAxiTarget(Target):
 
     def read_memory_block8(self, addr, size):
         e = threading.Event()
-        self.q.put((
-            CoreMiniAxiDebugOps.READ_MEMORY_BLOCK8, e, {
-                'addr': addr,
-                'size': size,
-            }
-        ))
+        self.q.put((CoreMiniAxiDebugOps.READ_MEMORY_BLOCK8, e, {
+            'addr': addr,
+            'size': size,
+        }))
         e.wait()
         rsp = self.q_rsp.get()
         return rsp
 
     def write_memory_block8(self, addr, size):
         e = threading.Event()
-        self.q.put((
-            CoreMiniAxiDebugOps.WRITE_MEMORY_BLOCK8, e, {
-                'addr': addr,
-                'data': size,
-            }
-        ))
+        self.q.put((CoreMiniAxiDebugOps.WRITE_MEMORY_BLOCK8, e, {
+            'addr': addr,
+            'data': size,
+        }))
         e.wait()
         rsp = self.q_rsp.get()
         return rsp
@@ -506,11 +396,9 @@ class CoreMiniAxiTarget(Target):
 
     def remove_breakpoint(self, addr):
         e = threading.Event()
-        self.q.put(
-            (CoreMiniAxiDebugOps.REMOVE_BREAKPOINT, e, {
-                'addr': addr,
-            })
-        )
+        self.q.put((CoreMiniAxiDebugOps.REMOVE_BREAKPOINT, e, {
+            'addr': addr,
+        }))
         e.wait()
         rsp = self.q_rsp.get()
         assert rsp == True
@@ -590,9 +478,9 @@ class CoreMiniAxiGDBServer(object):
                     cmdfile.name,
                     elf.name,
                 ]
-                ret = subprocess.call(
-                    args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
+                ret = subprocess.call(args,
+                                      stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL)
                 self.finish.put(ret == 0)
 
         def notify_cb():
@@ -601,16 +489,14 @@ class CoreMiniAxiGDBServer(object):
 
         gdbserver_queue = queue.Queue()
         gdbserver_queue_rsp = queue.Queue()
-        session = CoreMiniAxiSession(
-            self.core_mini_axi,
-            gdbserver_queue,
-            gdbserver_queue_rsp,
-            notify_cb,
-            options={
-                'gdbserver_port': gdb_port,
-                'telnet_port': telnet_port,
-            }
-        )
+        session = CoreMiniAxiSession(self.core_mini_axi,
+                                     gdbserver_queue,
+                                     gdbserver_queue_rsp,
+                                     notify_cb,
+                                     options={
+                                         'gdbserver_port': gdb_port,
+                                         'telnet_port': telnet_port,
+                                     })
         session.open()
         gdb_server = GDBServer(session=session)
         gdb_server.start()
@@ -654,8 +540,7 @@ class CoreMiniAxiGDBServer(object):
                         access_size = 2
 
                     val = await self.core_mini_axi.dm_read_mem(
-                        current_addr, access_size
-                    )
+                        current_addr, access_size)
                     val = val & ((1 << (access_size * 8)) - 1)
                     read_data.extend(val.to_bytes(access_size, 'little'))
 
@@ -682,8 +567,7 @@ class CoreMiniAxiGDBServer(object):
                     val = int.from_bytes(chunk, 'little')
 
                     await self.core_mini_axi.dm_write_mem(
-                        current_addr, val, access_size
-                    )
+                        current_addr, val, access_size)
 
                     current_addr += access_size
                     current_data_idx += access_size
@@ -704,12 +588,10 @@ class CoreMiniAxiGDBServer(object):
                     await self.core_mini_axi.dm_write_reg(0x7A0, 0)
                     await self.core_mini_axi.dm_write_reg(0x7A1, 0)
                     await self.core_mini_axi.dm_write_reg(
-                        0x7A2, kwargs['addr']
-                    )
+                        0x7A2, kwargs['addr'])
                     desired_tdata1 = 0x62431044
                     await self.core_mini_axi.dm_write_reg(
-                        0x7A1, desired_tdata1
-                    )
+                        0x7A1, desired_tdata1)
                     bp_set = True
                     gdbserver_queue_rsp.put(True)
             if t == CoreMiniAxiDebugOps.REMOVE_BREAKPOINT:

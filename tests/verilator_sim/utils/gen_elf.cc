@@ -1,23 +1,26 @@
-#include <vector>
 #include <cstring>
 #include <elf.h>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   if (argc < 2) {
-    std::cerr << "Usage: " << argv[0] << " <output_elf> [--address hex] [instructions_hex|--repeat count hex]..." << std::endl;
+    std::cerr << "Usage: " << argv[0]
+              << " <output_elf> [--address hex] [instructions_hex|--repeat "
+                 "count hex]..."
+              << std::endl;
     return 1;
   }
-  
+
   std::vector<uint32_t> payload;
   uint32_t load_address = 0x00000000;
   for (int i = 2; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg == "--address") {
       if (i + 1 < argc) {
-        load_address = std::strtoul(argv[i+1], nullptr, 16);
+        load_address = std::strtoul(argv[i + 1], nullptr, 16);
         i += 1;
       } else {
         std::cerr << "--address requires <hex>" << std::endl;
@@ -25,8 +28,8 @@ int main(int argc, char* argv[]) {
       }
     } else if (arg == "--repeat") {
       if (i + 2 < argc) {
-        uint32_t count = std::strtoul(argv[i+1], nullptr, 10);
-        uint32_t inst = std::strtoul(argv[i+2], nullptr, 16);
+        uint32_t count = std::strtoul(argv[i + 1], nullptr, 10);
+        uint32_t inst = std::strtoul(argv[i + 2], nullptr, 16);
         for (uint32_t c = 0; c < count; ++c) {
           payload.push_back(inst);
         }
@@ -79,13 +82,15 @@ int main(int argc, char* argv[]) {
     std::cerr << "Failed to open output file: " << argv[1] << std::endl;
     return 1;
   }
-  output_file_stream.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr));
-  output_file_stream.write(reinterpret_cast<const char*>(&phdr), sizeof(phdr));
-  output_file_stream.write(reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(uint32_t));
-  
+  output_file_stream.write(reinterpret_cast<const char *>(&ehdr), sizeof(ehdr));
+  output_file_stream.write(reinterpret_cast<const char *>(&phdr), sizeof(phdr));
+  output_file_stream.write(reinterpret_cast<const char *>(payload.data()),
+                           payload.size() * sizeof(uint32_t));
+
   output_file_stream.close();
   if (!output_file_stream) {
-    std::cerr << "Failed to write or close output file: " << argv[1] << std::endl;
+    std::cerr << "Failed to write or close output file: " << argv[1]
+              << std::endl;
     return 1;
   }
   return 0;

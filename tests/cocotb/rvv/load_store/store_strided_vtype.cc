@@ -15,7 +15,8 @@
 #include <riscv_vector.h>
 #include <stdint.h>
 
-// Tests strided stores after setting vtype. Strided stores should be vtype-agnostic.
+// Tests strided stores after setting vtype. Strided stores should be
+// vtype-agnostic.
 
 size_t vl __attribute__((section(".data"))) = 16;
 size_t vtype __attribute__((section(".data"))) = 0;
@@ -25,32 +26,32 @@ uint8_t store_data[8192] __attribute__((section(".data")));
 
 extern "C" {
 
-#define CREATE_STRIDED_STORE_FN(name, data_bits)                      \
-  __attribute__((used, retain)) void name() {                         \
-    size_t load_vl = 8 * __riscv_vlenb();                             \
-    asm("vsetvli zero, %[load_vl], e8, m8, ta, ma;"                   \
-        "vle8.v v8, %[load_data];"                                    \
-        "vsetvl zero, %[vl], %[vtype];"                               \
-        "vsse" #data_bits ".v v8, %[store_data], %[stride];"          \
-        : [store_data] "=A"(store_data)                               \
-        : [vl] "r"(vl), [load_vl] "r"(load_vl), [vtype] "r"(vtype),   \
-          [stride] "r"(stride), [load_data] "A"(load_data)            \
-        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl", \
-          "vtype");                                                   \
+#define CREATE_STRIDED_STORE_FN(name, data_bits)                               \
+  __attribute__((used, retain)) void name() {                                  \
+    size_t load_vl = 8 * __riscv_vlenb();                                      \
+    asm("vsetvli zero, %[load_vl], e8, m8, ta, ma;"                            \
+        "vle8.v v8, %[load_data];"                                             \
+        "vsetvl zero, %[vl], %[vtype];"                                        \
+        "vsse" #data_bits ".v v8, %[store_data], %[stride];"                   \
+        : [store_data] "=A"(store_data)                                        \
+        : [vl] "r"(vl), [load_vl] "r"(load_vl), [vtype] "r"(vtype),            \
+          [stride] "r"(stride), [load_data] "A"(load_data)                     \
+        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",          \
+          "vtype");                                                            \
   }
 
-#define CREATE_STRIDED_SEGMENT_STORE_FN(name, data_bits, segment)           \
-  __attribute__((used, retain)) void name() {                               \
-    size_t load_vl = 8 * __riscv_vlenb();                                   \
-    asm("vsetvli zero, %[load_vl], e8, m8, ta, ma;"                         \
-        "vle8.v v8, %[load_data];"                                          \
-        "vsetvl zero, %[vl], %[vtype];"                                     \
-        "vssseg" #segment "e" #data_bits ".v v8, %[store_data], %[stride];" \
-        : [store_data] "=A"(store_data)                                     \
-        : [vl] "r"(vl), [load_vl] "r"(load_vl), [vtype] "r"(vtype),         \
-          [stride] "r"(stride), [load_data] "A"(load_data)                  \
-        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",       \
-          "vtype");                                                         \
+#define CREATE_STRIDED_SEGMENT_STORE_FN(name, data_bits, segment)              \
+  __attribute__((used, retain)) void name() {                                  \
+    size_t load_vl = 8 * __riscv_vlenb();                                      \
+    asm("vsetvli zero, %[load_vl], e8, m8, ta, ma;"                            \
+        "vle8.v v8, %[load_data];"                                             \
+        "vsetvl zero, %[vl], %[vtype];"                                        \
+        "vssseg" #segment "e" #data_bits ".v v8, %[store_data], %[stride];"    \
+        : [store_data] "=A"(store_data)                                        \
+        : [vl] "r"(vl), [load_vl] "r"(load_vl), [vtype] "r"(vtype),            \
+          [stride] "r"(stride), [load_data] "A"(load_data)                     \
+        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",          \
+          "vtype");                                                            \
   }
 
 CREATE_STRIDED_STORE_FN(test_vsse8, 8)
@@ -79,12 +80,11 @@ CREATE_STRIDED_SEGMENT_STORE_FN(test_vssseg5e32, 32, 5)
 CREATE_STRIDED_SEGMENT_STORE_FN(test_vssseg6e32, 32, 6)
 CREATE_STRIDED_SEGMENT_STORE_FN(test_vssseg7e32, 32, 7)
 CREATE_STRIDED_SEGMENT_STORE_FN(test_vssseg8e32, 32, 8)
-
 }
 
 void (*impl)() __attribute__((section(".data"))) = &test_vsse8;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

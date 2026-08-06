@@ -63,7 +63,7 @@ __attribute__((used, retain)) void vcpop_m_b32() {
 
 void (*impl)() __attribute__((section(".data"))) = vcpop_m_b8;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
 
   return 0;

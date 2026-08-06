@@ -22,7 +22,7 @@
 namespace mpact::sim::riscv::rvvi {
 
 class SpscRingBufferTest : public ::testing::Test {
- protected:
+protected:
   SpscRingBuffer<> buffer_;
 };
 

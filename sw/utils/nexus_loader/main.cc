@@ -67,16 +67,16 @@ constexpr uint16_t kFtdiVid = 0x0403;
 constexpr uint16_t kFtdiPid = 0x6011;
 
 class RealFtdi : public FtdiInterface {
-  struct ftdi_context* ftdi_;
+  struct ftdi_context *ftdi_;
 
- public:
-  RealFtdi(struct ftdi_context* ftdi) : ftdi_(ftdi) {}
+public:
+  RealFtdi(struct ftdi_context *ftdi) : ftdi_(ftdi) {}
 
-  int write_data(const uint8_t* buf, int size) override {
+  int write_data(const uint8_t *buf, int size) override {
     return ftdi_write_data(ftdi_, buf, size);
   }
 
-  int read_data(uint8_t* buf, int size) override {
+  int read_data(uint8_t *buf, int size) override {
     return ftdi_read_data(ftdi_, buf, size);
   }
 
@@ -84,35 +84,40 @@ class RealFtdi : public FtdiInterface {
 };
 
 struct ElfDeleter {
-  void operator()(Elf* e) {
-    if (e) elf_end(e);
+  void operator()(Elf *e) {
+    if (e)
+      elf_end(e);
   }
 };
 
 struct FdDeleter {
-  void operator()(int* fd) {
-    if (fd && *fd >= 0) close(*fd);
+  void operator()(int *fd) {
+    if (fd && *fd >= 0)
+      close(*fd);
   }
 };
 
-ssize_t ReadFully(int fd, void* buf, size_t count) {
+ssize_t ReadFully(int fd, void *buf, size_t count) {
   size_t total = 0;
-  char* p = static_cast<char*>(buf);
+  char *p = static_cast<char *>(buf);
   while (total < count) {
     ssize_t n = read(fd, p + total, count - total);
     if (n < 0) {
-      if (errno == EINTR) continue;
+      if (errno == EINTR)
+        continue;
       return -1;
     }
-    if (n == 0) return total;
+    if (n == 0)
+      return total;
     total += n;
   }
   return total;
 }
 
-bool load_elf(SpiMaster& spi, const char* filename, uint32_t csr_base,
+bool load_elf(SpiMaster &spi, const char *filename, uint32_t csr_base,
               bool verify) {
-  if (elf_version(EV_CURRENT) == EV_NONE) return false;
+  if (elf_version(EV_CURRENT) == EV_NONE)
+    return false;
   int fd_val = open(filename, O_RDONLY, 0);
   if (fd_val < 0) {
     perror("Failed to open ELF file");
@@ -145,10 +150,12 @@ bool load_elf(SpiMaster& spi, const char* filename, uint32_t csr_base,
       fprintf(stderr, "gelf_getphdr failed: %s\n", elf_errmsg(-1));
       return false;
     }
-    if (phdr.p_type != PT_LOAD) continue;
+    if (phdr.p_type != PT_LOAD)
+      continue;
     uint32_t paddr = static_cast<uint32_t>(phdr.p_vaddr);
     size_t filesz = phdr.p_filesz;
-    if (filesz == 0) continue;
+    if (filesz == 0)
+      continue;
 
     fprintf(stderr, "Loading 0x%08x (%zu bytes)...", paddr, filesz);
     fflush(stderr);
@@ -194,7 +201,7 @@ bool load_elf(SpiMaster& spi, const char* filename, uint32_t csr_base,
 }
 
 struct FtdiDeleter {
-  void operator()(struct ftdi_context* f) {
+  void operator()(struct ftdi_context *f) {
     if (f) {
       ftdi_usb_close(f);
       ftdi_free(f);
@@ -202,16 +209,16 @@ struct FtdiDeleter {
   }
 };
 
-void HandleReset(struct ftdi_context* ftdi, SpiMaster& spi) {
+void HandleReset(struct ftdi_context *ftdi, SpiMaster &spi) {
   fprintf(stderr, "Resetting device...\n");
   ftdi_set_bitmode(ftdi, 0, BITMODE_RESET);
-  ftdi_set_bitmode(ftdi, 0x8b, BITMODE_MPSSE);  // ADBUS7+kDirMask
+  ftdi_set_bitmode(ftdi, 0x8b, BITMODE_MPSSE); // ADBUS7+kDirMask
   spi.device_reset();
   ftdi_set_bitmode(ftdi, 0, BITMODE_RESET);
   ftdi_set_bitmode(ftdi, kDirMask, BITMODE_MPSSE);
 }
 
-bool HandleLoadElf(SpiMaster& spi, uint32_t csr_base) {
+bool HandleLoadElf(SpiMaster &spi, uint32_t csr_base) {
   std::string elf_file = absl::GetFlag(FLAGS_load_elf);
   if (!load_elf(spi, elf_file.c_str(), csr_base, absl::GetFlag(FLAGS_verify))) {
     return false;
@@ -219,7 +226,7 @@ bool HandleLoadElf(SpiMaster& spi, uint32_t csr_base) {
   return true;
 }
 
-bool HandleLoadData(SpiMaster& spi) {
+bool HandleLoadData(SpiMaster &spi) {
   std::string load_data_file = absl::GetFlag(FLAGS_load_data);
   int fd_val = open(load_data_file.c_str(), O_RDONLY);
   if (fd_val < 0) {
@@ -245,10 +252,11 @@ bool HandleLoadData(SpiMaster& spi) {
   return true;
 }
 
-bool HandleReadData(SpiMaster& spi) {
+bool HandleReadData(SpiMaster &spi) {
   uint32_t read_data_addr = absl::GetFlag(FLAGS_read_data_addr);
   uint32_t read_data_size = absl::GetFlag(FLAGS_read_data_size);
-  if (read_data_size == 0) return true;
+  if (read_data_size == 0)
+    return true;
   std::vector<uint8_t> buf(read_data_size);
   if (spi.v2_read_data(read_data_addr, read_data_size, buf.data())) {
     fwrite(buf.data(), 1, read_data_size, stdout);
@@ -259,7 +267,7 @@ bool HandleReadData(SpiMaster& spi) {
   }
 }
 
-void HandleStartCore(SpiMaster& spi, uint32_t csr_base) {
+void HandleStartCore(SpiMaster &spi, uint32_t csr_base) {
   uint32_t entry_point = absl::GetFlag(FLAGS_set_entry_point);
   if (entry_point != 0xFFFFFFFF) {
     fprintf(stderr, "Setting entry point to 0x%08x\n", entry_point);
@@ -274,7 +282,7 @@ void HandleStartCore(SpiMaster& spi, uint32_t csr_base) {
   }
 }
 
-bool HandlePollHalt(SpiMaster& spi, uint32_t csr_base) {
+bool HandlePollHalt(SpiMaster &spi, uint32_t csr_base) {
   double poll_halt_timeout = absl::GetFlag(FLAGS_poll_halt);
   uint32_t status_addr = absl::GetFlag(FLAGS_poll_status_addr);
   uint32_t status_size = absl::GetFlag(FLAGS_poll_status_size);
@@ -292,7 +300,7 @@ bool HandlePollHalt(SpiMaster& spi, uint32_t csr_base) {
       break;
 
     uint32_t val;
-    if (spi.v2_read_data(csr_base + 8, 4, reinterpret_cast<uint8_t*>(&val))) {
+    if (spi.v2_read_data(csr_base + 8, 4, reinterpret_cast<uint8_t *>(&val))) {
       consecutive_failures = 0;
       if (val == 1) {
         fprintf(stderr, "Core halted.\n");
@@ -309,7 +317,7 @@ bool HandlePollHalt(SpiMaster& spi, uint32_t csr_base) {
     if (status_addr != 0xFFFFFFFF && status_size > 0) {
       std::vector<uint8_t> status_buf(status_size);
       if (spi.v2_read_data(status_addr, status_size, status_buf.data())) {
-        std::string current_status(reinterpret_cast<char*>(status_buf.data()),
+        std::string current_status(reinterpret_cast<char *>(status_buf.data()),
                                    status_size);
         // Truncate at null terminator
         size_t null_pos = current_status.find('\0');
@@ -327,7 +335,8 @@ bool HandlePollHalt(SpiMaster& spi, uint32_t csr_base) {
       }
     }
 
-    if (halted) break;
+    if (halted)
+      break;
     usleep(10000);
   }
 
@@ -338,7 +347,7 @@ bool HandlePollHalt(SpiMaster& spi, uint32_t csr_base) {
   return true;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   absl::SetProgramUsageMessage("FTDI Nexus Loader");
   absl::ParseCommandLine(argc, argv);
 
@@ -349,8 +358,10 @@ int main(int argc, char** argv) {
   }
 
   uint32_t csr_base = absl::GetFlag(FLAGS_csr_base);
-  if (absl::GetFlag(FLAGS_highmem)) csr_base = 0x200000;
-  if (absl::GetFlag(FLAGS_lowmem)) csr_base = 0x30000;
+  if (absl::GetFlag(FLAGS_highmem))
+    csr_base = 0x200000;
+  if (absl::GetFlag(FLAGS_lowmem))
+    csr_base = 0x30000;
 
   std::unique_ptr<struct ftdi_context, FtdiDeleter> ftdi_ctx(ftdi_new());
   ftdi_set_interface(ftdi_ctx.get(), INTERFACE_A);
@@ -387,11 +398,13 @@ int main(int argc, char** argv) {
   // 6. Read Word / Read Data / Read Line(s)
 
   if (!absl::GetFlag(FLAGS_load_elf).empty()) {
-    if (!HandleLoadElf(spi, csr_base)) return 1;
+    if (!HandleLoadElf(spi, csr_base))
+      return 1;
   }
 
   if (!absl::GetFlag(FLAGS_load_data).empty()) {
-    if (!HandleLoadData(spi)) return 1;
+    if (!HandleLoadData(spi))
+      return 1;
   }
 
   if (absl::GetFlag(FLAGS_write_word_addr) != 0xFFFFFFFF) {
@@ -405,13 +418,14 @@ int main(int argc, char** argv) {
   }
 
   if (absl::GetFlag(FLAGS_poll_halt) > 0.0) {
-    if (!HandlePollHalt(spi, csr_base)) return 1;
+    if (!HandlePollHalt(spi, csr_base))
+      return 1;
   }
 
   if (absl::GetFlag(FLAGS_read_word_addr) != 0xFFFFFFFF) {
     uint32_t addr = absl::GetFlag(FLAGS_read_word_addr);
     uint32_t val;
-    if (spi.v2_read_data(addr, 4, reinterpret_cast<uint8_t*>(&val))) {
+    if (spi.v2_read_data(addr, 4, reinterpret_cast<uint8_t *>(&val))) {
       printf("DATA_WORD: 0x%08x\n", val);
     } else {
       fprintf(stderr, "Failed to read word at 0x%08x\n", addr);
@@ -420,7 +434,8 @@ int main(int argc, char** argv) {
   }
 
   if (absl::GetFlag(FLAGS_read_data_addr) != 0xFFFFFFFF) {
-    if (!HandleReadData(spi)) return 1;
+    if (!HandleReadData(spi))
+      return 1;
   }
 
   if (absl::GetFlag(FLAGS_read_line) != 0xFFFFFFFF) {
@@ -428,7 +443,8 @@ int main(int argc, char** argv) {
     uint8_t line[16];
     if (spi.v2_read_lines(addr, 1, line)) {
       printf("0x%08x: 0x", addr);
-      for (int i = 15; i >= 0; i--) printf("%02x", line[i]);
+      for (int i = 15; i >= 0; i--)
+        printf("%02x", line[i]);
       printf("\n");
     }
   }
@@ -440,7 +456,8 @@ int main(int argc, char** argv) {
     if (spi.v2_read_lines(addr, count, lines.data())) {
       for (uint32_t c = 0; c < count; c++) {
         printf("0x%08x: 0x", addr + c * 16);
-        for (int i = 15; i >= 0; i--) printf("%02x", lines[c * 16 + i]);
+        for (int i = 15; i >= 0; i--)
+          printf("%02x", lines[c * 16 + i]);
         printf("\n");
       }
     }

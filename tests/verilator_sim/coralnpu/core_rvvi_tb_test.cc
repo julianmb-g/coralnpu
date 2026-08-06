@@ -33,9 +33,7 @@
 
 using namespace mpact::sim::riscv::rvvi;
 
-namespace mpact::sim::riscv::rvvi {
-
-} // namespace mpact::sim::riscv::rvvi
+namespace mpact::sim::riscv::rvvi {} // namespace mpact::sim::riscv::rvvi
 
 TEST(CoreRvviTbTest, TracingFidelity) {
   SpscRingBuffer<TracePacket, 4096> buffer;
@@ -48,7 +46,7 @@ TEST(CoreRvviTbTest, TracingFidelity) {
   ipacket.type = 'I';
   ipacket.pc = 0x1000;
   ipacket.inst = 0x00000013; // nop
-  std::strcpy(reinterpret_cast<char*>(ipacket.raw_bytes), "nop");
+  std::strcpy(reinterpret_cast<char *>(ipacket.raw_bytes), "nop");
 
   // Push with yield-spin loop (simulating zero-loss backpressure)
   while (!buffer.Push(ipacket)) {
@@ -87,7 +85,7 @@ TEST(CoreRvviTbTest, RegisterUpdateHandling) {
   ipacket.type = 'I';
   ipacket.pc = 0x1000;
   ipacket.inst = 0x00000013; // nop
-  std::strcpy(reinterpret_cast<char*>(ipacket.raw_bytes), "nop");
+  std::strcpy(reinterpret_cast<char *>(ipacket.raw_bytes), "nop");
   EXPECT_TRUE(buffer.Push(ipacket));
 
   // 2. Push a GPR update ('X' type)
@@ -106,7 +104,7 @@ TEST(CoreRvviTbTest, RegisterUpdateHandling) {
   ipacket2.type = 'I';
   ipacket2.pc = 0x1004;
   ipacket2.inst = 0x00000013; // nop
-  std::strcpy(reinterpret_cast<char*>(ipacket2.raw_bytes), "nop");
+  std::strcpy(reinterpret_cast<char *>(ipacket2.raw_bytes), "nop");
   EXPECT_TRUE(buffer.Push(ipacket2));
 
   // 4. Terminate
@@ -136,7 +134,7 @@ TEST(CoreRvviTbTest, BackpressureZeroLoss) {
     p.type = 'I';
     p.pc = 0x1000 + (i * 4);
     p.inst = 0x00000013; // nop
-    std::strcpy(reinterpret_cast<char*>(p.raw_bytes), "nop");
+    std::strcpy(reinterpret_cast<char *>(p.raw_bytes), "nop");
     EXPECT_TRUE(buffer.Push(p));
   }
 
@@ -145,7 +143,7 @@ TEST(CoreRvviTbTest, BackpressureZeroLoss) {
   p_extra.type = 'I';
   p_extra.pc = 0x1000 + (4096 * 4);
   p_extra.inst = 0x00000013; // nop
-  std::strcpy(reinterpret_cast<char*>(p_extra.raw_bytes), "nop");
+  std::strcpy(reinterpret_cast<char *>(p_extra.raw_bytes), "nop");
   EXPECT_FALSE(buffer.Push(p_extra));
 
   // Start daemon to consume packets
@@ -171,11 +169,13 @@ TEST(CoreRvviTbTest, BackpressureZeroLoss) {
   daemon.Stop();
 
   std::string trace_output = output.str();
-  // We should see the first and the extra instruction in the output, proving zero loss
+  // We should see the first and the extra instruction in the output, proving
+  // zero loss
   EXPECT_NE(trace_output.find("00001000"), std::string::npos);
-  
+
   std::stringstream hex_stream;
-  hex_stream << std::hex << std::setw(8) << std::setfill('0') << (0x1000 + (4096 * 4));
+  hex_stream << std::hex << std::setw(8) << std::setfill('0')
+             << (0x1000 + (4096 * 4));
   EXPECT_NE(trace_output.find(hex_stream.str()), std::string::npos);
 }
 
@@ -190,7 +190,7 @@ TEST(CoreRvviTbTest, MultiIssueRetirement) {
   ipacket1.type = 'I';
   ipacket1.pc = 0x1000;
   ipacket1.inst = 0x00100513; // li a0, 1
-  std::strcpy(reinterpret_cast<char*>(ipacket1.raw_bytes), "li a0, 1");
+  std::strcpy(reinterpret_cast<char *>(ipacket1.raw_bytes), "li a0, 1");
   EXPECT_TRUE(buffer.Push(ipacket1));
 
   // 2. Push GPR update for Slot 0 (X10 = 1)
@@ -204,12 +204,13 @@ TEST(CoreRvviTbTest, MultiIssueRetirement) {
   rpacket1.total_size = 8;
   EXPECT_TRUE(buffer.Push(rpacket1));
 
-  // 3. Push Instruction 2 (Slot 1) representing multi-issue retirement in same cycle
+  // 3. Push Instruction 2 (Slot 1) representing multi-issue retirement in same
+  // cycle
   TracePacket ipacket2 = {};
   ipacket2.type = 'I';
   ipacket2.pc = 0x1004;
   ipacket2.inst = 0x00200593; // li a1, 2
-  std::strcpy(reinterpret_cast<char*>(ipacket2.raw_bytes), "li a1, 2");
+  std::strcpy(reinterpret_cast<char *>(ipacket2.raw_bytes), "li a1, 2");
   EXPECT_TRUE(buffer.Push(ipacket2));
 
   // 4. Push GPR update for Slot 1 (X11 = 2)
@@ -228,7 +229,7 @@ TEST(CoreRvviTbTest, MultiIssueRetirement) {
   ipacket3.type = 'I';
   ipacket3.pc = 0x1008;
   ipacket3.inst = 0x00000013; // nop
-  std::strcpy(reinterpret_cast<char*>(ipacket3.raw_bytes), "nop");
+  std::strcpy(reinterpret_cast<char *>(ipacket3.raw_bytes), "nop");
   EXPECT_TRUE(buffer.Push(ipacket3));
 
   // 6. Terminate
@@ -243,7 +244,6 @@ TEST(CoreRvviTbTest, MultiIssueRetirement) {
 
   std::string trace_output = output.str();
   // Ensure both register updates from multi-issued retirement were captured
-  EXPECT_NE(trace_output.find("X10:0100000000000000"), std::string::npos);
-  EXPECT_NE(trace_output.find("X11:0200000000000000"), std::string::npos);
+  EXPECT_NE(trace_output.find("x10:0100000000000000"), std::string::npos);
+  EXPECT_NE(trace_output.find("x11:0200000000000000"), std::string::npos);
 }
-

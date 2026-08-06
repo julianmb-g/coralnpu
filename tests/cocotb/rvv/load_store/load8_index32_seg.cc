@@ -19,7 +19,7 @@ namespace {
 constexpr size_t lut_size = 30000;
 // Double sized so we can check trailing regions are not read/written.
 constexpr size_t buf_size = 256;
-}  // namespace
+} // namespace
 
 size_t vl __attribute__((section(".data"))) = 16;
 // Indices are always unsigned.
@@ -647,7 +647,7 @@ __attribute__((used, retain)) void vloxseg8ei32_v_u8m1x8() {
 
 void (*impl)() __attribute__((section(".data"))) = &vluxseg2ei32_v_u8m1x2;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

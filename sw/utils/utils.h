@@ -22,14 +22,13 @@ inline uint64_t mcycle_read(void) {
   uint32_t cycle_low = 0;
   uint32_t cycle_high = 0;
   uint32_t cycle_high_2 = 0;
-  asm volatile(
-      "1:"
-      "  csrr %0, mcycleh;"  // Read `mcycleh`.
-      "  csrr %1, mcycle;"   // Read `mcycle`.
-      "  csrr %2, mcycleh;"  // Read `mcycleh` again.
-      "  bne  %0, %2, 1b;"
-      : "=r"(cycle_high), "=r"(cycle_low), "=r"(cycle_high_2)
-      :);
+  asm volatile("1:"
+               "  csrr %0, mcycleh;" // Read `mcycleh`.
+               "  csrr %1, mcycle;"  // Read `mcycle`.
+               "  csrr %2, mcycleh;" // Read `mcycleh` again.
+               "  bne  %0, %2, 1b;"
+               : "=r"(cycle_high), "=r"(cycle_low), "=r"(cycle_high_2)
+               :);
   return static_cast<uint64_t>(cycle_high) << 32 | cycle_low;
 }
 
@@ -37,38 +36,35 @@ inline uint64_t minstret_read(void) {
   uint32_t instret_low = 0;
   uint32_t instret_high = 0;
   uint32_t instret_high_2 = 0;
-  asm volatile(
-      "1:"
-      "  csrr %0, minstreth;"  // Read `minstreth`.
-      "  csrr %1, minstret;"   // Read `minstret`.
-      "  csrr %2, minstreth;"
-      "bne %0, %2, 1b;"
-      : "=r"(instret_high), "=r"(instret_low), "=r"(instret_high_2)
-      :);
+  asm volatile("1:"
+               "  csrr %0, minstreth;" // Read `minstreth`.
+               "  csrr %1, minstret;"  // Read `minstret`.
+               "  csrr %2, minstreth;"
+               "bne %0, %2, 1b;"
+               : "=r"(instret_high), "=r"(instret_low), "=r"(instret_high_2)
+               :);
   return static_cast<uint64_t>(instret_high) << 32 | instret_low;
 }
 
 inline void cycle_counter_reset(void) {
   // Set the cycle counter to 0x1fffffff0.
-  asm volatile(
-      " \
+  asm volatile(" \
         csrwi mcycleh, 1; \
         li a0, 0xfffffff0; \
         csrrw a0, mcycle, a0;"
-      : /* no outputs*/
-      : /* no inputs */
-      : /* clobbers */ "a0");
+               : /* no outputs*/
+               : /* no inputs */
+               : /* clobbers */ "a0");
   return;
 }
 
 inline void instrut_counter_reset(void) {
-  asm volatile(
-      " \
+  asm volatile(" \
         csrwi minstreth, 1; \
         li a0, 0xfffffff0; \
         csrrw a0, minstret, a0; "
-      :
-      :
-      : "a0");
+               :
+               :
+               : "a0");
   return;
 }

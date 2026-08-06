@@ -17,10 +17,11 @@
 
 typedef uint8_t uint8x16_t __attribute__((vector_size(16)));
 
-uint8_t in_buf[32] __attribute__((section(".data")));   // 1 in use.
-uint8_t out_buf[16] __attribute__((section(".data")));  // 16 in use.
+uint8_t in_buf[32] __attribute__((section(".data")));  // 1 in use.
+uint8_t out_buf[16] __attribute__((section(".data"))); // 16 in use.
 
-__attribute__((used, retain)) void test_intrinsic(const uint8_t *x, uint8_t *y) {
+__attribute__((used, retain)) void test_intrinsic(const uint8_t *x,
+                                                  uint8_t *y) {
   vuint8m1_t v = __riscv_vlse8_v_u8m1(x, /*stride=*/0, /*vl=*/16);
   __riscv_vse8_v_u8m1(y, v, 16);
 }

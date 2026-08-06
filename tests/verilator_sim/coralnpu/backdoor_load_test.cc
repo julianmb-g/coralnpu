@@ -17,8 +17,8 @@ using namespace internal;
 
 ABSL_FLAG(bool, trace, false, "Enable tracing");
 
-int sc_main(int argc, char** argv) {
-  std::vector<char*> v_argv;
+int sc_main(int argc, char **argv) {
+  std::vector<char *> v_argv;
   for (int i = 0; i < argc; ++i) {
     if (std::string(argv[i]) != "--trace") {
       v_argv.push_back(argv[i]);
@@ -30,9 +30,9 @@ int sc_main(int argc, char** argv) {
   Verilated::commandArgs(v_argc, v_argv.data());
 
   CoreMiniAxiTb tb("CoreMiniAxiTb", 1000, /* random= */ false,
-                    /*debug_axi=*/true, /*instr_trace=*/false,
-                    /*backdoor_load=*/true,
-                    /*wfi_cb=*/std::nullopt, std::nullopt);
+                   /*debug_axi=*/true, /*instr_trace=*/false,
+                   /*backdoor_load=*/true,
+                   /*wfi_cb=*/std::nullopt, std::nullopt);
   sc_start(SC_ZERO_TIME);
 
   uint8_t itcm_data[32];

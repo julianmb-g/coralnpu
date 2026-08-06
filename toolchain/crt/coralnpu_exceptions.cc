@@ -15,6 +15,7 @@
 extern "C" {
 void __attribute__((weak)) coralnpu_exception_handler() {
   asm volatile("ebreak");
-  while (1) {}
+  while (1) {
+  }
 }
 }

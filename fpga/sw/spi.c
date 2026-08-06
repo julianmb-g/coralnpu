@@ -18,7 +18,7 @@
 
 #include "fpga/sw/clk.h"
 
-#define REG32(addr) (*(volatile uint32_t*)(uintptr_t)(addr))
+#define REG32(addr) (*(volatile uint32_t *)(uintptr_t)(addr))
 
 uint32_t spi_get_master_base_addr(void) { return SPI_MASTER_BASE; }
 uint32_t spi_get_flash_base_addr(void) { return SPI_FLASH_BASE; }
@@ -27,10 +27,13 @@ void spi_init(uint32_t base_addr, uint32_t target_mhz, uint32_t cpol,
               uint32_t cpha) {
   uint32_t spim_freq_mhz = clk_get_spim_freq_mhz();
   uint32_t div = (spim_freq_mhz / (2 * target_mhz)) - 1;
-  if (spim_freq_mhz < 2 * target_mhz) div = 0;
+  if (spim_freq_mhz < 2 * target_mhz)
+    div = 0;
   uint32_t ctrl = SPI_CTRL_ENABLE | SPI_CTRL_DIV(div);
-  if (cpol) ctrl |= SPI_CTRL_CPOL;
-  if (cpha) ctrl |= SPI_CTRL_CPHA;
+  if (cpol)
+    ctrl |= SPI_CTRL_CPOL;
+  if (cpha)
+    ctrl |= SPI_CTRL_CPHA;
   spi_set_control(base_addr, ctrl);
 }
 
@@ -64,9 +67,11 @@ uint8_t spi_read_rxdata(uint32_t base_addr) {
 
 uint8_t spi_xfer(uint32_t base_addr, uint8_t tx) {
   // Wait until TX FIFO is not full
-  while (spi_get_status(base_addr) & 0x4);
+  while (spi_get_status(base_addr) & 0x4)
+    ;
   spi_write_txdata(base_addr, tx);
   // Wait until not busy
-  while (spi_get_status(base_addr) & 0x1);
+  while (spi_get_status(base_addr) & 0x1)
+    ;
   return spi_read_rxdata(base_addr);
 }

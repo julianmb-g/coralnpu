@@ -18,36 +18,34 @@
 // A SystemC baseclass for constrained random testing of Verilated RTL.
 #include <systemc.h>
 
+#include <atomic>
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <thread>
-#include <chrono>
-#include <atomic>
 
 #include "absl/strings/string_view.h"
 #include "fifo.h"
 // sc_core needs to be included before verilator header
-using namespace sc_core;      // NOLINT(build/namespaces)
-#include "verilated_fst_c.h"  // NOLINT(build/include_subdir): From verilator.
+using namespace sc_core;     // NOLINT(build/namespaces)
+#include "verilated_fst_c.h" // NOLINT(build/include_subdir): From verilator.
 
 using sc_dt::sc_bv;
 
 #define BIND(a, b) a.b(b)
-#define BIND2(a, b, c) \
-  BIND(a, c);          \
+#define BIND2(a, b, c)                                                         \
+  BIND(a, c);                                                                  \
   BIND(b, c)
 
-template <typename T>
-class ScSignalVrb {
- public:
+template <typename T> class ScSignalVrb {
+public:
   sc_signal<bool> valid;
   sc_signal<bool> ready;
   sc_signal<T> bits;
 };
 
-template <typename T>
-class ScInVrb {
- public:
+template <typename T> class ScInVrb {
+public:
   sc_in<bool> valid;
   sc_out<bool> ready;
   sc_in<T> bits;
@@ -71,9 +69,8 @@ class ScInVrb {
   void operator()(ScSignalVrb<T> &vrb) { bind(vrb); }
 };
 
-template <typename T>
-class ScOutVrb {
- public:
+template <typename T> class ScOutVrb {
+public:
   sc_out<bool> valid;
   sc_in<bool> ready;
   sc_out<T> bits;
@@ -108,7 +105,7 @@ struct Base {
 
 // Base class for testbench {posedge & negedge}.
 class SyscTb : public sc_module {
- public:
+public:
   sc_clock clock;
   sc_signal<bool> reset;
   sc_signal<bool> resetn;
@@ -116,13 +113,8 @@ class SyscTb : public sc_module {
   SC_HAS_PROCESS(SyscTb);
 
   SyscTb(sc_module_name n, int loops, bool random = true)
-      : sc_module(n),
-        clock("clock", 1, SC_NS),
-        reset("reset"),
-        resetn("resetn"),
-        random_(random),
-        loops_(loops),
-        started_(false) {
+      : sc_module(n), clock("clock", 1, SC_NS), reset("reset"),
+        resetn("resetn"), random_(random), loops_(loops), started_(false) {
     loop_ = 0;
     error_ = false;
 
@@ -145,7 +137,7 @@ class SyscTb : public sc_module {
 
   ~SyscTb() {
     if (tf_) {
-      tf_->dump(sim_time_);  // last falling edge
+      tf_->dump(sim_time_); // last falling edge
       tf_->close();
       delete tf_;
       tf_ = nullptr;
@@ -166,25 +158,24 @@ class SyscTb : public sc_module {
     reset = 1;
     resetn = 0;
     for (int i = 0; i < reset_cycles; ++i) {
-      sc_start(5, SC_NS);  // Posedge
-      sc_start(5, SC_NS);  // Negedge
+      sc_start(5, SC_NS); // Posedge
+      sc_start(5, SC_NS); // Negedge
     }
     reset = 0;
     resetn = 1;
-    sc_start(5, SC_NS);  // Falling edge to ensure deassertion is seen.
+    sc_start(5, SC_NS); // Falling edge to ensure deassertion is seen.
 
     started_ = true;
     sc_start();
 
     if (tf_) {
-      tf_->dump(sim_time_++);  // last falling edge
+      tf_->dump(sim_time_++); // last falling edge
     }
   }
 
   void Start() { Start(false, 5); } // Default to no trace, 5 reset cycles
 
-  template <typename T>
-  void Trace(T* design, const char *name = "") {
+  template <typename T> void Trace(T *design, const char *name = "") {
     if (!strlen(name)) {
       name = design->name();
     }
@@ -209,7 +200,7 @@ class SyscTb : public sc_module {
     return (pos == absl::string_view::npos) ? s : s.substr(pos + 1);
   }
 
- protected:
+protected:
   virtual void Init() {}
   virtual void Posedge() {}
   virtual void Negedge() {}
@@ -234,32 +225,34 @@ class SyscTb : public sc_module {
   bool SyscTbRandBool() {
     // Do not allow any 'io_in_valid' controls to be set during reset.
     return !reset &&
-           (!random_ || (rand() & 1));  // NOLINT(runtime/threadsafe_fn)
+           (!random_ || (rand() & 1)); // NOLINT(runtime/threadsafe_fn)
   }
 
   // Generates a number on the range [min, max].
   int RandInt(int min = 0, int max = (1 << 31)) {
-    return (rand() % (max - min + 1)) + min;  // NOLINT(runtime/threadsafe_fn)
+    return (rand() % (max - min + 1)) + min; // NOLINT(runtime/threadsafe_fn)
   }
 
   uint32_t RandUint32(uint32_t min = 0, uint32_t max = 0xffffffffu) {
-    uint32_t r = (rand() & 0xffff) |  // NOLINT(runtime/threadsafe_fn)
-                 (rand() << 16);      // NOLINT(runtime/threadsafe_fn)
-    if (min == 0 && max == 0xffffffff) return r;
+    uint32_t r = (rand() & 0xffff) | // NOLINT(runtime/threadsafe_fn)
+                 (rand() << 16);     // NOLINT(runtime/threadsafe_fn)
+    if (min == 0 && max == 0xffffffff)
+      return r;
     return (r % (max - min + 1)) + min;
   }
 
   uint64_t RandUint64(uint64_t min = 0, uint64_t max = 0xffffffffffffffffull) {
     uint64_t r = RandUint32() | (uint64_t(RandUint32()) << 32);
-    if (min == 0 && max == 0xffffffffffffffffull) return r;
+    if (min == 0 && max == 0xffffffffffffffffull)
+      return r;
     return (r % (max - min + 1)) + min;
   }
 
   uint32_t Cycle() {
-    return sim_time_ / 2;  // posedge + negedge
+    return sim_time_ / 2; // posedge + negedge
   }
 
- private:
+private:
   const bool random_;
   const int loops_;
   int loop_;
@@ -272,16 +265,24 @@ class SyscTb : public sc_module {
   VerilatedFstC *tf_ = nullptr;
 
   void tb_posedge() {
-    if (tf_ && started_) { tf_->dump(sim_time_); tf_->flush(); }
+    if (tf_ && started_) {
+      tf_->dump(sim_time_);
+      tf_->flush();
+    }
     sim_time_++;
-    if (reset) return;
+    if (reset)
+      return;
     Posedge();
   }
 
   void tb_negedge() {
-    if (tf_ && started_) { tf_->dump(sim_time_); tf_->flush(); }
+    if (tf_ && started_) {
+      tf_->dump(sim_time_);
+      tf_->flush();
+    }
     sim_time_++;
-    if (reset) return;
+    if (reset)
+      return;
     Negedge();
   }
 
@@ -296,4 +297,4 @@ class SyscTb : public sc_module {
   }
 };
 
-#endif  // TESTS_VERILATOR_SIM_SYSC_TB_H_
+#endif // TESTS_VERILATOR_SIM_SYSC_TB_H_

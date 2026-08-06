@@ -28,7 +28,7 @@
 
 #ifdef USE_TFLM_COMPRESSION
 #error "USE_TFLM_COMPRESSION is not supported"
-#endif  // USE_TFLM_COMPRESSION
+#endif // USE_TFLM_COMPRESSION
 
 namespace coralnpu_v2::opt::litert_micro {
 
@@ -51,13 +51,13 @@ namespace {
 inline int idiv_ceil(int x, int y) { return (x + y - 1) / y; }
 
 void DepthwiseConvPerChannelPatch(
-    const DepthwiseParams& params, const int32_t* output_multiplier,
-    const uint8_t* shift_left, const uint8_t* shift_right,
-    const RuntimeShape& in_shape, const int8_t* in_data,
-    const RuntimeShape& f_shape, const int8_t* f_data,
-    const RuntimeShape& bias_shape, const int32_t* bias_data,
-    const RuntimeShape& out_shape, int8_t* out_data, int out_y_st, int out_y_ed,
-    int out_x_st, int out_x_ed, int32_t* accs) {
+    const DepthwiseParams &params, const int32_t *output_multiplier,
+    const uint8_t *shift_left, const uint8_t *shift_right,
+    const RuntimeShape &in_shape, const int8_t *in_data,
+    const RuntimeShape &f_shape, const int8_t *f_data,
+    const RuntimeShape &bias_shape, const int32_t *bias_data,
+    const RuntimeShape &out_shape, int8_t *out_data, int out_y_st, int out_y_ed,
+    int out_x_st, int out_x_ed, int32_t *accs) {
   // Get parameters.
   const int stride_w = params.stride_width;
   const int stride_h = params.stride_height;
@@ -149,13 +149,13 @@ void DepthwiseConvPerChannelPatch(
 }
 
 void DepthwiseConvPerChannelPatchCenter3x3Reuse6(
-    const DepthwiseParams& params, const int32_t* output_multiplier,
-    const uint8_t* shift_left, const uint8_t* shift_right,
-    const RuntimeShape& in_shape, const int8_t* in_data,
-    const RuntimeShape& f_shape, const int8_t* f_data,
-    const RuntimeShape& bias_shape, const int32_t* bias_data,
-    const RuntimeShape& out_shape, int8_t* out_data, int out_y_st, int out_y_ed,
-    int out_x_st, int out_x_ed, int32_t* accs) {
+    const DepthwiseParams &params, const int32_t *output_multiplier,
+    const uint8_t *shift_left, const uint8_t *shift_right,
+    const RuntimeShape &in_shape, const int8_t *in_data,
+    const RuntimeShape &f_shape, const int8_t *f_data,
+    const RuntimeShape &bias_shape, const int32_t *bias_data,
+    const RuntimeShape &out_shape, int8_t *out_data, int out_y_st, int out_y_ed,
+    int out_x_st, int out_x_ed, int32_t *accs) {
   // Get parameters.
   const int stride_w = params.stride_width;
   const int stride_h = params.stride_height;
@@ -250,42 +250,41 @@ void DepthwiseConvPerChannelPatchCenter3x3Reuse6(
               &in_data[Offset(in_shape, batch, in_y_orig + 2 * dilation_h,
                               in_x_orig + 1 * dilation_w, in_ch)],
               vl);
-          const int8_t* in_ptr0 =
+          const int8_t *in_ptr0 =
               &in_data[Offset(in_shape, batch, in_y_orig + 0 * dilation_h,
                               in_x_orig + 2 * dilation_w, in_ch)];
-          const int8_t* in_ptr1 =
+          const int8_t *in_ptr1 =
               &in_data[Offset(in_shape, batch, in_y_orig + 1 * dilation_h,
                               in_x_orig + 2 * dilation_w, in_ch)];
-          const int8_t* in_ptr2 =
+          const int8_t *in_ptr2 =
               &in_data[Offset(in_shape, batch, in_y_orig + 2 * dilation_h,
                               in_x_orig + 2 * dilation_w, in_ch)];
           while (out_x < out_x_ed) {
             // Initialize ACC
             vint32m4_t acc;
             // Fighting the compiler who wants to save a reg of 0s
-            asm volatile(
-                "vsetvli zero, %[vl], e32, m4, ta, ma;"
-                "vmv.v.i %[acc], 0;"
-                : [acc] "=vr"(acc)
-                : [vl] "r"(vl)
-                : "vl", "vtype");
+            asm volatile("vsetvli zero, %[vl], e32, m4, ta, ma;"
+                         "vmv.v.i %[acc], 0;"
+                         : [acc] "=vr"(acc)
+                         : [vl] "r"(vl)
+                         : "vl", "vtype");
             // Load and process input
             {
               // Row 0
               asm("vsetvli zero, %[vl], e16, m2, ta, ma;"
                   "vsext.vf2 v2, %[in0_v8];"
-                  "vle8.v v1, %[in_ptr];"  // in2_v8
+                  "vle8.v v1, %[in_ptr];" // in2_v8
                   "vsext.vf2 v4, %[f0_v8];"
                   "vadd.vx v2, v2, %[in_offset];"
-                  "vsext.vf2 v6, %[in1_v8];"  // Moved
+                  "vsext.vf2 v6, %[in1_v8];" // Moved
                   "vwmacc.vv %[acc], v2, v4;"
                   "vadd.vx v6, v6, %[in_offset];"
                   "vsext.vf2 v4, %[f1_v8];"
-                  "vsext.vf2 v2, v1;"  // Moved
+                  "vsext.vf2 v2, v1;" // Moved
                   "vwmacc.vv %[acc], v6, v4;"
                   "vadd.vx v2, v2, %[in_offset];"
                   "vsext.vf2 v4, %[f2_v8];"
-                  "vmv1r.v %[in0_v8], %[in1_v8];"  // Moved
+                  "vmv1r.v %[in0_v8], %[in1_v8];" // Moved
                   "vwmacc.vv %[acc], v2, v4;"
                   "vmv1r.v %[in1_v8], v1;"
                   : [acc] "+vr"(acc), [in0_v8] "+vr"(in00_v8),
@@ -299,18 +298,18 @@ void DepthwiseConvPerChannelPatchCenter3x3Reuse6(
               // Row 1
               asm("vsetvli zero, %[vl], e16, m2, ta, ma;"
                   "vsext.vf2 v2, %[in0_v8];"
-                  "vle8.v v1, %[in_ptr];"  // in2_v8
+                  "vle8.v v1, %[in_ptr];" // in2_v8
                   "vsext.vf2 v4, %[f0_v8];"
                   "vadd.vx v2, v2, %[in_offset];"
-                  "vsext.vf2 v6, %[in1_v8];"  // Moved
+                  "vsext.vf2 v6, %[in1_v8];" // Moved
                   "vwmacc.vv %[acc], v2, v4;"
                   "vadd.vx v6, v6, %[in_offset];"
                   "vsext.vf2 v4, %[f1_v8];"
-                  "vsext.vf2 v2, v1;"  // Moved
+                  "vsext.vf2 v2, v1;" // Moved
                   "vwmacc.vv %[acc], v6, v4;"
                   "vadd.vx v2, v2, %[in_offset];"
                   "vsext.vf2 v4, %[f2_v8];"
-                  "vmv1r.v %[in0_v8], %[in1_v8];"  // Moved
+                  "vmv1r.v %[in0_v8], %[in1_v8];" // Moved
                   "vwmacc.vv %[acc], v2, v4;"
                   "vmv1r.v %[in1_v8], v1;"
                   : [acc] "+vr"(acc), [in0_v8] "+vr"(in10_v8),
@@ -324,18 +323,18 @@ void DepthwiseConvPerChannelPatchCenter3x3Reuse6(
               // Row 2
               asm("vsetvli zero, %[vl], e16, m2, ta, ma;"
                   "vsext.vf2 v2, %[in0_v8];"
-                  "vle8.v v1, %[in_ptr];"  // in2_v8
+                  "vle8.v v1, %[in_ptr];" // in2_v8
                   "vsext.vf2 v4, %[f0_v8];"
                   "vadd.vx v2, v2, %[in_offset];"
-                  "vsext.vf2 v6, %[in1_v8];"  // Moved
+                  "vsext.vf2 v6, %[in1_v8];" // Moved
                   "vwmacc.vv %[acc], v2, v4;"
                   "vadd.vx v6, v6, %[in_offset];"
                   "vsext.vf2 v4, %[f1_v8];"
-                  "vsext.vf2 v2, v1;"  // Moved
+                  "vsext.vf2 v2, v1;" // Moved
                   "vwmacc.vv %[acc], v6, v4;"
                   "vadd.vx v2, v2, %[in_offset];"
                   "vsext.vf2 v4, %[f2_v8];"
-                  "vmv1r.v %[in0_v8], %[in1_v8];"  // Moved
+                  "vmv1r.v %[in0_v8], %[in1_v8];" // Moved
                   "vwmacc.vv %[acc], v2, v4;"
                   "vmv1r.v %[in1_v8], v1;"
                   : [acc] "+vr"(acc), [in0_v8] "+vr"(in20_v8),
@@ -372,14 +371,14 @@ void DepthwiseConvPerChannelPatchCenter3x3Reuse6(
     }
   }
 }
-}  // namespace
+} // namespace
 
 void DepthwiseConvPerChannel(
-    const DepthwiseParams& params, const int32_t* output_multiplier,
-    const int32_t* output_shift, const RuntimeShape& in_shape,
-    const int8_t* in_data, const RuntimeShape& f_shape, const int8_t* f_data,
-    const RuntimeShape& bias_shape, const int32_t* bias_data,
-    const RuntimeShape& out_shape, int8_t* out_data, int32_t* accs_buf) {
+    const DepthwiseParams &params, const int32_t *output_multiplier,
+    const int32_t *output_shift, const RuntimeShape &in_shape,
+    const int8_t *in_data, const RuntimeShape &f_shape, const int8_t *f_data,
+    const RuntimeShape &bias_shape, const int32_t *bias_data,
+    const RuntimeShape &out_shape, int8_t *out_data, int32_t *accs_buf) {
   // Check dimensions of the tensors.
   TFLITE_DCHECK_EQ(in_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(f_shape.DimensionsCount(), 4);
@@ -463,7 +462,8 @@ void DepthwiseConvPerChannel(
   DepthwiseConvPerChannelPatch(
       params, output_multiplier, shift_left.get(), shift_right.get(), in_shape,
       in_data, f_shape, f_data_copy.get(), bias_shape, bias_data_copy.get(),
-      out_shape, out_data, out_y_top, out_y_bottom, out_x_right, out_w, accs_buf);
+      out_shape, out_data, out_y_top, out_y_bottom, out_x_right, out_w,
+      accs_buf);
   // Bottom
   DepthwiseConvPerChannelPatch(
       params, output_multiplier, shift_left.get(), shift_right.get(), in_shape,
@@ -471,17 +471,18 @@ void DepthwiseConvPerChannel(
       out_shape, out_data, out_y_bottom, out_h, 0, out_w, accs_buf);
 }
 
-void* DepthwiseConvInit(TfLiteContext* context, const char* buffer, size_t length) {
+void *DepthwiseConvInit(TfLiteContext *context, const char *buffer,
+                        size_t length) {
   TFLITE_DCHECK(context->AllocatePersistentBuffer != nullptr);
   return context->AllocatePersistentBuffer(context, sizeof(OpDataConvCustom));
 }
 
-TfLiteStatus DepthwiseConvPrepare(TfLiteContext* context, TfLiteNode* node) {
+TfLiteStatus DepthwiseConvPrepare(TfLiteContext *context, TfLiteNode *node) {
   TF_LITE_ENSURE_OK(context, tflite::DepthwiseConvPrepare(context, node));
 
-  OpDataConvCustom* data = static_cast<OpDataConvCustom*>(node->user_data);
-  tflite::MicroContext* micro_context = tflite::GetMicroContext(context);
-  TfLiteTensor* output =
+  OpDataConvCustom *data = static_cast<OpDataConvCustom *>(node->user_data);
+  tflite::MicroContext *micro_context = tflite::GetMicroContext(context);
+  TfLiteTensor *output =
       micro_context->AllocateTempOutputTensor(node, kDepthwiseConvOutputTensor);
   TF_LITE_ENSURE(context, output != nullptr);
 
@@ -501,49 +502,49 @@ TfLiteStatus DepthwiseConvPrepare(TfLiteContext* context, TfLiteNode* node) {
   return kTfLiteOk;
 }
 
-TfLiteStatus DepthwiseConvEval(TfLiteContext* context, TfLiteNode* node) {
+TfLiteStatus DepthwiseConvEval(TfLiteContext *context, TfLiteNode *node) {
   TFLITE_DCHECK(node->user_data != nullptr);
   TFLITE_DCHECK(node->builtin_data != nullptr);
 
-  const auto& params =
-      *(reinterpret_cast<TfLiteDepthwiseConvParams*>(node->builtin_data));
-  const auto& data = *(static_cast<const OpDataConvCustom*>(node->user_data));
+  const auto &params =
+      *(reinterpret_cast<TfLiteDepthwiseConvParams *>(node->builtin_data));
+  const auto &data = *(static_cast<const OpDataConvCustom *>(node->user_data));
 
-  int32_t* accs_buf = static_cast<int32_t*>(
+  int32_t *accs_buf = static_cast<int32_t *>(
       context->GetScratchBuffer(context, data.accs_buffer_index));
   TFLITE_DCHECK_NE(accs_buf, nullptr);
 
-  TfLiteEvalTensor* output =
+  TfLiteEvalTensor *output =
       GetEvalOutput(context, node, kDepthwiseConvOutputTensor);
-  const TfLiteEvalTensor* input =
+  const TfLiteEvalTensor *input =
       GetEvalInput(context, node, kDepthwiseConvInputTensor);
-  const TfLiteEvalTensor* filter =
+  const TfLiteEvalTensor *filter =
       GetEvalInput(context, node, kDepthwiseConvWeightsTensor);
-  const TfLiteEvalTensor* bias =
+  const TfLiteEvalTensor *bias =
       (NumInputs(node) == 3)
           ? GetEvalInput(context, node, kDepthwiseConvBiasTensor)
           : nullptr;
 
-  switch (input->type) {  // Already know in/out types are same.
+  switch (input->type) { // Already know in/out types are same.
+  case kTfLiteInt8: {
+    switch (filter->type) {
     case kTfLiteInt8: {
-      switch (filter->type) {
-        case kTfLiteInt8: {
-          DepthwiseConvPerChannel(
-              DepthwiseConvParamsQuantized(params, data),
-              data.per_channel_output_multiplier, data.per_channel_output_shift,
-              GetTensorShape(input), GetTensorData<int8_t>(input),
-              GetTensorShape(filter), GetTensorData<int8_t>(filter),
-              GetTensorShape(bias), GetOptionalTensorData<int32_t>(bias),
-              GetTensorShape(output), GetTensorData<int8_t>(output), accs_buf);
-          break;
-        }
-        default:
-          return tflite::Register_DEPTHWISE_CONV_2D().invoke(context, node);
-      }
+      DepthwiseConvPerChannel(
+          DepthwiseConvParamsQuantized(params, data),
+          data.per_channel_output_multiplier, data.per_channel_output_shift,
+          GetTensorShape(input), GetTensorData<int8_t>(input),
+          GetTensorShape(filter), GetTensorData<int8_t>(filter),
+          GetTensorShape(bias), GetOptionalTensorData<int32_t>(bias),
+          GetTensorShape(output), GetTensorData<int8_t>(output), accs_buf);
       break;
     }
     default:
       return tflite::Register_DEPTHWISE_CONV_2D().invoke(context, node);
+    }
+    break;
+  }
+  default:
+    return tflite::Register_DEPTHWISE_CONV_2D().invoke(context, node);
   }
   return kTfLiteOk;
 }
@@ -556,4 +557,4 @@ TFLMRegistration Register_DEPTHWISE_CONV_2D() {
   return registration;
 }
 
-}  // namespace coralnpu_v2::opt::litert_micro
+} // namespace coralnpu_v2::opt::litert_micro

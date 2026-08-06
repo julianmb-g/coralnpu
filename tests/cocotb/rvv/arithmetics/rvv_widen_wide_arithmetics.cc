@@ -23,13 +23,12 @@
 
 size_t vl __attribute__((section(".data"))) = 16;
 uint8_t vs1[MAX_VREG_GROUP_BYTES] __attribute__((section(".data")))
-    __attribute__((aligned(16)));  // vs1 is narrow
+__attribute__((aligned(16))); // vs1 is narrow
 uint8_t vs2[MAX_VREG_GROUP_BYTES] __attribute__((section(".data")))
-    __attribute__((aligned(16)));  // vs2 is wide
+__attribute__((aligned(16))); // vs2 is wide
 uint64_t xs2 __attribute__((section(".data")));
 
-template <typename U>
-inline U get_xs2_as() {
+template <typename U> inline U get_xs2_as() {
   static_assert(sizeof(U) <= sizeof(xs2),
                 "Type U exceeds the size of xs2 buffer");
   U val;
@@ -37,26 +36,25 @@ inline U get_xs2_as() {
   return val;
 }
 uint8_t vd[MAX_VREG_GROUP_BYTES] __attribute__((section(".data")))
-    __attribute__((aligned(16)));
+__attribute__((aligned(16)));
 
 #ifndef WV_FUNCTION
 #define WV_FUNCTION VwaddW
 #endif
 
-template <typename T, Lmul lmul>
-inline void test_op() {
+template <typename T, Lmul lmul> inline void test_op() {
   if constexpr (Widen(lmul) != Lmul::INVALID && !std::is_same_v<T, int32_t> &&
                 !std::is_same_v<T, uint32_t>) {
     using W = WidenType<T>;
     constexpr Lmul w_lmul = Widen(lmul);
-    const auto v_wide = Vle<W, w_lmul>(reinterpret_cast<const W*>(vs2), vl);
+    const auto v_wide = Vle<W, w_lmul>(reinterpret_cast<const W *>(vs2), vl);
 #if defined(TEST_WIDEN_WV)
-    const auto v_narrow = Vle<T, lmul>(reinterpret_cast<const T*>(vs1), vl);
+    const auto v_narrow = Vle<T, lmul>(reinterpret_cast<const T *>(vs1), vl);
     const auto result = WV_FUNCTION<T, lmul>(v_wide, v_narrow, vl);
 #elif defined(TEST_WIDEN_WX)
     const auto result = WV_FUNCTION<T, lmul>(v_wide, get_xs2_as<T>(), vl);
 #endif
-    Vse<W, w_lmul>(reinterpret_cast<W*>(vd), result, vl);
+    Vse<W, w_lmul>(reinterpret_cast<W *>(vd), result, vl);
   } else {
     __builtin_trap();
   }

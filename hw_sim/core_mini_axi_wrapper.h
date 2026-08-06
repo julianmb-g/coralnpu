@@ -31,10 +31,9 @@
 namespace coralnpu::sim {
 
 class CoreMiniAxiWrapper {
- public:
-  explicit CoreMiniAxiWrapper(VerilatedContext* context)
-      : context_(context),
-        core_(context, "core"),
+public:
+  explicit CoreMiniAxiWrapper(VerilatedContext *context)
+      : context_(context), core_(context, "core"),
         clock_(context, &core_.io_aclk, &core_),
         slave_write_driver_(&clock_, &core_.io_axi_slave_write_addr_valid,
                             &core_.io_axi_slave_write_addr_bits_addr,
@@ -114,8 +113,7 @@ class CoreMiniAxiWrapper {
                              &core_.io_axi_master_write_resp_bits_id,
                              &core_.io_axi_master_write_resp_bits_resp,
                              &core_.io_axi_master_write_resp_ready),
-        halted_(&core_.io_halted),
-        wfi_(&core_.io_wfi) {}
+        halted_(&core_.io_halted), wfi_(&core_.io_wfi) {}
   ~CoreMiniAxiWrapper() = default;
 
   void Reset() {
@@ -129,21 +127,21 @@ class CoreMiniAxiWrapper {
 
   void Step() { clock_.Step(); }
 
-  CoralNPUMailbox& mailbox() { return mailbox_; }
+  CoralNPUMailbox &mailbox() { return mailbox_; }
 
-  const CoralNPUMailbox& mailbox() const { return mailbox_; }
+  const CoralNPUMailbox &mailbox() const { return mailbox_; }
 
-  const CoralNPUMailbox& ReadMailbox(void) { return mailbox_; }
+  const CoralNPUMailbox &ReadMailbox(void) { return mailbox_; }
 
-  void WriteMailbox(const CoralNPUMailbox& mailbox) {
+  void WriteMailbox(const CoralNPUMailbox &mailbox) {
     for (int i = 0; i < 4; i++) {
       mailbox_.message[i] = mailbox.message[i];
     }
   }
 
-  void Write(uint32_t addr, uint32_t len, const char* data) {
+  void Write(uint32_t addr, uint32_t len, const char *data) {
     auto write_data =
-        absl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(data), len);
+        absl::Span<const uint8_t>(reinterpret_cast<const uint8_t *>(data), len);
     while (write_data.size() > 0) {
       uint32_t offset4096 = addr % 4096;
       uint32_t remainder4096 = 4096 - offset4096;
@@ -188,17 +186,17 @@ class CoreMiniAxiWrapper {
     return result;
   }
 
-  void RegisterReadCallback(std::function<AxiRData(const AxiAddr&)> read_cb) {
+  void RegisterReadCallback(std::function<AxiRData(const AxiAddr &)> read_cb) {
     master_read_driver_.RegisterReadCallback(read_cb);
   }
 
   void RegisterWriteCallback(
-      std::function<AxiWResp(const AxiAddr&, const AxiWData&)> write_cb) {
+      std::function<AxiWResp(const AxiAddr &, const AxiWData &)> write_cb) {
     master_write_driver_.RegisterWriteCallback(write_cb);
   }
 
   void WriteWord(uint32_t addr, uint32_t word) {
-    absl::Span<const uint8_t> data_span(reinterpret_cast<uint8_t*>(&word),
+    absl::Span<const uint8_t> data_span(reinterpret_cast<uint8_t *>(&word),
                                         sizeof(word));
     std::shared_ptr<bool> transaction =
         slave_write_driver_.WriteTransaction(0, addr, data_span);
@@ -217,8 +215,8 @@ class CoreMiniAxiWrapper {
     return false;
   }
 
- private:
-  VerilatedContext* const context_;
+private:
+  VerilatedContext *const context_;
   CoralNPUMailbox mailbox_;
 #ifdef ENABLE_RVV
   VRvvCoreMiniAxi core_;
@@ -230,10 +228,10 @@ class CoreMiniAxiWrapper {
   AxiSlaveReadDriver slave_read_driver_;
   AxiMasterReadDriver master_read_driver_;
   AxiMasterWriteDriver master_write_driver_;
-  const uint8_t* const halted_;
-  const uint8_t* const wfi_;
+  const uint8_t *const halted_;
+  const uint8_t *const wfi_;
 };
 
-}  // namespace coralnpu::sim
+} // namespace coralnpu::sim
 
-#endif  // HW_SIM_CORE_MINI_AXI_WRAPPER_H_
+#endif // HW_SIM_CORE_MINI_AXI_WRAPPER_H_

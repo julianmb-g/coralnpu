@@ -25,13 +25,10 @@ uint32_t result_vl __attribute__((section(".data"))) = ~0;
 
 int main(int argc, char **argv) {
   uint32_t vtype_to_write = (vma << 7) | (vta << 6) | (sew << 3) | lmul;
-  asm volatile(
-      "vsetvl %[result_vl], %[vl], %[vtype_to_write];"
-      "csrr %[vtype], vtype;"
-      : [result_vl] "=r" (result_vl),
-        [vtype] "=r" (vtype)
-      : [vl] "r"(vl),
-        [vtype_to_write] "r"(vtype_to_write));
+  asm volatile("vsetvl %[result_vl], %[vl], %[vtype_to_write];"
+               "csrr %[vtype], vtype;"
+               : [result_vl] "=r"(result_vl), [vtype] "=r"(vtype)
+               : [vl] "r"(vl), [vtype_to_write] "r"(vtype_to_write));
 
   // Enable external interrupts in MIE (bit 11) so WFI can wake up
   asm volatile("li t0, 0x800; csrs mie, t0;");

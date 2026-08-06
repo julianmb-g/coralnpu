@@ -12,20 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gtest/gtest.h"
-#include <string>
-#include <sstream>
 #include "absl/strings/str_format.h"
+#include "gtest/gtest.h"
+#include <sstream>
+#include <string>
 
-// Define a simple fallback formatter class to test CustomFallbackFormatter logic.
+// Define a simple fallback formatter class to test CustomFallbackFormatter
+// logic.
 class CustomFallbackFormatter {
- public:
-  static std::string Format(uint64_t pc, uint32_t inst, const std::string& disasm) {
+public:
+  static std::string Format(uint64_t pc, uint32_t inst,
+                            const std::string &disasm) {
     return absl::StrFormat("rvvi,0,%016lx,%08x,%s", pc, inst, disasm);
   }
 };
 
 TEST(CustomFallbackFormatterTest, FormatVerification) {
-  std::string formatted = CustomFallbackFormatter::Format(0x1000, 0x00000013, "nop");
+  std::string formatted =
+      CustomFallbackFormatter::Format(0x1000, 0x00000013, "nop");
   EXPECT_EQ(formatted, "rvvi,0,0000000000001000,00000013,nop");
 }

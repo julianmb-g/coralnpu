@@ -33,8 +33,8 @@ chisel_library(
         "Axi2TLUL.scala",
         "Clint.scala",
         "DmaEngine.scala",
-        "Plic.scala",
         "GPIO.scala",
+        "Plic.scala",
         "RawTlulErrorResponder.scala",
         "RawTlulToSram.scala",
         "SecdedEncoderTestbench.scala",
@@ -132,7 +132,6 @@ chisel_cc_library(
     module_name = "TlulToSram",
 )
 
-
 chisel_cc_library(
     name = "tlul_local_xbar_cc_library",
     chisel_lib = ":bus",
@@ -195,7 +194,6 @@ verilator_cocotb_model(
     trace = True,
     verilog_source = "//hdl/chisel/src/bus:TlulToSram.sv",
 )
-
 
 chisel_cc_library(
     name = "tlul_integrity_testbench_cc_library",

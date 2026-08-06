@@ -43,12 +43,12 @@ int main() {
   }
   auto file_size = sb.st_size;
   auto file_data = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-  CopyFn copy_fn = [&wrapper](void* dest, const void* src , size_t count) {
+  CopyFn copy_fn = [&wrapper](void *dest, const void *src, size_t count) {
     uint32_t addr = static_cast<uint32_t>(reinterpret_cast<uint64_t>(dest));
-    wrapper.Write(addr, count, reinterpret_cast<const char*>(src));
+    wrapper.Write(addr, count, reinterpret_cast<const char *>(src));
     return dest;
   };
-  uint32_t start_pc = LoadElf(reinterpret_cast<uint8_t*>(file_data), copy_fn);
+  uint32_t start_pc = LoadElf(reinterpret_cast<uint8_t *>(file_data), copy_fn);
 
   munmap(file_data, file_size);
   close(fd);

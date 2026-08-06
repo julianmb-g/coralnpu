@@ -17,20 +17,20 @@
 #include <cstdint>
 
 // LHS is row-major, RHS is col-major.
-extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols, const float* lhs,
-             const float* rhs, float* result) {
+extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols,
+                        const float *lhs, const float *rhs, float *result) {
   size_t vlmax = __riscv_vsetvlmax_e32m1();
 
   for (size_t r = 0; r < lhs_rows; r += 4) {
     for (size_t c = 0; c < rhs_cols; c += 4) {
-      const float* lhs_data_0 = lhs + (r * inner);
-      const float* lhs_data_1 = lhs + ((r + 1) * inner);
-      const float* lhs_data_2 = lhs + ((r + 2) * inner);
-      const float* lhs_data_3 = lhs + ((r + 3) * inner);
-      const float* rhs_data_0 = rhs + (c * inner);
-      const float* rhs_data_1 = rhs + ((c + 1) * inner);
-      const float* rhs_data_2 = rhs + ((c + 2) * inner);
-      const float* rhs_data_3 = rhs + ((c + 3) * inner);
+      const float *lhs_data_0 = lhs + (r * inner);
+      const float *lhs_data_1 = lhs + ((r + 1) * inner);
+      const float *lhs_data_2 = lhs + ((r + 2) * inner);
+      const float *lhs_data_3 = lhs + ((r + 3) * inner);
+      const float *rhs_data_0 = rhs + (c * inner);
+      const float *rhs_data_1 = rhs + ((c + 1) * inner);
+      const float *rhs_data_2 = rhs + ((c + 2) * inner);
+      const float *rhs_data_3 = rhs + ((c + 3) * inner);
 
       vfloat32m1_t vzero = __riscv_vfmv_v_f_f32m1(0.0f, 1);
       vfloat32m1_t vacc_00 = __riscv_vfmv_v_f_f32m1(0.0f, vlmax);
@@ -97,7 +97,8 @@ extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols, const fl
         rhs_data_3 += vl;
         k -= vl;
 
-        if (k == 0) break;
+        if (k == 0)
+          break;
 
         // Sub-iteration 2
         vl = __riscv_vsetvl_e32m1(k);
@@ -140,7 +141,8 @@ extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols, const fl
         rhs_data_3 += vl;
         k -= vl;
 
-        if (k == 0) break;
+        if (k == 0)
+          break;
 
         // Sub-iteration 3
         vl = __riscv_vsetvl_e32m1(k);
@@ -183,7 +185,8 @@ extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols, const fl
         rhs_data_3 += vl;
         k -= vl;
 
-        if (k == 0) break;
+        if (k == 0)
+          break;
 
         // Sub-iteration 4
         vl = __riscv_vsetvl_e32m1(k);
@@ -285,5 +288,3 @@ extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols, const fl
     }
   }
 }
-
-

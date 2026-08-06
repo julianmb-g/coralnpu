@@ -18,57 +18,57 @@
 
 #include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 
-template <typename T>
-struct get_port_width;
+template <typename T> struct get_port_width;
 
-template <typename T>
-struct get_port_width<T&> : get_port_width<T> {};
+template <typename T> struct get_port_width<T &> : get_port_width<T> {};
 
-template <int W>
-struct get_port_width<sc_core::sc_in<sc_dt::sc_bv<W>>> {
+template <int W> struct get_port_width<sc_core::sc_in<sc_dt::sc_bv<W>>> {
   static const int value = W;
 };
 
-template <int W>
-struct get_port_width<sc_core::sc_out<sc_dt::sc_bv<W>>> {
+template <int W> struct get_port_width<sc_core::sc_out<sc_dt::sc_bv<W>>> {
   static const int value = W;
 };
 
 class L1ICacheTb : public SyscTb {
- public:
-  static const int PC_WIDTH = get_port_width<decltype(VL1ICache::io_flush_pcNext)>::value;
-  static const int ADDR_WIDTH = get_port_width<decltype(VL1ICache::io_ibus_addr)>::value;
-  static const int FAULT_ADDR_WIDTH = get_port_width<decltype(VL1ICache::io_ibus_fault_bits_addr)>::value;
-  static const int FAULT_EPC_WIDTH = get_port_width<decltype(VL1ICache::io_ibus_fault_bits_epc)>::value;
+public:
+  static const int PC_WIDTH =
+      get_port_width<decltype(VL1ICache::io_flush_pcNext)>::value;
+  static const int ADDR_WIDTH =
+      get_port_width<decltype(VL1ICache::io_ibus_addr)>::value;
+  static const int FAULT_ADDR_WIDTH =
+      get_port_width<decltype(VL1ICache::io_ibus_fault_bits_addr)>::value;
+  static const int FAULT_EPC_WIDTH =
+      get_port_width<decltype(VL1ICache::io_ibus_fault_bits_epc)>::value;
 
   sc_out<bool> io_flush_valid;
-  sc_out<sc_bv<PC_WIDTH> > io_flush_pcNext;
+  sc_out<sc_bv<PC_WIDTH>> io_flush_pcNext;
   sc_in<bool> io_flush_ready;
   sc_out<bool> io_ibus_valid;
   sc_in<bool> io_ibus_ready;
-  sc_out<sc_bv<ADDR_WIDTH> > io_ibus_addr;
-  sc_in<sc_bv<kL1IAxiBits> > io_ibus_rdata;
+  sc_out<sc_bv<ADDR_WIDTH>> io_ibus_addr;
+  sc_in<sc_bv<kL1IAxiBits>> io_ibus_rdata;
   sc_in<bool> io_ibus_fault_valid;
   sc_in<bool> io_ibus_fault_bits_write;
   sc_in<sc_bv<FAULT_ADDR_WIDTH>> io_ibus_fault_bits_addr;
   sc_in<sc_bv<FAULT_EPC_WIDTH>> io_ibus_fault_bits_epc;
   sc_in<bool> io_axi_read_addr_valid;
   sc_out<bool> io_axi_read_addr_ready;
-  sc_in<sc_bv<kL1IAxiId> > io_axi_read_addr_bits_id;
-  sc_in<sc_bv<32> > io_axi_read_addr_bits_addr;
-  sc_in<sc_bv<4> > io_axi_read_addr_bits_region;
-  sc_in<sc_bv<4> > io_axi_read_addr_bits_qos;
-  sc_in<sc_bv<3> > io_axi_read_addr_bits_prot;
-  sc_in<sc_bv<4> > io_axi_read_addr_bits_cache;
+  sc_in<sc_bv<kL1IAxiId>> io_axi_read_addr_bits_id;
+  sc_in<sc_bv<32>> io_axi_read_addr_bits_addr;
+  sc_in<sc_bv<4>> io_axi_read_addr_bits_region;
+  sc_in<sc_bv<4>> io_axi_read_addr_bits_qos;
+  sc_in<sc_bv<3>> io_axi_read_addr_bits_prot;
+  sc_in<sc_bv<4>> io_axi_read_addr_bits_cache;
   sc_in<bool> io_axi_read_addr_bits_lock;
-  sc_in<sc_bv<2> > io_axi_read_addr_bits_burst;
-  sc_in<sc_bv<3> > io_axi_read_addr_bits_size;
-  sc_in<sc_bv<8> > io_axi_read_addr_bits_len;
+  sc_in<sc_bv<2>> io_axi_read_addr_bits_burst;
+  sc_in<sc_bv<3>> io_axi_read_addr_bits_size;
+  sc_in<sc_bv<8>> io_axi_read_addr_bits_len;
   sc_out<bool> io_axi_read_data_valid;
   sc_in<bool> io_axi_read_data_ready;
-  sc_out<sc_bv<2> > io_axi_read_data_bits_resp;
-  sc_out<sc_bv<kL1IAxiId> > io_axi_read_data_bits_id;
-  sc_out<sc_bv<kL1IAxiBits> > io_axi_read_data_bits_data;
+  sc_out<sc_bv<2>> io_axi_read_data_bits_resp;
+  sc_out<sc_bv<kL1IAxiId>> io_axi_read_data_bits_id;
+  sc_out<sc_bv<kL1IAxiBits>> io_axi_read_data_bits_data;
   sc_out<bool> io_axi_read_data_bits_last;
   sc_in<bool> io_volt_sel;
 
@@ -99,7 +99,7 @@ class L1ICacheTb : public SyscTb {
       }
     }
 
-    if (!io_ibus_valid || io_ibus_ready) {  // latch transaction
+    if (!io_ibus_valid || io_ibus_ready) { // latch transaction
       command_t cmd;
       bool newaddr = RandInt(0, 3) == 0 || !history.Rand(cmd);
       uint32_t addr = newaddr ? RandUint32() : cmd.addr;
@@ -147,7 +147,7 @@ class L1ICacheTb : public SyscTb {
     }
   }
 
- private:
+private:
   struct command_t {
     uint32_t addr;
   };
@@ -172,33 +172,33 @@ class L1ICacheTb : public SyscTb {
 
 static void L1ICacheTest(absl::string_view name, int loops, bool trace) {
   sc_signal<bool> io_flush_valid;
-  sc_signal<sc_bv<L1ICacheTb::PC_WIDTH> > io_flush_pcNext;
+  sc_signal<sc_bv<L1ICacheTb::PC_WIDTH>> io_flush_pcNext;
   sc_signal<bool> io_flush_ready;
   sc_signal<bool> io_ibus_valid;
   sc_signal<bool> io_ibus_ready;
-  sc_signal<sc_bv<L1ICacheTb::ADDR_WIDTH> > io_ibus_addr;
-  sc_signal<sc_bv<kL1IAxiBits> > io_ibus_rdata;
+  sc_signal<sc_bv<L1ICacheTb::ADDR_WIDTH>> io_ibus_addr;
+  sc_signal<sc_bv<kL1IAxiBits>> io_ibus_rdata;
   sc_signal<bool> io_ibus_fault_valid;
   sc_signal<bool> io_ibus_fault_bits_write;
   sc_signal<sc_bv<L1ICacheTb::FAULT_ADDR_WIDTH>> io_ibus_fault_bits_addr;
   sc_signal<sc_bv<L1ICacheTb::FAULT_EPC_WIDTH>> io_ibus_fault_bits_epc;
   sc_signal<bool> io_axi_read_addr_valid;
   sc_signal<bool> io_axi_read_addr_ready;
-  sc_signal<sc_bv<kL1IAxiId> > io_axi_read_addr_bits_id;
-  sc_signal<sc_bv<32> > io_axi_read_addr_bits_addr;
-  sc_signal<sc_bv<4> > io_axi_read_addr_bits_region;
-  sc_signal<sc_bv<4> > io_axi_read_addr_bits_qos;
-  sc_signal<sc_bv<3> > io_axi_read_addr_bits_prot;
-  sc_signal<sc_bv<4> > io_axi_read_addr_bits_cache;
+  sc_signal<sc_bv<kL1IAxiId>> io_axi_read_addr_bits_id;
+  sc_signal<sc_bv<32>> io_axi_read_addr_bits_addr;
+  sc_signal<sc_bv<4>> io_axi_read_addr_bits_region;
+  sc_signal<sc_bv<4>> io_axi_read_addr_bits_qos;
+  sc_signal<sc_bv<3>> io_axi_read_addr_bits_prot;
+  sc_signal<sc_bv<4>> io_axi_read_addr_bits_cache;
   sc_signal<bool> io_axi_read_addr_bits_lock;
-  sc_signal<sc_bv<2> > io_axi_read_addr_bits_burst;
-  sc_signal<sc_bv<3> > io_axi_read_addr_bits_size;
-  sc_signal<sc_bv<8> > io_axi_read_addr_bits_len;
+  sc_signal<sc_bv<2>> io_axi_read_addr_bits_burst;
+  sc_signal<sc_bv<3>> io_axi_read_addr_bits_size;
+  sc_signal<sc_bv<8>> io_axi_read_addr_bits_len;
   sc_signal<bool> io_axi_read_data_valid;
   sc_signal<bool> io_axi_read_data_ready;
-  sc_signal<sc_bv<2> > io_axi_read_data_bits_resp;
-  sc_signal<sc_bv<kL1IAxiId> > io_axi_read_data_bits_id;
-  sc_signal<sc_bv<kL1IAxiBits> > io_axi_read_data_bits_data;
+  sc_signal<sc_bv<2>> io_axi_read_data_bits_resp;
+  sc_signal<sc_bv<kL1IAxiId>> io_axi_read_data_bits_id;
+  sc_signal<sc_bv<kL1IAxiBits>> io_axi_read_data_bits_data;
   sc_signal<bool> io_axi_read_data_bits_last;
   sc_signal<bool> io_volt_sel;
 

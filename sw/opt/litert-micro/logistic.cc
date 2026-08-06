@@ -30,7 +30,7 @@ namespace coralnpu_v2::opt::litert_micro {
 namespace {
 static int8_t lut[256];
 static bool lut_initialized = false;
-}  // namespace
+} // namespace
 
 void LogisticInit(int32_t input_zero_point, int32_t input_range_radius,
                   int32_t input_multiplier, int32_t input_left_shift) {
@@ -45,14 +45,15 @@ void LogisticInit(int32_t input_zero_point, int32_t input_range_radius,
 
 void Logistic(int32_t input_zero_point, int32_t input_range_radius,
               int32_t input_multiplier, int32_t input_left_shift,
-              int32_t input_size, const int8_t* input_data,
-              int8_t* output_data) {
+              int32_t input_size, const int8_t *input_data,
+              int8_t *output_data) {
   if (!lut_initialized && input_size > 0) {
     LogisticInit(input_zero_point, input_range_radius, input_multiplier,
                  input_left_shift);
   }
 
-  if (input_size <= 0) return;
+  if (input_size <= 0)
+    return;
 
   // CoralNPU VLEN=128, SEW=8, LMUL=8 -> VLMAX=128.
   size_t vlmax = __riscv_vsetvlmax_e8m8();
@@ -90,14 +91,14 @@ void Logistic(int32_t input_zero_point, int32_t input_range_radius,
 }
 
 namespace {
-TfLiteStatus LogisticEval(TfLiteContext* context, TfLiteNode* node) {
-  const TfLiteEvalTensor* input =
+TfLiteStatus LogisticEval(TfLiteContext *context, TfLiteNode *node) {
+  const TfLiteEvalTensor *input =
       tflite::micro::GetEvalInput(context, node, tflite::kLogisticInputTensor);
-  TfLiteEvalTensor* output = tflite::micro::GetEvalOutput(
+  TfLiteEvalTensor *output = tflite::micro::GetEvalOutput(
       context, node, tflite::kLogisticOutputTensor);
 
   TFLITE_DCHECK(node->user_data != nullptr);
-  auto* data = static_cast<tflite::OpDataLogistic*>(node->user_data);
+  auto *data = static_cast<tflite::OpDataLogistic *>(node->user_data);
 
   if (input->type == kTfLiteInt8 && output->type == kTfLiteInt8) {
     Logistic(
@@ -111,7 +112,7 @@ TfLiteStatus LogisticEval(TfLiteContext* context, TfLiteNode* node) {
 
   return tflite::Register_LOGISTIC().invoke(context, node);
 }
-}  // namespace
+} // namespace
 
 TFLMRegistration Register_LOGISTIC() {
   auto registration = tflite::Register_LOGISTIC();
@@ -119,4 +120,4 @@ TFLMRegistration Register_LOGISTIC() {
   return registration;
 }
 
-}  // namespace coralnpu_v2::opt::litert_micro
+} // namespace coralnpu_v2::opt::litert_micro

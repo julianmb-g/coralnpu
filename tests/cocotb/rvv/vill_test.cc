@@ -33,7 +33,8 @@ void coralnpu_exception_handler() {
   mtval = local_mtval;
 
   asm volatile("ebreak");
-  while (1) {}
+  while (1) {
+  }
 }
 }
 

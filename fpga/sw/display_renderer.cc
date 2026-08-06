@@ -25,7 +25,7 @@
 #endif
 #include "third_party/waveshare_display/LCD_Driver.h"
 
-#define REG32(addr) (*(volatile uint32_t*)(addr))
+#define REG32(addr) (*(volatile uint32_t *)(addr))
 
 namespace coralnpu {
 
@@ -36,7 +36,7 @@ struct DisplayInternalStorage {
 };
 // Use a static instance for the aligned storage requirements.
 static DisplayInternalStorage g_storage __attribute__((section(".extbss")));
-}  // namespace
+} // namespace
 
 bool DisplayRenderer::Init() {
 #ifdef USE_UART
@@ -57,7 +57,7 @@ bool DisplayRenderer::Init() {
   return true;
 }
 
-void DisplayRenderer::SetupFrameDma(const uint16_t* frame_buffer) {
+void DisplayRenderer::SetupFrameDma(const uint16_t *frame_buffer) {
   uint32_t spi_base = spi_get_master_base_addr();
   uint32_t gpio_base = gpio_get_base_addr();
   uint32_t spi_tx_addr = spi_base + SPI_REG_TXDATA;
@@ -76,7 +76,7 @@ void DisplayRenderer::SetupFrameDma(const uint16_t* frame_buffer) {
   g_storage.full_frame_cmd.y_data[3] = (kLcdHeight - 1) & 0xff;
   g_storage.full_frame_cmd.cmd_2c = 0x2c;
 
-  dma_descriptor* d = g_storage.dma_chain;
+  dma_descriptor *d = g_storage.dma_chain;
   int cur = 0;
   auto link = [&]() {
     d[cur].next_desc = (uint32_t)(uintptr_t)&d[cur + 1];
@@ -170,7 +170,7 @@ void DisplayRenderer::SetupFrameDma(const uint16_t* frame_buffer) {
   d[cur].next_desc = 0;
 }
 
-void DisplayRenderer::Render(const uint16_t* frame_buffer) {
+void DisplayRenderer::Render(const uint16_t *frame_buffer) {
   SetupFrameDma(frame_buffer);
   WaitDma();
   dma_start((uint32_t)(uintptr_t)g_storage.dma_chain);
@@ -190,7 +190,7 @@ void DisplayRenderer::WaitDma() {
       uart_puthex32(REG32(dma_base + 0x0c));
       uart_puts("\r\n");
 #endif
-      (*(volatile uint32_t*)dma_base) = 0x4;
+      (*(volatile uint32_t *)dma_base) = 0x4;
       break;
     }
     if (++timeout > 1000000) {
@@ -206,4 +206,4 @@ void DisplayRenderer::WaitDma() {
   }
 }
 
-}  // namespace coralnpu
+} // namespace coralnpu

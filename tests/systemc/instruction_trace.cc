@@ -21,18 +21,16 @@
 constexpr uint32_t kEcallInst = 0x00000073;
 
 void InstructionTrace::TraceInstruction(
-  const std::vector<bool>& fires,
-  const std::vector<uint32_t>& addrs,
-  const std::vector<uint32_t>& insts,
-  const std::vector<bool>& scalarWriteAddrValids,
-  const std::vector<uint32_t>& scalarWriteAddrAddrs,
-  const std::vector<bool>& floatWriteAddrValids,
-  const std::vector<uint32_t>& floatWriteAddrAddrs,
-  const std::vector<bool>& writeDataValids,
-  const std::vector<uint32_t>& writeDataAddrs,
-  const std::vector<uint32_t>& writeDataDatas,
-  const std::vector<int>& executeRegBases
-) {
+    const std::vector<bool> &fires, const std::vector<uint32_t> &addrs,
+    const std::vector<uint32_t> &insts,
+    const std::vector<bool> &scalarWriteAddrValids,
+    const std::vector<uint32_t> &scalarWriteAddrAddrs,
+    const std::vector<bool> &floatWriteAddrValids,
+    const std::vector<uint32_t> &floatWriteAddrAddrs,
+    const std::vector<bool> &writeDataValids,
+    const std::vector<uint32_t> &writeDataAddrs,
+    const std::vector<uint32_t> &writeDataDatas,
+    const std::vector<int> &executeRegBases) {
   assert(fires.size() == addrs.size());
   assert(fires.size() == insts.size());
   assert(fires.size() == scalarWriteAddrValids.size());
@@ -78,8 +76,9 @@ void InstructionTrace::TraceInstruction(
     bool valid = writeDataValids[i];
     uint32_t addr = writeDataAddrs[i] + executeRegBases[i];
     uint32_t data = writeDataDatas[i];
-    for (auto& in : retirement_buffer_) {
-      if (in.completed) continue;
+    for (auto &in : retirement_buffer_) {
+      if (in.completed)
+        continue;
       if (valid && (addr == in.reg)) {
         in.data.resize(4);
         in.data[0] = (data >> 24) & 0xff;
@@ -112,7 +111,7 @@ void InstructionTrace::TraceInstruction(
 
 void InstructionTrace::TraceInstructionRaw(uint32_t pc, uint32_t inst,
                                            uint32_t reg,
-                                           const std::vector<uint8_t>& data,
+                                           const std::vector<uint8_t> &data,
                                            const bool trap) {
   Instruction in(pc, inst, reg, trap);
   in.data = data;
@@ -121,7 +120,7 @@ void InstructionTrace::TraceInstructionRaw(uint32_t pc, uint32_t inst,
 
 void InstructionTrace::PrintTrace() const {
   printf("PC,INST,REG,DATA\n");
-  for (auto& inst : committed_insts_) {
+  for (auto &inst : committed_insts_) {
     printf("0x%08x,0x%08x,0x%02x,0x", inst.pc, inst.inst, inst.reg);
     for (auto d : inst.data) {
       printf("%02x", d);

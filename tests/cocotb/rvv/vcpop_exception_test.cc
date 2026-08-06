@@ -42,7 +42,7 @@ void coralnpu_exception_handler() {
 }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   // Load mask data
   asm volatile("vsetivli x0, 16, e8, m1, ta, ma");
   asm volatile("vle8.v v0, (%0)" : : "r"(mask_data));

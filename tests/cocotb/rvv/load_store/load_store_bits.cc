@@ -57,7 +57,7 @@ __attribute__((used, retain)) void vlm_vsm_v_b32() {
 
 void (*impl)() __attribute__((section(".data"))) = &vlm_vsm_v_b1;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

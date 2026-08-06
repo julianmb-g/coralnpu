@@ -25,19 +25,20 @@
 #define I2C_FDATA_OFFSET 0x010
 #define I2C_CLK_DIV_OFFSET 0x018
 
-#define REG32(addr) (*((volatile uint32_t*)(uintptr_t)(addr)))
+#define REG32(addr) (*((volatile uint32_t *)(uintptr_t)(addr)))
 
 void i2c_init(uint32_t target_khz) {
   uint32_t main_freq_mhz = clk_get_main_freq_mhz();
   uint32_t clk_div = (main_freq_mhz * 1000) / (target_khz * 4) - 1;
   REG32(I2C_BASE + I2C_CLK_DIV_OFFSET) = clk_div;
-  REG32(I2C_BASE + I2C_CTRL_OFFSET) = 0x1;  // Enable
+  REG32(I2C_BASE + I2C_CTRL_OFFSET) = 0x1; // Enable
 }
 
 uint32_t i2c_get_status(void) { return REG32(I2C_BASE + I2C_STATUS_OFFSET); }
 
 void i2c_wait_idle(void) {
-  while (i2c_get_status() & 0x3);  // Busy or !fifo_empty
+  while (i2c_get_status() & 0x3)
+    ; // Busy or !fifo_empty
 }
 
 void i2c_write_fdata(uint32_t data) {

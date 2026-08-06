@@ -21,11 +21,11 @@
 #include <cstdio>
 #include <malloc.h>
 
-void* __dso_handle = reinterpret_cast<void*>(&__dso_handle);
+void *__dso_handle = reinterpret_cast<void *>(&__dso_handle);
 
 extern "C" int _close(int file) { return -1; }
 
-extern "C" int _fstat(int file, struct stat* st) {
+extern "C" int _fstat(int file, struct stat *st) {
   if (file != STDOUT_FILENO && file != STDERR_FILENO) {
     errno = EBADF;
     return -1;
@@ -54,7 +54,7 @@ extern "C" int _lseek(int file, int ptr, int dir) {
   return 0;
 }
 
-extern "C" int _read(int file, char* ptr, int len) {
+extern "C" int _read(int file, char *ptr, int len) {
   errno = EBADF;
   return -1;
 }
@@ -63,7 +63,7 @@ extern "C" int _read(int file, char* ptr, int len) {
 #define LOG_MAX_SZ 256
 #endif
 // TODO(lundong): Handle stdout and stderr separately
-extern "C" int _write(int file, char* buf, int nbytes) {
+extern "C" int _write(int file, char *buf, int nbytes) {
   static int _write_line_buffer_len = 0;
   static char _write_line_buffer[LOG_MAX_SZ];
 
@@ -101,7 +101,7 @@ extern "C" int _write(int file, char* buf, int nbytes) {
   return bytes_read;
 }
 
-extern "C" int _open(const char* path, int flags, ...) { return -1; }
+extern "C" int _open(const char *path, int flags, ...) { return -1; }
 
 extern "C" void _exit(int status) {
   asm volatile("ebreak");
@@ -119,24 +119,24 @@ extern "C" int _getpid(void) {
   return -1;
 }
 
-extern "C" void* _sbrk(int bytes) {
+extern "C" void *_sbrk(int bytes) {
   extern char __heap_start__, __heap_end__;
-  static char* _heap_ptr = &__heap_start__;
-  char* prev_heap_end;
+  static char *_heap_ptr = &__heap_start__;
+  char *prev_heap_end;
   if ((bytes < 0) || (_heap_ptr + bytes > &__heap_end__)) {
     errno = ENOMEM;
-    return reinterpret_cast<void*>(-1);
+    return reinterpret_cast<void *>(-1);
   }
 
   prev_heap_end = _heap_ptr;
   _heap_ptr += bytes;
 
-  return reinterpret_cast<void*>(prev_heap_end);
+  return reinterpret_cast<void *>(prev_heap_end);
 }
 
-void* operator new(size_t n) { return malloc(n); }
-void* operator new[](size_t n) { return malloc(n); }
+void *operator new(size_t n) { return malloc(n); }
+void *operator new[](size_t n) { return malloc(n); }
 
-void operator delete(void* p) noexcept { free(p); }
-void operator delete(void* p, size_t c) noexcept { operator delete(p); }
-void operator delete[](void* p) noexcept { free(p); }
+void operator delete(void *p) noexcept { free(p); }
+void operator delete(void *p, size_t c) noexcept { operator delete(p); }
+void operator delete[](void *p) noexcept { free(p); }

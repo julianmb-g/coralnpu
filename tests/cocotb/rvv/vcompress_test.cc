@@ -23,8 +23,8 @@ uint32_t vl __attribute__((section(".data"))) = 16;
 uint32_t vstart __attribute__((section(".data"))) = 0;
 
 uint8_t mask_data[16] __attribute__((section(".data")));
-uint8_t input_data[8*16] __attribute__((section(".data")));
-uint8_t result[8*16] __attribute__((section(".data")));
+uint8_t input_data[8 * 16] __attribute__((section(".data")));
+uint8_t result[8 * 16] __attribute__((section(".data")));
 
 uint32_t faulted __attribute__((section(".data"))) = 0;
 uint32_t mcause __attribute__((section(".data"))) = 0;
@@ -38,7 +38,8 @@ void coralnpu_exception_handler() {
   mcause = local_mcause;
 
   asm volatile("ebreak");
-  while (1) {}
+  while (1) {
+  }
 }
 }
 
@@ -53,7 +54,7 @@ int main(int argc, char **argv) {
 
   // Set configuration state
   uint32_t vtype_to_write = (vma << 7) | (vta << 6) | (sew << 3) | lmul;
-  asm volatile("vsetvl x0, %0, %1": : "r"(vl), "r"(vtype_to_write));
+  asm volatile("vsetvl x0, %0, %1" : : "r"(vl), "r"(vtype_to_write));
   uint32_t local_vstart = vstart;
   asm volatile("csrw vstart, %0" : : "r"(local_vstart));
 

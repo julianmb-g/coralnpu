@@ -25,7 +25,7 @@
 namespace mpact::sim::riscv::rvvi {
 
 class TraceDaemonTest : public ::testing::Test {
- protected:
+protected:
   SpscRingBuffer<> buffer_;
   std::stringstream output_stream_;
 };
@@ -48,7 +48,7 @@ TEST_F(TraceDaemonTest, ProcessVectorChunkReassembly) {
   inst_packet.type = 'I';
   inst_packet.pc = 0x1000;
   inst_packet.inst = 0x00000057; // Vector instruction
-  std::strcpy(reinterpret_cast<char*>(inst_packet.raw_bytes), "vadd.vv");
+  std::strcpy(reinterpret_cast<char *>(inst_packet.raw_bytes), "vadd.vv");
   EXPECT_TRUE(buffer_.Push(inst_packet));
 
   // Send first chunk
@@ -59,10 +59,11 @@ TEST_F(TraceDaemonTest, ProcessVectorChunkReassembly) {
   p1.chunk_size = 32;
   p1.offset = 0;
   p1.total_size = 64;
-  for (int i = 0; i < 4; ++i) p1.raw_words[i] = i; // Simplified data
-  
+  for (int i = 0; i < 4; ++i)
+    p1.raw_words[i] = i; // Simplified data
+
   EXPECT_TRUE(buffer_.Push(p1));
-  
+
   // Send second chunk
   TracePacket p2 = {};
   p2.type = 'R';
@@ -71,22 +72,23 @@ TEST_F(TraceDaemonTest, ProcessVectorChunkReassembly) {
   p2.chunk_size = 32;
   p2.offset = 32;
   p2.total_size = 64;
-  for (int i = 4; i < 8; ++i) p2.raw_words[i-4] = i; 
-  
+  for (int i = 4; i < 8; ++i)
+    p2.raw_words[i - 4] = i;
+
   EXPECT_TRUE(buffer_.Push(p2));
 
   // Send end packet to flush and process the line
   TracePacket e_packet = {};
   e_packet.type = 'E';
   EXPECT_TRUE(buffer_.Push(e_packet));
-  
+
   // Wait for processing
   while (!buffer_.IsEmpty()) {
     std::this_thread::yield();
   }
-  
+
   daemon.Stop();
-  
+
   std::string output = output_stream_.str();
   EXPECT_FALSE(output.empty());
   EXPECT_NE(output.find("rvvi,0,"), std::string::npos);
@@ -101,21 +103,22 @@ TEST_F(TraceDaemonTest, ProcessEndPacketTerminatesCleanly) {
 
   TracePacket e_packet;
   e_packet.type = 'E';
-  
+
   EXPECT_TRUE(buffer_.Push(e_packet));
-  
+
   // Wait for processing
   while (!buffer_.IsEmpty()) {
     std::this_thread::yield();
   }
-  
-  // Give the daemon thread time to process the 'E' packet and set running_ = false.
+
+  // Give the daemon thread time to process the 'E' packet and set running_ =
+  // false.
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   EXPECT_FALSE(daemon.IsRunning());
 }
 
 TEST_F(TraceDaemonTest, ProcessMultiIssueInstructions) {
-  // This test verifies that the daemon correctly handles multiple instructions 
+  // This test verifies that the daemon correctly handles multiple instructions
   // retired in sequence (simulating superscalar/multi-issue retirement).
   TraceDaemon<> daemon(&buffer_, &output_stream_, nullptr);
   daemon.Start();
@@ -125,7 +128,7 @@ TEST_F(TraceDaemonTest, ProcessMultiIssueInstructions) {
   p0.type = 'I';
   p0.pc = 0x80000000;
   p0.inst = 0x00000013; // nop
-  std::strcpy(reinterpret_cast<char*>(p0.raw_bytes), "nop");
+  std::strcpy(reinterpret_cast<char *>(p0.raw_bytes), "nop");
   EXPECT_TRUE(buffer_.Push(p0));
 
   // Lane 1 instruction
@@ -133,7 +136,7 @@ TEST_F(TraceDaemonTest, ProcessMultiIssueInstructions) {
   p1.type = 'I';
   p1.pc = 0x80000004;
   p1.inst = 0x00100513; // li a0, 1
-  std::strcpy(reinterpret_cast<char*>(p1.raw_bytes), "li a0, 1");
+  std::strcpy(reinterpret_cast<char *>(p1.raw_bytes), "li a0, 1");
   EXPECT_TRUE(buffer_.Push(p1));
 
   // End packet to flush everything
@@ -144,7 +147,7 @@ TEST_F(TraceDaemonTest, ProcessMultiIssueInstructions) {
   while (!buffer_.IsEmpty()) {
     std::this_thread::yield();
   }
-  
+
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   daemon.Stop();
 

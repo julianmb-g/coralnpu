@@ -19,9 +19,14 @@ from cocotb.triggers import RisingEdge, FallingEdge
 
 class AxiSlave:
 
-    def __init__(
-        self, dut, name, clock, reset, log, has_memory=False, mem_base_addr=0
-    ):
+    def __init__(self,
+                 dut,
+                 name,
+                 clock,
+                 reset,
+                 log,
+                 has_memory=False,
+                 mem_base_addr=0):
         self.dut = dut
         self.name = name
         self.clock = clock
@@ -54,8 +59,8 @@ class AxiSlave:
             if self.has_memory:
                 addr = ardata["addr"] - self.mem_base_addr
                 bus_bytes = len(
-                    getattr(self.dut, f'io_{self.name}_read_data_bits_data')
-                ) // 8
+                    getattr(self.dut,
+                            f'io_{self.name}_read_data_bits_data')) // 8
                 aligned_addr = (addr // bus_bytes) * bus_bytes
                 read_bytes = bytearray()
                 for i in range(bus_bytes):
@@ -111,9 +116,7 @@ class AxiSlave:
                         ardata[prop] = int(
                             getattr(
                                 self.dut,
-                                f'io_{self.name}_read_addr_bits_{prop}'
-                            ).value
-                        )
+                                f'io_{self.name}_read_addr_bits_{prop}').value)
                     await self.ar_queue.put(ardata)
             except Exception as e:
                 print('X seen in _ar_agent: ' + str(e), flush=True)
@@ -148,11 +151,9 @@ class AxiSlave:
                     awdata = dict()
                     for prop in ["id", "addr", "size", "len"]:
                         awdata[prop] = int(
-                            getattr(
-                                self.dut,
-                                f'io_{self.name}_write_addr_bits_{prop}'
-                            ).value
-                        )
+                            getattr(self.dut,
+                                    f'io_{self.name}_write_addr_bits_{prop}').
+                            value)
                     await self.aw_queue.put(awdata)
             except Exception as e:
                 print('X seen in _aw_agent: ' + str(e), flush=True)
@@ -165,12 +166,13 @@ class AxiSlave:
                 if getattr(self.dut, f'io_{self.name}_write_data_valid').value:
                     wdata = dict()
                     wdata["data"] = getattr(
-                        self.dut, f'io_{self.name}_write_data_bits_data'
-                    ).value.to_bytes(byteorder="big")
+                        self.dut,
+                        f'io_{self.name}_write_data_bits_data').value.to_bytes(
+                            byteorder="big")
                     for prop in ["strb", "last"]:
                         wdata[prop] = getattr(
-                            self.dut, f'io_{self.name}_write_data_bits_{prop}'
-                        ).value
+                            self.dut,
+                            f'io_{self.name}_write_data_bits_{prop}').value
                     await self.w_queue.put(wdata)
             except Exception as e:
                 print('X seen in _w_agent: ' + str(e), flush=True)

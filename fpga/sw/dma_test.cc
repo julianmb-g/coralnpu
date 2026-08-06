@@ -23,18 +23,18 @@
 #define SRAM_BASE 0x20000000
 
 // All buffers placed in SRAM
-static volatile uint32_t* const src32 =
-    (volatile uint32_t*)(SRAM_BASE + 0x0000);
-static volatile uint32_t* const dst32 =
-    (volatile uint32_t*)(SRAM_BASE + 0x1000);
-static volatile struct dma_descriptor* const desc0 =
-    (volatile struct dma_descriptor*)(SRAM_BASE + 0x2000);
-static volatile struct dma_descriptor* const desc1 =
-    (volatile struct dma_descriptor*)(SRAM_BASE + 0x2020);
-static volatile uint32_t* const src32b =
-    (volatile uint32_t*)(SRAM_BASE + 0x0100);
-static volatile uint32_t* const dst32b =
-    (volatile uint32_t*)(SRAM_BASE + 0x1100);
+static volatile uint32_t *const src32 =
+    (volatile uint32_t *)(SRAM_BASE + 0x0000);
+static volatile uint32_t *const dst32 =
+    (volatile uint32_t *)(SRAM_BASE + 0x1000);
+static volatile struct dma_descriptor *const desc0 =
+    (volatile struct dma_descriptor *)(SRAM_BASE + 0x2000);
+static volatile struct dma_descriptor *const desc1 =
+    (volatile struct dma_descriptor *)(SRAM_BASE + 0x2020);
+static volatile uint32_t *const src32b =
+    (volatile uint32_t *)(SRAM_BASE + 0x0100);
+static volatile uint32_t *const dst32b =
+    (volatile uint32_t *)(SRAM_BASE + 0x1100);
 
 int main() {
   uart_init();
@@ -43,8 +43,10 @@ int main() {
   const uint32_t nwords = 16;
   const uint32_t nbytes = nwords * 4;
 
-  for (uint32_t i = 0; i < nwords; i++) src32[i] = 0xDEAD0000 + i;
-  for (uint32_t i = 0; i < nwords; i++) dst32[i] = 0;
+  for (uint32_t i = 0; i < nwords; i++)
+    src32[i] = 0xDEAD0000 + i;
+  for (uint32_t i = 0; i < nwords; i++)
+    dst32[i] = 0;
 
   desc0->src_addr = (uint32_t)(uintptr_t)src32;
   desc0->dst_addr = (uint32_t)(uintptr_t)dst32;
@@ -75,9 +77,12 @@ int main() {
   const uint32_t nwords2 = 8;
   const uint32_t nbytes2 = nwords2 * 4;
 
-  for (uint32_t i = 0; i < nwords2; i++) src32b[i] = 0xBEEF0000 + i;
-  for (uint32_t i = 0; i < nwords2; i++) dst32b[i] = 0;
-  for (uint32_t i = 0; i < nwords; i++) dst32[i] = 0;
+  for (uint32_t i = 0; i < nwords2; i++)
+    src32b[i] = 0xBEEF0000 + i;
+  for (uint32_t i = 0; i < nwords2; i++)
+    dst32b[i] = 0;
+  for (uint32_t i = 0; i < nwords; i++)
+    dst32[i] = 0;
 
   desc0->src_addr = (uint32_t)(uintptr_t)src32;
   desc0->dst_addr = (uint32_t)(uintptr_t)dst32;
@@ -122,7 +127,7 @@ int main() {
 #define UART0_STATUS (UART0_BASE + 0x14)
 #define UART0_WDATA (UART0_BASE + 0x1c)
 
-#define REG32(addr) (*(volatile uint32_t*)(addr))
+#define REG32(addr) (*(volatile uint32_t *)(addr))
 
   // Enable UART0 TX (same NCO formula as uart_init)
   {
@@ -132,8 +137,8 @@ int main() {
     REG32(UART0_CTRL) = (uint32_t)((nco << 16) | 3);
   }
 
-  const uint32_t t3_len = 4;  // 4 bytes
-  volatile uint8_t* const t3_src = (volatile uint8_t*)(SRAM_BASE + 0x3000);
+  const uint32_t t3_len = 4; // 4 bytes
+  volatile uint8_t *const t3_src = (volatile uint8_t *)(SRAM_BASE + 0x3000);
   t3_src[0] = 'D';
   t3_src[1] = 'M';
   t3_src[2] = 'A';
@@ -142,7 +147,7 @@ int main() {
   desc0->src_addr = (uint32_t)(uintptr_t)t3_src;
   desc0->dst_addr = UART0_WDATA;
   desc0->len_flags =
-      dma_make_len_flags(t3_len, 0, 0, 1, 0);  // 1-byte beats, dst_fixed
+      dma_make_len_flags(t3_len, 0, 0, 1, 0); // 1-byte beats, dst_fixed
   desc0->next_desc = 0;
   desc0->poll_addr = 0;
   desc0->poll_mask = 0;
@@ -164,12 +169,13 @@ int main() {
   const uint32_t nwords4 = 8;
   const uint32_t nbytes4 = nwords4 * 4;
 
-  for (uint32_t i = 0; i < nwords4; i++) dst32[i] = 0;
+  for (uint32_t i = 0; i < nwords4; i++)
+    dst32[i] = 0;
 
   // Read UART0 STATUS (a real peripheral register) repeatedly
   desc0->src_addr = UART0_STATUS;
   desc0->dst_addr = (uint32_t)(uintptr_t)dst32;
-  desc0->len_flags = dma_make_len_flags(nbytes4, 2, 1, 0, 0);  // src_fixed=1
+  desc0->len_flags = dma_make_len_flags(nbytes4, 2, 1, 0, 0); // src_fixed=1
   desc0->next_desc = 0;
   desc0->poll_addr = 0;
   desc0->poll_mask = 0;
@@ -199,7 +205,7 @@ int main() {
   // DMA bytes to UART0 WDATA, polling UART0 STATUS bit 0 (TX full).
   // The DMA waits until the TX FIFO has space before each byte write.
   const uint32_t t5_len = 8;
-  volatile uint8_t* const t5_src = (volatile uint8_t*)(SRAM_BASE + 0x3200);
+  volatile uint8_t *const t5_src = (volatile uint8_t *)(SRAM_BASE + 0x3200);
   t5_src[0] = 'P';
   t5_src[1] = 'O';
   t5_src[2] = 'L';
@@ -212,11 +218,11 @@ int main() {
   desc0->src_addr = (uint32_t)(uintptr_t)t5_src;
   desc0->dst_addr = UART0_WDATA;
   desc0->len_flags =
-      dma_make_len_flags(t5_len, 0, 0, 1, 1);  // 1-byte, dst_fixed, poll_en
+      dma_make_len_flags(t5_len, 0, 0, 1, 1); // 1-byte, dst_fixed, poll_en
   desc0->next_desc = 0;
   desc0->poll_addr = UART0_STATUS;
-  desc0->poll_mask = 0x00000001;   // bit 0 = TX full
-  desc0->poll_value = 0x00000000;  // wait until TX not full
+  desc0->poll_mask = 0x00000001;  // bit 0 = TX full
+  desc0->poll_value = 0x00000000; // wait until TX not full
   desc0->reserved = 0;
 
   dma_start((uint32_t)(uintptr_t)desc0);

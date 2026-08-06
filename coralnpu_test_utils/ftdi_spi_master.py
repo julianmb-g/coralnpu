@@ -42,8 +42,7 @@ class FtdiSpiMaster:
             r = runfiles.Create()
             # Find nexus_loader binary
             self.nexus_loader_bin = r.Rlocation(
-                "coralnpu_hw/sw/utils/nexus_loader/nexus_loader"
-            )
+                "coralnpu_hw/sw/utils/nexus_loader/nexus_loader")
 
         if not self.nexus_loader_bin:
             # Fallback if not running in bazel run environment
@@ -51,22 +50,18 @@ class FtdiSpiMaster:
             script_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.abspath(os.path.join(script_dir, ".."))
             self.nexus_loader_bin = os.path.join(
-                project_root, "bazel-bin/sw/utils/nexus_loader/nexus_loader"
-            )
+                project_root, "bazel-bin/sw/utils/nexus_loader/nexus_loader")
             if not os.path.exists(self.nexus_loader_bin):
                 self.nexus_loader_bin = os.path.join(
-                    project_root, "sw/utils/nexus_loader/nexus_loader"
-                )
+                    project_root, "sw/utils/nexus_loader/nexus_loader")
 
         if not os.path.exists(self.nexus_loader_bin):
             raise FileNotFoundError(
                 f"Could not find nexus_loader binary at {self.nexus_loader_bin}. "
-                "Please build it first: bazel build //sw/utils/nexus_loader"
-            )
+                "Please build it first: bazel build //sw/utils/nexus_loader")
 
         logger.info(
-            f"Initialized FtdiSpiMaster wrapper using {self.nexus_loader_bin}"
-        )
+            f"Initialized FtdiSpiMaster wrapper using {self.nexus_loader_bin}")
 
     def _run_cmd(self, args, capture=False, timeout=10.0):
         """Runs the nexus_loader binary with the given args.
@@ -90,29 +85,24 @@ class FtdiSpiMaster:
         # Add 1.0s buffer to the subprocess timeout to let the C++ binary exit gracefully first.
         try:
             if capture:
-                res = subprocess.run(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    check=True,
-                    timeout=timeout + 1.0
-                )
+                res = subprocess.run(cmd,
+                                     stdout=subprocess.PIPE,
+                                     check=True,
+                                     timeout=timeout + 1.0)
                 return res.stdout
             else:
                 subprocess.run(cmd, check=True, timeout=timeout + 1.0)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             if "--reset" not in args and not self._recovering:
                 logger.warning(
-                    "Command failed. Attempting FPGA self-healing recovery..."
-                )
+                    "Command failed. Attempting FPGA self-healing recovery...")
                 if self.recover_fpga():
                     logger.info("Recovery succeeded. Retrying command...")
                     if capture:
-                        return subprocess.run(
-                            cmd,
-                            stdout=subprocess.PIPE,
-                            check=True,
-                            timeout=timeout + 1.0
-                        ).stdout
+                        return subprocess.run(cmd,
+                                              stdout=subprocess.PIPE,
+                                              check=True,
+                                              timeout=timeout + 1.0).stdout
                     else:
                         subprocess.run(cmd, check=True, timeout=timeout + 1.0)
                         return
@@ -126,8 +116,7 @@ class FtdiSpiMaster:
             match = re.search(r"Nexus-FTDI-(\d+)", self.usb_serial)
             if not match:
                 logger.error(
-                    f"Cannot derive SOM host from serial {self.usb_serial}"
-                )
+                    f"Cannot derive SOM host from serial {self.usb_serial}")
                 return False
             nexus_id = match.group(1)
             som_host = f"nexus{nexus_id}.mtv.corp.google.com"
@@ -147,8 +136,7 @@ class FtdiSpiMaster:
                     logger.info("Soft reset succeeded. FPGA is responsive.")
                     return True
                 logger.warning(
-                    "Soft reset completed but FPGA is still unresponsive."
-                )
+                    "Soft reset completed but FPGA is still unresponsive.")
             except subprocess.SubprocessError as e:
                 logger.warning(f"Soft reset command failed: {e}")
 
@@ -166,8 +154,7 @@ class FtdiSpiMaster:
             # 3. Load bitstream via SSH
             bitstream = "chip_nexus.bin"
             logger.info(
-                f"Reloading bitstream {bitstream} on {som_host} via zturn..."
-            )
+                f"Reloading bitstream {bitstream} on {som_host} via zturn...")
             ssh_cmd = [
                 "ssh",
                 "-o",
@@ -175,9 +162,10 @@ class FtdiSpiMaster:
                 f"root@{som_host}",
                 f"cd /mnt/mmcp1 && ./zturn -d a {bitstream}",
             ]
-            res = subprocess.run(
-                ssh_cmd, capture_output=True, text=True, timeout=30.0
-            )
+            res = subprocess.run(ssh_cmd,
+                                 capture_output=True,
+                                 text=True,
+                                 timeout=30.0)
             if res.returncode != 1:
                 logger.error(
                     f"zturn failed with exit code {res.returncode}. Output: {res.stdout}\n{res.stderr}"
@@ -185,8 +173,7 @@ class FtdiSpiMaster:
                 return False
 
             logger.info(
-                "FPGA reloaded successfully. Waiting for DDR calibration..."
-            )
+                "FPGA reloaded successfully. Waiting for DDR calibration...")
             time.sleep(2.0)  # Wait for DDR calibration
             return True
         except Exception as e:
@@ -228,11 +215,10 @@ class FtdiSpiMaster:
         pass
 
     def write_word(self, address, data):
-        self._run_cmd([
-            "--write_word_addr",
-            hex(address), "--write_word_val",
-            hex(data)
-        ])
+        self._run_cmd(
+            ["--write_word_addr",
+             hex(address), "--write_word_val",
+             hex(data)])
 
     def read_word(self, address):
         out = self._run_cmd(["--read_word_addr", hex(address)], capture=True)
@@ -247,10 +233,9 @@ class FtdiSpiMaster:
         raise ValueError(f"Could not find DATA_WORD in output: {out}")
 
     def load_file(self, file_path, address):
-        self._run_cmd([
-            "--load_data", file_path, "--load_data_addr",
-            hex(address)
-        ])
+        self._run_cmd(
+            ["--load_data", file_path, "--load_data_addr",
+             hex(address)])
 
     def load_data(self, data, address):
         tf = tempfile.NamedTemporaryFile(delete=False)

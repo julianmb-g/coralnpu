@@ -17,8 +17,8 @@
 
 #include <cstdint>
 
-#define CLINT_BASE      0x02000000u
-#define MSIP            (*(volatile uint32_t*)(CLINT_BASE + 0x0000))
+#define CLINT_BASE 0x02000000u
+#define MSIP (*(volatile uint32_t *)(CLINT_BASE + 0x0000))
 
 volatile int sw_fired = 0;
 
@@ -36,12 +36,12 @@ __attribute__((naked)) __attribute__((aligned(4))) void isr_wrapper(void) {
 
       // Check mcause
       "csrr t0, mcause  \n"
-      "li t1, 0x80000003\n"  // Machine software interrupt
+      "li t1, 0x80000003\n" // Machine software interrupt
       "bne t0, t1, 1f   \n"
 
       // Software interrupt: disable by clearing MSIP
-      "li t0, 0x02000000\n"  // MSIP address
-      "sw zero, 0(t0)   \n"  // msip = 0
+      "li t0, 0x02000000\n" // MSIP address
+      "sw zero, 0(t0)   \n" // msip = 0
 
       // Set sw_fired = 1
       "la t0, sw_fired  \n"
@@ -60,26 +60,26 @@ __attribute__((naked)) __attribute__((aligned(4))) void isr_wrapper(void) {
       "lw t0, 0(sp)     \n"
       "lw t1, 4(sp)     \n"
       "addi sp, sp, 8   \n"
-      "mret             \n"
-  );
+      "mret             \n");
 }
 
-}  // extern "C"
+} // extern "C"
 
 int main() {
   // 1. Set mtvec to our handler
-  asm volatile("csrw mtvec, %0" :: "r"((uint32_t)(&isr_wrapper)));
+  asm volatile("csrw mtvec, %0" ::"r"((uint32_t)(&isr_wrapper)));
 
   // 2. Enable mie.MSIE (bit 3)
-  asm volatile("csrs mie, %0" :: "r"(1u << 3));
+  asm volatile("csrs mie, %0" ::"r"(1u << 3));
 
   // 3. Enable mstatus.MIE (bit 3) — this arms the interrupt
-  asm volatile("csrs mstatus, %0" :: "r"(1u << 3));
+  asm volatile("csrs mstatus, %0" ::"r"(1u << 3));
 
   // 4. Spin-wait for the ISR to set sw_fired.
   // The interrupt will be triggered externally by writing to MSIP.
   for (volatile int i = 0; i < 100000; i++) {
-    if (sw_fired) break;
+    if (sw_fired)
+      break;
   }
 
   return !(sw_fired == 1);

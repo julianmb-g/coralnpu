@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-int main(int argc, char** argv) {
-    float pi = 3.1415;
-    float* storage = reinterpret_cast<float*>(0xa0000000);
-    *storage = pi;
-    return 0;
+int main(int argc, char **argv) {
+  float pi = 3.1415;
+  float *storage = reinterpret_cast<float *>(0xa0000000);
+  *storage = pi;
+  return 0;
 }

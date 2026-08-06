@@ -7,8 +7,8 @@
 
 extern "C" {
 int32_t input_dims[4] __attribute__((section(".data"))) = {0};
-int8_t input_data[307200] __attribute__((section(".data"), aligned(16))) = {
-    0};  // Largest input 300KB
+int8_t input_data[307200]
+    __attribute__((section(".data"), aligned(16))) = {0}; // Largest input 300KB
 
 int32_t output_dims[4] __attribute__((section(".data"))) = {0};
 int8_t output_data[307200] __attribute__((section(".data"), aligned(16))) = {0};
@@ -78,4 +78,4 @@ int main(void) {
   impl();
   return 0;
 }
-}  // extern "C"
+} // extern "C"

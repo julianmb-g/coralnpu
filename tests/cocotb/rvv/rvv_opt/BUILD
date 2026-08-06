@@ -30,11 +30,11 @@ template_rule(
     {
         "rvv_memcpy_test": {
             "srcs": ["memcpy_test.cc"],
-            "hdrs": ["//sw/opt:rvv_opt.h"]
+            "hdrs": ["//sw/opt:rvv_opt.h"],
         },
         "rvv_memset_test": {
             "srcs": ["memset_test.cc"],
-            "hdrs": ["//sw/opt:rvv_opt.h"]
+            "hdrs": ["//sw/opt:rvv_opt.h"],
         },
     },
 )

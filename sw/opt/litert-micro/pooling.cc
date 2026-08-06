@@ -27,9 +27,9 @@
 
 namespace coralnpu_v2::opt::litert_micro {
 
-void MaxPool(const tflite::PoolParams& params,
-             const tflite::RuntimeShape& input_shape, const int8_t* input_data,
-             const tflite::RuntimeShape& output_shape, int8_t* output_data) {
+void MaxPool(const tflite::PoolParams &params,
+             const tflite::RuntimeShape &input_shape, const int8_t *input_data,
+             const tflite::RuntimeShape &output_shape, int8_t *output_data) {
   const int batches = tflite::MatchingDim(input_shape, 0, output_shape, 0);
   const int depth = tflite::MatchingDim(input_shape, 3, output_shape, 3);
   const int input_height = input_shape.Dims(1);
@@ -69,7 +69,7 @@ void MaxPool(const tflite::PoolParams& params,
                  ++filter_x) {
               const int in_x = in_x_origin + filter_x;
               const int in_y = in_y_origin + filter_y;
-              const int8_t* in_ptr =
+              const int8_t *in_ptr =
                   input_data +
                   tflite::Offset(input_shape, batch, in_y, in_x, channel);
               vint8m8_t val_v = __riscv_vle8_v_i8m8(in_ptr, vl);
@@ -81,7 +81,7 @@ void MaxPool(const tflite::PoolParams& params,
           max_v = __riscv_vmax_vx_i8m8(max_v, activation_min, vl);
           max_v = __riscv_vmin_vx_i8m8(max_v, activation_max, vl);
 
-          int8_t* out_ptr = output_data + tflite::Offset(output_shape, batch,
+          int8_t *out_ptr = output_data + tflite::Offset(output_shape, batch,
                                                          out_y, out_x, channel);
           __riscv_vse8_v_i8m8(out_ptr, max_v, vl);
 
@@ -95,14 +95,14 @@ void MaxPool(const tflite::PoolParams& params,
 
 namespace {
 
-TfLiteStatus MaxEval(TfLiteContext* context, TfLiteNode* node) {
-  auto* params = reinterpret_cast<TfLitePoolParams*>(node->builtin_data);
-  const tflite::OpDataPooling* data =
-      static_cast<const tflite::OpDataPooling*>(node->user_data);
+TfLiteStatus MaxEval(TfLiteContext *context, TfLiteNode *node) {
+  auto *params = reinterpret_cast<TfLitePoolParams *>(node->builtin_data);
+  const tflite::OpDataPooling *data =
+      static_cast<const tflite::OpDataPooling *>(node->user_data);
 
-  const TfLiteEvalTensor* input =
+  const TfLiteEvalTensor *input =
       tflite::micro::GetEvalInput(context, node, tflite::kPoolingInputTensor);
-  TfLiteEvalTensor* output =
+  TfLiteEvalTensor *output =
       tflite::micro::GetEvalOutput(context, node, tflite::kPoolingOutputTensor);
 
   if (input->type == kTfLiteInt8) {
@@ -126,7 +126,7 @@ TfLiteStatus MaxEval(TfLiteContext* context, TfLiteNode* node) {
   return tflite::Register_MAX_POOL_2D().invoke(context, node);
 }
 
-}  // namespace
+} // namespace
 
 TFLMRegistration Register_MAX_POOL_2D() {
   auto registration = tflite::Register_MAX_POOL_2D();
@@ -134,4 +134,4 @@ TFLMRegistration Register_MAX_POOL_2D() {
   return registration;
 }
 
-}  // namespace coralnpu_v2::opt::litert_micro
+} // namespace coralnpu_v2::opt::litert_micro

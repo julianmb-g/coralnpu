@@ -21,6 +21,6 @@ struct CoralNPUMailbox {
   uint32_t message[4] = {0, 0, 0, 0};
 };
 
-}  // namespace coralnpu::sim
+} // namespace coralnpu::sim
 
-#endif  // HW_SIM_MAILBOX_H_
+#endif // HW_SIM_MAILBOX_H_

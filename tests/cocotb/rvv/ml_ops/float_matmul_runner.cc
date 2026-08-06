@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstdint>
 #include "sw/utils/utils.h"
+#include <cstdint>
 
 constexpr size_t kMaxLhsRows = 16;
 constexpr size_t kMaxRhsCols = 16;
@@ -39,10 +39,10 @@ float result_output[kMaxLhsRows * kMaxRhsCols]
     __attribute__((section(".data"), used, retain))
     __attribute__((aligned(16)));
 
-extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols, const float* lhs,
-                        const float* rhs, float* result);
+extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols,
+                        const float *lhs, const float *rhs, float *result);
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   uint32_t mcontext0_write_value = 1;
   asm volatile("csrw 0x7C0, %0" : : "r"(mcontext0_write_value));
 

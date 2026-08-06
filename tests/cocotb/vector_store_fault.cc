@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <riscv_vector.h>
 #include <cstdint>
+#include <riscv_vector.h>
 
 extern "C" {
 void isr_wrapper(void);
@@ -27,22 +27,22 @@ __attribute__((naked)) void isr_wrapper(void) {
       "bne t0, t1, 1f \n" // If not store access fault, fail
       "csrr t0, mtval \n"
       "li t1, 0xA0000000 \n" // Bad address
-      "bne t0, t1, 1f \n" // If not bad address, fail
-      ".word 0x08000073 \n" // mpause (halt) -> Success
-      "1: ebreak \n"      // Fail
+      "bne t0, t1, 1f \n"    // If not bad address, fail
+      ".word 0x08000073 \n"  // mpause (halt) -> Success
+      "1: ebreak \n"         // Fail
   );
 }
 
-}  // extern "C"
+} // extern "C"
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   // Store Fault (external) via Vector Store
-  asm volatile("csrw mtvec, %0" :: "rK"((uint32_t)(&isr_wrapper)));
-  
+  asm volatile("csrw mtvec, %0" ::"rK"((uint32_t)(&isr_wrapper)));
+
   size_t vl = 16;
   vuint8m1_t vec = __riscv_vid_v_u8m1(vl);
-  unsigned char* store_bad_addr = reinterpret_cast<unsigned char*>(0xA0000000);
-  
+  unsigned char *store_bad_addr = reinterpret_cast<unsigned char *>(0xA0000000);
+
   // This should trigger the store access fault
   __riscv_vse8_v_u8m1(store_bad_addr, vec, vl);
 

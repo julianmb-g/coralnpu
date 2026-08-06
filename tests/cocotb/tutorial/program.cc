@@ -17,7 +17,7 @@
 // TODO: Add two inputs buffers of 8 uint32_t's (input1_buffer, input2_buffer)
 // TODO: Add one output buffer of 8 uint32_t's (output_buffer)
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   // TODO: Add code to element wise add/subtract from input1_buffer and
   // input2_buffer and store the result to output_buffer.
 

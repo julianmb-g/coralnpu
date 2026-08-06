@@ -23,9 +23,9 @@ int main() {
 
   memset(input_1, 1, 1024);
   memset(input_2, 6, 1024);
-  const int8_t* input1_ptr = &input_1[0];
-  const int8_t* input2_ptr = &input_2[0];
-  int16_t* output_ptr = &output[0];
+  const int8_t *input1_ptr = &input_1[0];
+  const int8_t *input2_ptr = &input_2[0];
+  int16_t *output_ptr = &output[0];
 
   long vl_out;
   asm volatile("vsetvli %0, zero, e8, m1, ta, ma" : "=r"(vl_out));

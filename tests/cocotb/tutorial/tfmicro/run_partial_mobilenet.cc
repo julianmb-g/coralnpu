@@ -26,13 +26,13 @@
 namespace {
 using MobilenetOpResolver = tflite::MicroMutableOpResolver<2>;
 using coralnpu_v2::opt::litert_micro::Register_DEPTHWISE_CONV_2D;
-TfLiteStatus RegisterOps(MobilenetOpResolver& op_resolver) {
+TfLiteStatus RegisterOps(MobilenetOpResolver &op_resolver) {
   TF_LITE_ENSURE_STATUS(op_resolver.AddConv2D());
   TF_LITE_ENSURE_STATUS(
       op_resolver.AddDepthwiseConv2D(Register_DEPTHWISE_CONV_2D()));
   return kTfLiteOk;
 }
-}  // namespace
+} // namespace
 
 extern "C" {
 // aligned(16)
@@ -44,8 +44,8 @@ uint8_t tensor_arena[kTensorArenaSize]
     __attribute__((section(".extdata"), aligned(16)));
 }
 
-int main(int argc, char** argv) {
-  const tflite::Model* model =
+int main(int argc, char **argv) {
+  const tflite::Model *model =
       tflite::GetModel(g_mobilenet_v1_025_partial_layers_model_data);
   MobilenetOpResolver op_resolver;
   RegisterOps(op_resolver);

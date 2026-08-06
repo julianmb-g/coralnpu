@@ -24,4 +24,4 @@
 #define STRINGIFY(x) STRINGIFY_(x)
 #define STRINGIFY_(x) #x
 
-#endif  // TESTS_VERILATOR_SIM_UTIL_H_
+#endif // TESTS_VERILATOR_SIM_UTIL_H_

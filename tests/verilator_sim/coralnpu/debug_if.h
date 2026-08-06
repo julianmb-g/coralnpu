@@ -19,13 +19,13 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-#include "tests/verilator_sim/sysc_module.h"
 #include "tests/verilator_sim/coralnpu/memory_if.h"
+#include "tests/verilator_sim/sysc_module.h"
 
 // A core debug model.
 class DebugIf : public SyscModule {
- public:
-  DebugIf(sc_module_name n, MemoryIf* mm) : SyscModule(n), mm_(mm) {
+public:
+  DebugIf(sc_module_name n, MemoryIf *mm) : SyscModule(n), mm_(mm) {
     SC_METHOD(Eval);
     sensitive << reset << clock.pos();
   }
@@ -55,18 +55,19 @@ class DebugIf : public SyscModule {
       cycle_++;
     }
   }
- private:
+
+private:
 #ifndef TIME_DISABLE
-  const char* KNRM = "\x1B[0m";
-  const char* KRED = "\x1B[31m";
-  const char* KGRN = "\x1B[32m";
-  const char* KYEL = "\x1B[33m";
-  const char* KBLU = "\x1B[34m";
-  const char* KMAG = "\x1B[35m";
-  const char* KCYN = "\x1B[36m";
-  const char* KWHT = "\x1B[37m";
-  const char* KRST = "\033[0m";
-#endif  // TIME_DISABLE
+  const char *KNRM = "\x1B[0m";
+  const char *KRED = "\x1B[31m";
+  const char *KGRN = "\x1B[32m";
+  const char *KYEL = "\x1B[33m";
+  const char *KBLU = "\x1B[34m";
+  const char *KMAG = "\x1B[35m";
+  const char *KCYN = "\x1B[36m";
+  const char *KWHT = "\x1B[37m";
+  const char *KRST = "\033[0m";
+#endif // TIME_DISABLE
 
   static const int ARGMAX = 16;
   static const int BUFFERLIMIT = 100;
@@ -77,10 +78,10 @@ class DebugIf : public SyscModule {
 
   struct timeval stop_, start_;
 
-  MemoryIf* mm_;
+  MemoryIf *mm_;
 
   bool newline_ = false;
   int cycle_ = 0;
 };
 
-#endif  // TESTS_VERILATOR_SIM_CORALNPU_DEBUG_IF_H_
+#endif // TESTS_VERILATOR_SIM_CORALNPU_DEBUG_IF_H_

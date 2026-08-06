@@ -5,17 +5,17 @@
 #include "spi_master.h"
 
 class MockFtdi : public FtdiInterface {
- public:
+public:
   std::vector<uint8_t> written;
   std::vector<uint8_t> to_read;
   size_t read_idx = 0;
 
-  int write_data(const uint8_t* buf, int size) override {
+  int write_data(const uint8_t *buf, int size) override {
     written.insert(written.end(), buf, buf + size);
     return size;
   }
 
-  int read_data(uint8_t* buf, int size) override {
+  int read_data(uint8_t *buf, int size) override {
     int n = 0;
     while (n < size && read_idx < to_read.size()) {
       buf[n++] = to_read[read_idx++];
@@ -42,7 +42,7 @@ TEST(NexusLoaderTest, WriteLines) {
 
   // Assert header presence
   ASSERT_GT(mock.written.size(), 20u);
-  EXPECT_EQ(mock.written[0], 0x80);  // CS Low
+  EXPECT_EQ(mock.written[0], 0x80); // CS Low
 }
 
 TEST(NexusLoaderTest, ReadLines) {
@@ -52,10 +52,10 @@ TEST(NexusLoaderTest, ReadLines) {
   size_t window =
       1 * SpiMaster::kBytesPerBeat + SpiMaster::kInitialLatencyPaddingBytes;
   mock.to_read.resize(window, 0);
-  mock.to_read[5] = 0xFE;  // Sync token
+  mock.to_read[5] = 0xFE; // Sync token
 
   for (int i = 0; i < 16; i++) {
-    mock.to_read[6 + i] = i + 1;  // 1, 2, 3... 16
+    mock.to_read[6 + i] = i + 1; // 1, 2, 3... 16
   }
 
   uint8_t out[16] = {0};
@@ -78,11 +78,13 @@ TEST(NexusLoaderTest, ReadLinesMultiBeat) {
 
   // Beat 0: sync at 100
   mock.to_read[100] = 0xFE;
-  for (int i = 0; i < 16; i++) mock.to_read[101 + i] = 0xA0 + i;
+  for (int i = 0; i < 16; i++)
+    mock.to_read[101 + i] = 0xA0 + i;
 
   // Beat 1: sync at 200 (must be after beat 0's data)
   mock.to_read[200] = 0xFE;
-  for (int i = 0; i < 16; i++) mock.to_read[201 + i] = 0xB0 + i;
+  for (int i = 0; i < 16; i++)
+    mock.to_read[201 + i] = 0xB0 + i;
 
   uint8_t out[32] = {0};
   bool res = spi.v2_read_lines(0x3000, 2, out);
@@ -103,7 +105,7 @@ TEST(NexusLoaderTest, WriteWord) {
   size_t window =
       1 * SpiMaster::kBytesPerBeat + SpiMaster::kInitialLatencyPaddingBytes;
   mock.to_read.resize(window, 0xCC);
-  mock.to_read[500] = 0xFE;  // sync token
+  mock.to_read[500] = 0xFE; // sync token
 
   // For the v2_write_lines drain loop
   mock.to_read.push_back(0xFF);
@@ -143,8 +145,8 @@ TEST(NexusLoaderTest, WriteDataUnaligned) {
   size_t window =
       1 * SpiMaster::kBytesPerBeat + SpiMaster::kInitialLatencyPaddingBytes;
   mock.to_read.resize(window, 0xCC);
-  mock.to_read[500] = 0xFE;      // sync token
-  mock.to_read.push_back(0xFF);  // drain loop
+  mock.to_read[500] = 0xFE;     // sync token
+  mock.to_read.push_back(0xFF); // drain loop
 
   uint8_t payload[8] = {1, 2, 3, 4, 5, 6, 7, 8};
   spi.v2_write_data(0x1004, payload, 8);
@@ -175,9 +177,9 @@ TEST(NexusLoaderTest, ReadDataUnaligned) {
   size_t window =
       1 * SpiMaster::kBytesPerBeat + SpiMaster::kInitialLatencyPaddingBytes;
   mock.to_read.resize(window, 0xCC);
-  mock.to_read[500] = 0xFE;  // sync token
+  mock.to_read[500] = 0xFE; // sync token
   for (int i = 0; i < 16; i++) {
-    mock.to_read[501 + i] = i;  // Data in line is 0, 1, 2, ... 15
+    mock.to_read[501 + i] = i; // Data in line is 0, 1, 2, ... 15
   }
 
   uint8_t out[8] = {0};

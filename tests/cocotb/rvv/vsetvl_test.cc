@@ -44,16 +44,15 @@ __attribute__((used, retain)) void vsetvl_keep() {
       : "vtype", "vl");
 }
 
-#define CREATE_VSETVLI_FN(name, sew, lmul)                  \
-  __attribute__((used, retain)) void name() {               \
-    asm("vsetvli %[vl_out1], zero, " #sew ", " #lmul        \
-        ", ta, ma;"                                         \
-        "csrr %[vl_out2], vl;"                              \
-        "csrr %[vtype_out], vtype;"                         \
-        : [vl_out1] "=r"(vl_out1), [vl_out2] "=r"(vl_out2), \
-          [vtype_out] "=r"(vtype_out)                       \
-        : [avl] "r"(avl), [vtype] "r"(vtype)                \
-        : "vtype", "vl");                                   \
+#define CREATE_VSETVLI_FN(name, sew, lmul)                                     \
+  __attribute__((used, retain)) void name() {                                  \
+    asm("vsetvli %[vl_out1], zero, " #sew ", " #lmul ", ta, ma;"               \
+        "csrr %[vl_out2], vl;"                                                 \
+        "csrr %[vtype_out], vtype;"                                            \
+        : [vl_out1] "=r"(vl_out1), [vl_out2] "=r"(vl_out2),                    \
+          [vtype_out] "=r"(vtype_out)                                          \
+        : [avl] "r"(avl), [vtype] "r"(vtype)                                   \
+        : "vtype", "vl");                                                      \
   }
 
 CREATE_VSETVLI_FN(vsetvli_max_e8mf4, e8, mf4)
@@ -89,7 +88,7 @@ __attribute__((used, retain)) void vsetvli_keep() {
 
 void (*impl)() __attribute__((section(".data"))) = vsetvl_max;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
 
   return 0;

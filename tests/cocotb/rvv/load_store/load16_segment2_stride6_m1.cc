@@ -23,8 +23,7 @@ __attribute__((used, retain)) void test_intrinsic(const uint16_t *x,
   vuint16m1x2_t v = __riscv_vlsseg2e16_v_u16m1x2(in_buf, 6, 8);
 
   vuint16m2_t vv = __riscv_vcreate_v_u16m1_u16m2(
-      __riscv_vget_v_u16m1x2_u16m1(v, 0),
-      __riscv_vget_v_u16m1x2_u16m1(v, 1));
+      __riscv_vget_v_u16m1x2_u16m1(v, 0), __riscv_vget_v_u16m1x2_u16m1(v, 1));
 
   __riscv_vse16_v_u16m2(y, vv, /*vl=*/16);
 }

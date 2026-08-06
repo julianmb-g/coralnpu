@@ -17,8 +17,8 @@
 
 typedef uint16_t uint16x8_t __attribute__((vector_size(16)));
 
-uint16_t in_buf[16] __attribute__((section(".data")));  // 15 in use.
-uint16_t out_buf[8] __attribute__((section(".data")));  // 8 in use.
+uint16_t in_buf[16] __attribute__((section(".data"))); // 15 in use.
+uint16_t out_buf[8] __attribute__((section(".data"))); // 8 in use.
 
 __attribute__((used, retain)) void test_intrinsic(const uint16_t *x,
                                                   uint16_t *y) {

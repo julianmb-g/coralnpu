@@ -15,14 +15,14 @@
 #ifndef TESTS_VERILATOR_SIM_RVVI_REGISTER_VALUE_H_
 #define TESTS_VERILATOR_SIM_RVVI_REGISTER_VALUE_H_
 
-#include <cstdint>
-#include <cstddef>
 #include "absl/types/span.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace mpact::sim::riscv::rvvi {
 
 class RegisterValue {
- public:
+public:
   RegisterValue() : reg_type_(0), index_(0), current_size_(0) {
     for (size_t i = 0; i < 256; ++i) {
       data_[i] = 0;
@@ -38,20 +38,20 @@ class RegisterValue {
   uint16_t CurrentSize() const { return current_size_; }
   void SetCurrentSize(uint16_t size) { current_size_ = size; }
 
-  uint8_t* DataPtr() { return data_; }
-  const uint8_t* DataPtr() const { return data_; }
+  uint8_t *DataPtr() { return data_; }
+  const uint8_t *DataPtr() const { return data_; }
 
   absl::Span<const uint8_t> Data() const {
     return absl::MakeConstSpan(data_, current_size_);
   }
 
- private:
+private:
   uint8_t reg_type_;
   uint16_t index_;
   uint16_t current_size_;
   uint8_t data_[256];
 };
 
-}  // namespace mpact::sim::riscv::rvvi
+} // namespace mpact::sim::riscv::rvvi
 
-#endif  // TESTS_VERILATOR_SIM_RVVI_REGISTER_VALUE_H_
+#endif // TESTS_VERILATOR_SIM_RVVI_REGISTER_VALUE_H_

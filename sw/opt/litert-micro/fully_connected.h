@@ -20,14 +20,14 @@
 namespace coralnpu_v2::opt::litert_micro {
 
 void FullyConnected(
-    const tflite::FullyConnectedParams& params,
-    const tflite::RuntimeShape& input_shape, const int8_t* input_data,
-    const tflite::RuntimeShape& filter_shape, const int8_t* filter_data,
-    const tflite::RuntimeShape& bias_shape, const int32_t* bias_data,
-    const tflite::RuntimeShape& output_shape, int8_t* output_data);
+    const tflite::FullyConnectedParams &params,
+    const tflite::RuntimeShape &input_shape, const int8_t *input_data,
+    const tflite::RuntimeShape &filter_shape, const int8_t *filter_data,
+    const tflite::RuntimeShape &bias_shape, const int32_t *bias_data,
+    const tflite::RuntimeShape &output_shape, int8_t *output_data);
 
 TFLMRegistration Register_FULLY_CONNECTED();
 
-}  // namespace coralnpu_v2::opt::litert_micro
+} // namespace coralnpu_v2::opt::litert_micro
 
-#endif  // SW_OPT_LITERT_MICRO_FULLY_CONNECTED_H_
+#endif // SW_OPT_LITERT_MICRO_FULLY_CONNECTED_H_

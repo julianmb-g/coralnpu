@@ -12,32 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
- #ifndef TESTS_RISCV_TESTS_RISCV_TEST_H_
- #define TESTS_RISCV_TESTS_RISCV_TEST_H_
- 
- #define RVTEST_RV32U \
-   .macro init;       \
-   .endm
- #define RVTEST_RV32M \
-   .macro init;       \
-   .endm
-#define RVTEST_RV32UF \
-    .macro init;      \
-    .endm
-#define RVTEST_CODE_BEGIN                     \
-  .option norelax;                            \
-  .globl _start;                              \
-  _start:                                     \
-    li      t0, 0x6600;                       \
-    csrrs   zero, mstatus, t0;
+#ifndef TESTS_RISCV_TESTS_RISCV_TEST_H_
+#define TESTS_RISCV_TESTS_RISCV_TEST_H_
 
+#define RVTEST_RV32U                                                           \
+  .macro init;                                                                 \
+  .endm
+#define RVTEST_RV32M                                                           \
+  .macro init;                                                                 \
+  .endm
+#define RVTEST_RV32UF                                                          \
+  .macro init;                                                                 \
+  .endm
+#define RVTEST_CODE_BEGIN                                                      \
+  .option norelax;                                                             \
+  .globl _start;                                                               \
+  _start:                                                                      \
+  li t0, 0x6600;                                                               \
+  csrrs zero, mstatus, t0;
 
- #define RVTEST_CODE_END
- #define TESTNUM gp
- #define RVTEST_PASS .word 0x08000073
- #define RVTEST_FAIL ebreak
- #define EXTRA_DATA
- // clang-format off
+#define RVTEST_CODE_END
+#define TESTNUM gp
+#define RVTEST_PASS .word 0x08000073
+#define RVTEST_FAIL ebreak
+#define EXTRA_DATA
+// clang-format off
  #define RVTEST_DATA_BEGIN                                           \
    EXTRA_DATA                                                        \
    .pushsection .tohost, "aw", @progbits;                            \
@@ -47,15 +46,15 @@
    .align 4;                                                         \
    .global begin_signature;                                          \
    begin_signature:
- // clang-format on
- #define RVTEST_DATA_END  \
-   .align 4;              \
-   .global end_signature; \
-   end_signature:
- 
- #define MSTATUS_FS (0x00006000)
- #define MSTATUS_MPP (0x00001800)
- #define CAUSE_USER_ECALL (0x8)
- #define CAUSE_ILLEGAL_INSTRUCTION (0x2)
- 
- #endif  // TESTS_RISCV_TESTS_RISCV_TEST_H_
+// clang-format on
+#define RVTEST_DATA_END                                                        \
+  .align 4;                                                                    \
+  .global end_signature;                                                       \
+  end_signature:
+
+#define MSTATUS_FS (0x00006000)
+#define MSTATUS_MPP (0x00001800)
+#define CAUSE_USER_ECALL (0x8)
+#define CAUSE_ILLEGAL_INSTRUCTION (0x2)
+
+#endif // TESTS_RISCV_TESTS_RISCV_TEST_H_

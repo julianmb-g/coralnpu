@@ -159,7 +159,7 @@ void sram_cleanup(void *handle) {
 }
 
 void sram_clear() {
-  for (auto const& [base, sram] : registered_srams) {
+  for (auto const &[base, sram] : registered_srams) {
     std::fill(sram->data.begin(), sram->data.end(), 0);
   }
 }

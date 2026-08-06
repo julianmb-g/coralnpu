@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
+#include "sw/opt/rvv_opt.h"
 #include <riscv_vector.h>
 #include <stdint.h>
-#include "sw/opt/rvv_opt.h"
 
-uint8_t in_buf[512] __attribute__((section(".data"))) __attribute__((aligned(16)));
-uint8_t out_buf[512] __attribute__((section(".data"))) __attribute__((aligned(16)));
+uint8_t in_buf[512] __attribute__((section(".data")))
+__attribute__((aligned(16)));
+uint8_t out_buf[512] __attribute__((section(".data")))
+__attribute__((aligned(16)));
 size_t size_n __attribute__((section(".data")));
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   coralnpu_v2::opt::Memcpy(out_buf, in_buf, size_n);
   return 0;
 }

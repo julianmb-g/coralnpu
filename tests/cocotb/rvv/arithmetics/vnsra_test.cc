@@ -17,7 +17,7 @@
 
 namespace {
 constexpr size_t buf_size = 64;
-}  // namespace
+} // namespace
 
 size_t vl __attribute__((section(".data"))) = 4;
 size_t shift_scalar __attribute__((section(".data"))) = 1;
@@ -152,7 +152,7 @@ __attribute__((used, retain)) void vnsra_wx_i8m4() {
 
 void (*impl)() __attribute__((section(".data"))) = &vnsra_wv_i16m1;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

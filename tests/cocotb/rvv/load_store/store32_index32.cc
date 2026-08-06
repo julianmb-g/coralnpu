@@ -18,7 +18,7 @@
 namespace {
 constexpr size_t scatter_count = 32;
 constexpr size_t buf_size = 7000;
-}  // namespace
+} // namespace
 
 size_t vl __attribute__((section(".data"))) = 8;
 // Indices are always unsigned.
@@ -82,7 +82,7 @@ __attribute__((used, retain)) void vsoxei32_v_u32m8() {
 
 void (*impl)() __attribute__((section(".data"))) = &vsuxei32_v_u32m1;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

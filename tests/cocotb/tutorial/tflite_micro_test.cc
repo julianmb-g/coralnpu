@@ -25,14 +25,14 @@
 namespace {
 using HelloWorldOpResolver = tflite::MicroMutableOpResolver<1>;
 
-TfLiteStatus RegisterOps(HelloWorldOpResolver& op_resolver) {
+TfLiteStatus RegisterOps(HelloWorldOpResolver &op_resolver) {
   TF_LITE_ENSURE_STATUS(op_resolver.AddFullyConnected());
   return kTfLiteOk;
 }
-}  // namespace
+} // namespace
 
-int main(int argc, char** argv) {
-  const tflite::Model* model = tflite::GetModel(g_hello_world_int8_model_data);
+int main(int argc, char **argv) {
+  const tflite::Model *model = tflite::GetModel(g_hello_world_int8_model_data);
   HelloWorldOpResolver op_resolver;
 
   constexpr size_t kTensorArenaSize = 3000;
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
   if (interpreter.AllocateTensors() != kTfLiteOk) {
     return -1;
   }
-  TfLiteTensor* input = interpreter.input(0);
+  TfLiteTensor *input = interpreter.input(0);
   memset(tflite::GetTensorData<uint8_t>(input), 0, input->bytes);
   if (interpreter.Invoke() != kTfLiteOk) {
     return -2;

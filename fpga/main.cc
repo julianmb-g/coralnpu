@@ -30,8 +30,8 @@ namespace {
 // the first eval(); waiting until the first OnClock callback guarantees they
 // are in the registered_srams map.
 class BackdoorElfLoader : public SimCtrlExtension {
- public:
-  bool ParseCLIArguments(int argc, char** argv, bool& exit_app) override {
+public:
+  bool ParseCLIArguments(int argc, char **argv, bool &exit_app) override {
     static const char kFlag[] = "--load_elf=";
     static const size_t kFlagLen = sizeof(kFlag) - 1;
     for (int i = 1; i < argc; ++i) {
@@ -43,19 +43,20 @@ class BackdoorElfLoader : public SimCtrlExtension {
   }
 
   void OnClock(unsigned long sim_time) override {
-    if (loaded_ || path_.empty()) return;
+    if (loaded_ || path_.empty())
+      return;
     std::cerr << "[Backdoor] Loading ELF: " << path_ << std::endl;
     sram_clear();
     sram_load_elf(path_.c_str());
     loaded_ = true;
   }
 
- private:
+private:
   std::string path_;
   bool loaded_ = false;
 };
 
-}  // namespace
+} // namespace
 
 #if defined(CHISEL_SUBSYSTEM_HIGHMEM)
 constexpr bool highmem = true;
@@ -99,7 +100,8 @@ int main(int argc, char **argv) {
   simctrl.SetInitialResetDelay(20);
   simctrl.SetResetDuration(10);
 
-  std::cout << "Simulation of CoralNPU SoC (" << (highmem ? "Highmem" : "Default") << ")" << std::endl
+  std::cout << "Simulation of CoralNPU SoC ("
+            << (highmem ? "Highmem" : "Default") << ")" << std::endl
             << "======================" << std::endl
             << std::endl;
 

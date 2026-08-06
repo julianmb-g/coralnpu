@@ -20,9 +20,9 @@
 // can be overridden via the `vl` parameter.
 
 uint8_t buffer[4096] __attribute__((section(".data")));
-uint8_t* in_ptr __attribute__((section(".data"))) = &(buffer[0]);
-uint8_t* out_ptr __attribute__((section(".data"))) = &(buffer[0]);
-size_t vl __attribute__((section(".data"))) = 16 ;
+uint8_t *in_ptr __attribute__((section(".data"))) = &(buffer[0]);
+uint8_t *out_ptr __attribute__((section(".data"))) = &(buffer[0]);
+size_t vl __attribute__((section(".data"))) = 16;
 
 int main() {
   vuint8m1_t v = __riscv_vle8_v_u8m1(in_ptr, vl);

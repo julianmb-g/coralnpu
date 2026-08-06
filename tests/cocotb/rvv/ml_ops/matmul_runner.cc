@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstdint>
 #include "sw/utils/utils.h"
+#include <cstdint>
 
 constexpr size_t kMaxLhsRows = 32;
 constexpr size_t kMaxRhsCols = 32;
@@ -36,8 +36,8 @@ __attribute__((aligned(16)));
 int32_t result_output[kMaxLhsRows * kMaxRhsCols]
     __attribute__((section(".data"))) __attribute__((aligned(16)));
 
-extern "C" void MatMul(size_t lhs_rows, size_t inner, size_t rhs_cols, const int8_t* lhs,
-                       const int8_t* rhs, int32_t* result);
+extern "C" void MatMul(size_t lhs_rows, size_t inner, size_t rhs_cols,
+                       const int8_t *lhs, const int8_t *rhs, int32_t *result);
 
 int main() {
   mcontext0_write_value = 0x01;

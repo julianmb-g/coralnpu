@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdint.h>
-#include <stddef.h>
 #include "sw/utils/utils.h"
+#include <stddef.h>
+#include <stdint.h>
 
 // Fully frozen dimensions
 constexpr size_t kLhsRows = 16;
@@ -31,14 +31,17 @@ volatile uint32_t csr_cycle_count = 0;
 
 // Statically allocated and padded buffers
 int8_t lhs_input[kLhsRows * kInner]
-    __attribute__((section(".data"), used, retain)) __attribute__((aligned(16)));
+    __attribute__((section(".data"), used, retain))
+    __attribute__((aligned(16)));
 int8_t rhs_input[kInner * kRhsCols]
-    __attribute__((section(".data"), used, retain)) __attribute__((aligned(16)));
+    __attribute__((section(".data"), used, retain))
+    __attribute__((aligned(16)));
 int32_t result_output[kLhsRows * kRhsCols]
-    __attribute__((section(".data"), used, retain)) __attribute__((aligned(16)));
+    __attribute__((section(".data"), used, retain))
+    __attribute__((aligned(16)));
 
-extern "C" void MatMul(size_t lhs_rows, size_t inner, size_t rhs_cols, const int8_t* lhs,
-                       const int8_t* rhs, int32_t* result);
+extern "C" void MatMul(size_t lhs_rows, size_t inner, size_t rhs_cols,
+                       const int8_t *lhs, const int8_t *rhs, int32_t *result);
 
 int main() {
   // Flag start of power-critical section (write to mcontext0)

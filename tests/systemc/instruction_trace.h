@@ -20,40 +20,35 @@
 #include <vector>
 
 class InstructionTrace {
- public:
-  void TraceInstruction(
-    const std::vector<bool>& fires,
-    const std::vector<uint32_t>& addrs,
-    const std::vector<uint32_t>& insts,
-    const std::vector<bool>& scalarWriteAddrValids,
-    const std::vector<uint32_t>& scalarWriteAddrAddrs,
-    const std::vector<bool>& floatWriteAddrValids,
-    const std::vector<uint32_t>& floatWriteAddrAddrs,
-    const std::vector<bool>& writeDataValids,
-    const std::vector<uint32_t>& writeDataAddrs,
-    const std::vector<uint32_t>& writeDataDatas,
-    const std::vector<int>& executeRegBases);
+public:
+  void TraceInstruction(const std::vector<bool> &fires,
+                        const std::vector<uint32_t> &addrs,
+                        const std::vector<uint32_t> &insts,
+                        const std::vector<bool> &scalarWriteAddrValids,
+                        const std::vector<uint32_t> &scalarWriteAddrAddrs,
+                        const std::vector<bool> &floatWriteAddrValids,
+                        const std::vector<uint32_t> &floatWriteAddrAddrs,
+                        const std::vector<bool> &writeDataValids,
+                        const std::vector<uint32_t> &writeDataAddrs,
+                        const std::vector<uint32_t> &writeDataDatas,
+                        const std::vector<int> &executeRegBases);
   void TraceInstructionRaw(uint32_t pc, uint32_t inst, uint32_t reg,
-                           const std::vector<uint8_t>& data, const bool trap);
+                           const std::vector<uint8_t> &data, const bool trap);
   void PrintTrace() const;
 
   static const int kScalarBaseReg = 0;
   static const int kFloatBaseReg = 32;
   static const int kEcallBaseReg = 64;
 
- private:
+private:
   struct Instruction {
     Instruction() = default;
     ~Instruction() = default;
-    Instruction(const Instruction&) = default;
+    Instruction(const Instruction &) = default;
     Instruction(uint32_t pc, uint32_t inst, uint32_t reg)
         : Instruction(pc, inst, reg, false) {}
-    Instruction(uint32_t pc, uint32_t inst, uint32_t reg, bool trap) :
-      pc(pc),
-      inst(inst),
-      reg(reg),
-      trap(trap),
-      completed(false) {}
+    Instruction(uint32_t pc, uint32_t inst, uint32_t reg, bool trap)
+        : pc(pc), inst(inst), reg(reg), trap(trap), completed(false) {}
 
     uint32_t pc;
     uint32_t inst;
@@ -66,4 +61,4 @@ class InstructionTrace {
   std::deque<Instruction> retirement_buffer_;
 };
 
-#endif  // TESTS_SYSTEMC_INSTRUCTION_TRACE_H_
+#endif // TESTS_SYSTEMC_INSTRUCTION_TRACE_H_

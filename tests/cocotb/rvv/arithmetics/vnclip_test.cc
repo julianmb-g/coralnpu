@@ -17,8 +17,8 @@
 
 namespace {
 constexpr size_t buf_size = 64;
-constexpr uint32_t vxrm = 2;  // TODO(davidgao): test remaining ones
-}  // namespace
+constexpr uint32_t vxrm = 2; // TODO(davidgao): test remaining ones
+} // namespace
 
 size_t vl __attribute__((section(".data"))) = 4;
 size_t shift_scalar __attribute__((section(".data"))) = 1;
@@ -163,9 +163,10 @@ __attribute__((used, retain)) void vnclip_vxsat_check() {
   asm volatile("csrwi vxsat, 0");
 
   // Use MAX_INT32 with shift=0 to guarantee saturation to int16.
-  // 0x7FFFFFFF (2147483647) >> 0 = 2147483647, which saturates to 32767 (0x7FFF).
+  // 0x7FFFFFFF (2147483647) >> 0 = 2147483647, which saturates to 32767
+  // (0x7FFF).
   buf32[0] = 0x7FFFFFFF;
-  buf_shift16[0] = 0;  // No shift - guaranteed to saturate
+  buf_shift16[0] = 0; // No shift - guaranteed to saturate
 
   const auto in_v = __riscv_vle32_v_i32m1(buf32, 1);
   const auto shift = __riscv_vle16_v_u16mf2(buf_shift16, 1);
@@ -179,7 +180,7 @@ __attribute__((used, retain)) void vnclip_vxsat_check() {
 
 void (*impl)() __attribute__((section(".data"))) = &vnclip_wv_i16m1;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

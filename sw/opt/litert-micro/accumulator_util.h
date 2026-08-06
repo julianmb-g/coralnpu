@@ -25,11 +25,11 @@
 
 #if TFLITE_SINGLE_ROUNDING
 #error "TFLITE_SINGLE_ROUNDING is not supported"
-#endif  // TFLITE_SINGLE_ROUNDING
+#endif // TFLITE_SINGLE_ROUNDING
 
 namespace coralnpu_v2::opt::litert_micro {
-inline void PrepareShiftParams(uint8_t* left, uint8_t* right,
-                               const int32_t* shift_in, int out_d) {
+inline void PrepareShiftParams(uint8_t *left, uint8_t *right,
+                               const int32_t *shift_in, int out_d) {
   int out_ch = 0;
   size_t out_ch_rem = out_d;
   while (out_ch_rem > 0) {
@@ -51,12 +51,12 @@ inline void PrepareShiftParams(uint8_t* left, uint8_t* right,
 }
 
 // TODO(davidgao): use a param structure for reuse?
-inline void PostprocessAcc(const int32_t* accs, const int32_t* bias_data,
-                           const uint8_t* lshift, const int32_t* multiplier,
-                           const uint8_t* rshift, int32_t out_offset,
-                           int8_t out_min, int8_t out_max, int8_t* out_data,
+inline void PostprocessAcc(const int32_t *accs, const int32_t *bias_data,
+                           const uint8_t *lshift, const int32_t *multiplier,
+                           const uint8_t *rshift, int32_t out_offset,
+                           int8_t out_min, int8_t out_max, int8_t *out_data,
                            int out_w, int out_d) {
-  constexpr uint32_t vxrm = 0;  // round-to-nearest-up
+  constexpr uint32_t vxrm = 0; // round-to-nearest-up
 
   int out_ch = 0;
   size_t out_ch_rem = out_d;
@@ -95,11 +95,11 @@ inline void PostprocessAcc(const int32_t* accs, const int32_t* bias_data,
   }
 }
 
-inline void PostprocessAcc16(const int32_t* accs, const int32_t* bias_data,
-                             const uint8_t* lshift, const int32_t* multiplier,
-                             const uint8_t* rshift, int32_t out_offset,
+inline void PostprocessAcc16(const int32_t *accs, const int32_t *bias_data,
+                             const uint8_t *lshift, const int32_t *multiplier,
+                             const uint8_t *rshift, int32_t out_offset,
                              int16_t out_min, int16_t out_max,
-                             int16_t* out_data, int out_w, int out_d) {
+                             int16_t *out_data, int out_w, int out_d) {
   // Scalar post-processing to ensure absolute bit-exactness with TFLM.
   // The user requested correctness over performance for this stage.
   for (int out_x = 0; out_x < out_w; ++out_x) {
@@ -119,6 +119,6 @@ inline void PostprocessAcc16(const int32_t* accs, const int32_t* bias_data,
     }
   }
 }
-}  // namespace coralnpu_v2::opt::litert_micro
+} // namespace coralnpu_v2::opt::litert_micro
 
-#endif  // SW_OPT_LITERT_MICRO_ACCUMULATOR_UTIL_H_
+#endif // SW_OPT_LITERT_MICRO_ACCUMULATOR_UTIL_H_

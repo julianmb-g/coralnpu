@@ -14,15 +14,14 @@
 
 load("@coralnpu_hw//rules:coco_tb.bzl", "cocotb_test_suite", "verilator_cocotb_model")
 load("@coralnpu_hw//third_party/python:requirements.bzl", "requirement")
-
-package(default_visibility = ["//visibility:public"])
-
 load(
     "//tests/cocotb:build_defs.bzl",
     "VCS_BUILD_ARGS",
     "VCS_DEFINES",
     "VCS_TEST_ARGS",
 )
+
+package(default_visibility = ["//visibility:public"])
 
 # BEGIN_TESTCASES_FOR_tlul2axi_cocotb_test
 TLUL2AXI_TESTCASES = [
@@ -52,12 +51,12 @@ cocotb_test_suite(
         ],
         "waves": True,
     },
+    vcs_build_args = VCS_BUILD_ARGS,
+    vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
     vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul2axi_cc_library_verilog"],
     verilator_model = "//hdl/chisel/src/bus:tlul2axi_model",
-    vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
-    vcs_data = ["//hdl/verilog:dpi_files"],
 )
 
 # BEGIN_TESTCASES_FOR_axi2tlul_cocotb_test
@@ -87,12 +86,12 @@ cocotb_test_suite(
         ],
         "waves": True,
     },
+    vcs_build_args = VCS_BUILD_ARGS,
+    vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
     vcs_verilog_sources = ["//hdl/chisel/src/bus:axi2tlul_cc_library_verilog"],
     verilator_model = "//hdl/chisel/src/bus:axi2tlul_model",
-    vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
-    vcs_data = ["//hdl/verilog:dpi_files"],
 )
 
 # BEGIN_TESTCASES_FOR_tlul_fifo_async_128_cocotb_test
@@ -103,7 +102,10 @@ TLUL_FIFO_ASYNC_TESTCASES = [
 
 cocotb_test_suite(
     name = "tlul_fifo_async_128_cocotb_test",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = TLUL_FIFO_ASYNC_TESTCASES,
     testcases_vname = "TLUL_FIFO_ASYNC_TESTCASES",
     tests_kwargs = {
@@ -115,12 +117,12 @@ cocotb_test_suite(
         "waves": True,
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/bus:tlul_fifo_async_128_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_fifo_async_128_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_fifo_async_128_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:tlul_fifo_async_128_model",
 )
 
 # BEGIN_TESTCASES_FOR_tlul_fifo_sync_cocotb_test
@@ -131,7 +133,10 @@ TLUL_FIFO_SYNC_TESTCASES = [
 
 cocotb_test_suite(
     name = "tlul_fifo_sync_cocotb_test",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = TLUL_FIFO_SYNC_TESTCASES,
     testcases_vname = "TLUL_FIFO_SYNC_TESTCASES",
     tests_kwargs = {
@@ -143,12 +148,12 @@ cocotb_test_suite(
         "waves": True,
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/bus:tlul_fifo_sync_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_fifo_sync_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_fifo_sync_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:tlul_fifo_sync_model",
 )
 
 # BEGIN_TESTCASES_FOR_tlul_socket_1n_128_cocotb_test
@@ -180,12 +185,12 @@ cocotb_test_suite(
         "waves": True,
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/bus:tlul_socket_1n_128_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_socket_1n_128_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_socket_1n_128_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:tlul_socket_1n_128_model",
 )
 
 # BEGIN_TESTCASES_FOR_tlul_socket_m1_2_128_cocotb_test
@@ -216,12 +221,12 @@ cocotb_test_suite(
         "waves": True,
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/bus:tlul_socket_m1_2_128_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_socket_m1_2_128_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_socket_m1_2_128_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:tlul_socket_m1_2_128_model",
 )
 
 # BEGIN_TESTCASES_FOR_tlul_integrity_cocotb_test
@@ -235,7 +240,10 @@ TLUL_INTEGRITY_TESTCASES = [
 
 cocotb_test_suite(
     name = "tlul_integrity_cocotb_test",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = TLUL_INTEGRITY_TESTCASES,
     testcases_vname = "TLUL_INTEGRITY_TESTCASES",
     tests_kwargs = {
@@ -248,12 +256,12 @@ cocotb_test_suite(
         "waves": True,
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/bus:tlul_integrity_testbench_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_integrity_testbench_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:tlul_integrity_testbench_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:tlul_integrity_testbench_model",
 )
 
 # BEGIN_TESTCASES_FOR_secded_encoder_cocotb_test
@@ -264,7 +272,10 @@ SECDED_ENCODER_TESTCASES = [
 
 cocotb_test_suite(
     name = "secded_encoder_cocotb_test",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = SECDED_ENCODER_TESTCASES,
     testcases_vname = "SECDED_ENCODER_TESTCASES",
     tests_kwargs = {
@@ -276,22 +287,26 @@ cocotb_test_suite(
         "waves": True,
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/bus:secded_encoder_testbench_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/bus:secded_encoder_testbench_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:secded_encoder_testbench_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:secded_encoder_testbench_model",
 )
 
 # BEGIN_TESTCASES_FOR_secded_encoder_32_cocotb_test
 SECDED_ENCODER_32_TESTCASES = [
     "test_secded_encoder",
 ]
+
 # END_TESTCASES_FOR_secded_encoder_32_cocotb_test
 cocotb_test_suite(
     name = "secded_encoder_32_cocotb_test",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = SECDED_ENCODER_32_TESTCASES,
     testcases_vname = "SECDED_ENCODER_32_TESTCASES",
     tests_kwargs = {
@@ -303,22 +318,26 @@ cocotb_test_suite(
         "waves": True,
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/bus:secded_encoder_testbench_32_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/bus:secded_encoder_testbench_32_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:secded_encoder_testbench_32_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:secded_encoder_testbench_32_model",
 )
 
 # BEGIN_TESTCASES_FOR_secded_encoder_57_cocotb_test
 SECDED_ENCODER_57_TESTCASES = [
     "test_secded_encoder",
 ]
+
 # END_TESTCASES_FOR_secded_encoder_57_cocotb_test
 cocotb_test_suite(
     name = "secded_encoder_57_cocotb_test",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = SECDED_ENCODER_57_TESTCASES,
     testcases_vname = "SECDED_ENCODER_57_TESTCASES",
     tests_kwargs = {
@@ -330,12 +349,12 @@ cocotb_test_suite(
         "waves": True,
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/bus:secded_encoder_testbench_57_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/bus:secded_encoder_testbench_57_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/bus:secded_encoder_testbench_57_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/bus:secded_encoder_testbench_57_model",
 )
 
 # --- Rules for CoralNPUXbar cocotb test ---
@@ -365,7 +384,10 @@ CORALNPU_XBAR_TESTCASES = [
 
 cocotb_test_suite(
     name = "coralnpu_xbar_cocotb",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = CORALNPU_XBAR_TESTCASES,
     testcases_vname = "CORALNPU_XBAR_TESTCASES",
     tests_kwargs = {
@@ -379,12 +401,12 @@ cocotb_test_suite(
         ],
         "size": "small",
     },
-    verilator_model = "//hdl/chisel/src/soc:coralnpu_xbar_testharness_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_xbar_testharness_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_xbar_testharness_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/soc:coralnpu_xbar_testharness_model",
 )
 
 # BEGIN_TESTCASES_FOR_coralnpu_chisel_subsystem_cocotb
@@ -420,7 +442,10 @@ py_library(
 
 cocotb_test_suite(
     name = "coralnpu_chisel_subsystem_cocotb",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = CORALNPU_CHISEL_SUBSYSTEM_TESTCASES,
     testcases_vname = "CORALNPU_CHISEL_SUBSYSTEM_TESTCASES",
     tests_kwargs = {
@@ -446,8 +471,7 @@ cocotb_test_suite(
         "default_testcase_size": "small",
         "size": "enormous",
     },
-    verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_cc_library_verilog"],
+    vcs_build_args = VCS_BUILD_ARGS,
     vcs_data = [
         "//hdl/verilog:dpi_files",
         "//tests/cocotb/rvv/arithmetics:rvv_add_int32_m1.elf",
@@ -456,9 +480,10 @@ cocotb_test_suite(
         "//tests/cocotb:software_interrupt_test.elf",
         "//tests/cocotb:plic_test.elf",
     ],
-    vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
     vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_model",
 )
 
 # BEGIN_TESTCASES_FOR_spi_master_cocotb
@@ -472,7 +497,10 @@ SPI_MASTER_TESTCASES = [
 
 cocotb_test_suite(
     name = "spi_master_cocotb",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = SPI_MASTER_TESTCASES,
     testcases_vname = "SPI_MASTER_TESTCASES",
     tests_kwargs = {
@@ -486,12 +514,12 @@ cocotb_test_suite(
         "default_testcase_size": "small",
         "size": "medium",
     },
-    verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_model",
 )
 
 # BEGIN_TESTCASES_FOR_dma_integration_cocotb
@@ -504,7 +532,10 @@ DMA_INTEGRATION_TESTCASES = [
 
 cocotb_test_suite(
     name = "dma_integration_cocotb",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = DMA_INTEGRATION_TESTCASES,
     testcases_vname = "DMA_INTEGRATION_TESTCASES",
     tests_kwargs = {
@@ -518,12 +549,12 @@ cocotb_test_suite(
         "default_testcase_size": "small",
         "size": "medium",
     },
-    verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_model",
 )
 
 # BEGIN_TESTCASES_FOR_gpio_integration_cocotb
@@ -534,7 +565,10 @@ GPIO_INTEGRATION_TESTCASES = [
 
 cocotb_test_suite(
     name = "gpio_integration_cocotb",
-    simulators = ["verilator", "vcs"],
+    simulators = [
+        "verilator",
+        "vcs",
+    ],
     testcases = GPIO_INTEGRATION_TESTCASES,
     testcases_vname = "GPIO_INTEGRATION_TESTCASES",
     tests_kwargs = {
@@ -548,12 +582,12 @@ cocotb_test_suite(
         "default_testcase_size": "small",
         "size": "medium",
     },
-    verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_model",
-    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_cc_library_verilog"],
     vcs_build_args = VCS_BUILD_ARGS,
-    vcs_test_args = VCS_TEST_ARGS,
-    vcs_defines = VCS_DEFINES,
     vcs_data = ["//hdl/verilog:dpi_files"],
+    vcs_defines = VCS_DEFINES,
+    vcs_test_args = VCS_TEST_ARGS,
+    vcs_verilog_sources = ["//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_cc_library_verilog"],
+    verilator_model = "//hdl/chisel/src/soc:coralnpu_chisel_subsystem_testharness_model",
 )
 
 cocotb_test_suite(

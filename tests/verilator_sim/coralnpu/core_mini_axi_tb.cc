@@ -26,9 +26,9 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
-#include "tests/verilator_sim/sysc_tb.h"
 #include "mpact/sim/generic/core_debug_interface.h"
 #include "mpact/sim/util/program_loader/elf_program_loader.h"
+#include "tests/verilator_sim/sysc_tb.h"
 
 /* clang-format off */
 #include <systemc>
@@ -39,27 +39,20 @@ namespace internal {
 using namespace internal;
 /* clang-format on */
 
-const char* CoreMiniAxiTb::kCoreMiniAxiModelName = STRINGIFY(VERILATOR_MODEL);
+const char *CoreMiniAxiTb::kCoreMiniAxiModelName = STRINGIFY(VERILATOR_MODEL);
 
 CoreMiniAxiTb::CoreMiniAxiTb(sc_module_name n, int loops, bool random,
-                               bool debug_axi, bool instr_trace,
-                               bool backdoor_load,
-                               std::optional<std::function<void()>> wfi_cb,
-                               std::optional<std::function<void()>> halted_cb)
-    : SyscTb(n, loops, random),
-      tg_("traffic_generator"),
-      tlm2axi_bridge_("tlm2axi_bridge"),
-      tlm_mux_("tlm_mux"),
+                             bool debug_axi, bool instr_trace,
+                             bool backdoor_load,
+                             std::optional<std::function<void()>> wfi_cb,
+                             std::optional<std::function<void()>> halted_cb)
+    : SyscTb(n, loops, random), tg_("traffic_generator"),
+      tlm2axi_bridge_("tlm2axi_bridge"), tlm_mux_("tlm_mux"),
       tohost_initiator_socket_("tohost_initiator_socket"),
-      axi2tlm_bridge_("axi2tlm_bridge"),
-      tlm2axi_checker_("tlm2axi_checker"),
-      tlm2axi_signals_("tlm2axi_signals"),
-      axi2tlm_signals_("axi2tlm_signals"),
-      xbar_("xbar"),
-      wfi_cb_(wfi_cb),
-      halted_cb_(halted_cb),
-      instr_trace_(instr_trace),
-      backdoor_load_(backdoor_load) {
+      axi2tlm_bridge_("axi2tlm_bridge"), tlm2axi_checker_("tlm2axi_checker"),
+      tlm2axi_signals_("tlm2axi_signals"), axi2tlm_signals_("axi2tlm_signals"),
+      xbar_("xbar"), wfi_cb_(wfi_cb), halted_cb_(halted_cb),
+      instr_trace_(instr_trace), backdoor_load_(backdoor_load) {
   if (CoreMiniAxiTb::singleton_ != nullptr) {
     CHECK(false);
   }
@@ -106,7 +99,8 @@ void CoreMiniAxiTb::Connect() {
   // TLM sockets
   tg_.socket.bind(*tlm_mux_.t_sk[0]);
   tohost_initiator_socket_.bind(*tlm_mux_.t_sk[1]);
-  tlm_mux_.memmap(0, 0xffffffffffffffffull, ADDRMODE_RELATIVE, -1, tlm2axi_bridge_.tgt_socket);
+  tlm_mux_.memmap(0, 0xffffffffffffffffull, ADDRMODE_RELATIVE, -1,
+                  tlm2axi_bridge_.tgt_socket);
 
   core_->io_aclk(clock);
   core_->io_aresetn(resetn);
@@ -119,6 +113,7 @@ void CoreMiniAxiTb::Connect() {
   core_->io_te(io_te);
   core_->io_boot_addr(io_boot_addr);
 
+#if KP_exposeDebugPorts
   core_->io_debug_en(debug_io_.en);
   core_->io_debug_cycles(debug_io_.cycles);
   core_->io_debug_addr_0(debug_io_.addr_0);
@@ -145,65 +140,98 @@ void CoreMiniAxiTb::Connect() {
   core_->io_debug_dispatch_1_instInst(debug_io_.dispatch_1_instInst);
   core_->io_debug_dispatch_2_instInst(debug_io_.dispatch_2_instInst);
   core_->io_debug_dispatch_3_instInst(debug_io_.dispatch_3_instInst);
-  core_->io_debug_regfile_writeAddr_0_valid(debug_io_.regfile_writeAddr_0_valid);
-  core_->io_debug_regfile_writeAddr_1_valid(debug_io_.regfile_writeAddr_1_valid);
-  core_->io_debug_regfile_writeAddr_2_valid(debug_io_.regfile_writeAddr_2_valid);
-  core_->io_debug_regfile_writeAddr_3_valid(debug_io_.regfile_writeAddr_3_valid);
+  core_->io_debug_regfile_writeAddr_0_valid(
+      debug_io_.regfile_writeAddr_0_valid);
+  core_->io_debug_regfile_writeAddr_1_valid(
+      debug_io_.regfile_writeAddr_1_valid);
+  core_->io_debug_regfile_writeAddr_2_valid(
+      debug_io_.regfile_writeAddr_2_valid);
+  core_->io_debug_regfile_writeAddr_3_valid(
+      debug_io_.regfile_writeAddr_3_valid);
   core_->io_debug_regfile_writeAddr_0_bits(debug_io_.regfile_writeAddr_0_bits);
   core_->io_debug_regfile_writeAddr_1_bits(debug_io_.regfile_writeAddr_1_bits);
   core_->io_debug_regfile_writeAddr_2_bits(debug_io_.regfile_writeAddr_2_bits);
   core_->io_debug_regfile_writeAddr_3_bits(debug_io_.regfile_writeAddr_3_bits);
-  core_->io_debug_regfile_writeData_0_valid(debug_io_.regfile_writeData_0_valid);
-  core_->io_debug_regfile_writeData_1_valid(debug_io_.regfile_writeData_1_valid);
-  core_->io_debug_regfile_writeData_2_valid(debug_io_.regfile_writeData_2_valid);
-  core_->io_debug_regfile_writeData_3_valid(debug_io_.regfile_writeData_3_valid);
-  core_->io_debug_regfile_writeData_4_valid(debug_io_.regfile_writeData_4_valid);
-  core_->io_debug_regfile_writeData_5_valid(debug_io_.regfile_writeData_5_valid);
-  core_->io_debug_regfile_writeData_0_bits_addr(debug_io_.regfile_writeData_0_bits_addr);
-  core_->io_debug_regfile_writeData_1_bits_addr(debug_io_.regfile_writeData_1_bits_addr);
-  core_->io_debug_regfile_writeData_2_bits_addr(debug_io_.regfile_writeData_2_bits_addr);
-  core_->io_debug_regfile_writeData_3_bits_addr(debug_io_.regfile_writeData_3_bits_addr);
-  core_->io_debug_regfile_writeData_4_bits_addr(debug_io_.regfile_writeData_4_bits_addr);
-  core_->io_debug_regfile_writeData_5_bits_addr(debug_io_.regfile_writeData_5_bits_addr);
-  core_->io_debug_regfile_writeData_0_bits_data(debug_io_.regfile_writeData_0_bits_data);
-  core_->io_debug_regfile_writeData_1_bits_data(debug_io_.regfile_writeData_1_bits_data);
-  core_->io_debug_regfile_writeData_2_bits_data(debug_io_.regfile_writeData_2_bits_data);
-  core_->io_debug_regfile_writeData_3_bits_data(debug_io_.regfile_writeData_3_bits_data);
-  core_->io_debug_regfile_writeData_4_bits_data(debug_io_.regfile_writeData_4_bits_data);
-  core_->io_debug_regfile_writeData_5_bits_data(debug_io_.regfile_writeData_5_bits_data);
+  core_->io_debug_regfile_writeData_0_valid(
+      debug_io_.regfile_writeData_0_valid);
+  core_->io_debug_regfile_writeData_1_valid(
+      debug_io_.regfile_writeData_1_valid);
+  core_->io_debug_regfile_writeData_2_valid(
+      debug_io_.regfile_writeData_2_valid);
+  core_->io_debug_regfile_writeData_3_valid(
+      debug_io_.regfile_writeData_3_valid);
+  core_->io_debug_regfile_writeData_4_valid(
+      debug_io_.regfile_writeData_4_valid);
+  core_->io_debug_regfile_writeData_5_valid(
+      debug_io_.regfile_writeData_5_valid);
+  core_->io_debug_regfile_writeData_0_bits_addr(
+      debug_io_.regfile_writeData_0_bits_addr);
+  core_->io_debug_regfile_writeData_1_bits_addr(
+      debug_io_.regfile_writeData_1_bits_addr);
+  core_->io_debug_regfile_writeData_2_bits_addr(
+      debug_io_.regfile_writeData_2_bits_addr);
+  core_->io_debug_regfile_writeData_3_bits_addr(
+      debug_io_.regfile_writeData_3_bits_addr);
+  core_->io_debug_regfile_writeData_4_bits_addr(
+      debug_io_.regfile_writeData_4_bits_addr);
+  core_->io_debug_regfile_writeData_5_bits_addr(
+      debug_io_.regfile_writeData_5_bits_addr);
+  core_->io_debug_regfile_writeData_0_bits_data(
+      debug_io_.regfile_writeData_0_bits_data);
+  core_->io_debug_regfile_writeData_1_bits_data(
+      debug_io_.regfile_writeData_1_bits_data);
+  core_->io_debug_regfile_writeData_2_bits_data(
+      debug_io_.regfile_writeData_2_bits_data);
+  core_->io_debug_regfile_writeData_3_bits_data(
+      debug_io_.regfile_writeData_3_bits_data);
+  core_->io_debug_regfile_writeData_4_bits_data(
+      debug_io_.regfile_writeData_4_bits_data);
+  core_->io_debug_regfile_writeData_5_bits_data(
+      debug_io_.regfile_writeData_5_bits_data);
 #if (KP_enableFloat == true)
   core_->io_debug_float_writeAddr_valid(debug_io_.float_writeAddr_valid);
   core_->io_debug_float_writeAddr_bits(debug_io_.float_writeAddr_bits);
   core_->io_debug_float_writeData_0_valid(debug_io_.float_writeData_0_valid);
   core_->io_debug_float_writeData_1_valid(debug_io_.float_writeData_1_valid);
-  core_->io_debug_float_writeData_0_bits_addr(debug_io_.float_writeData_0_bits_addr);
-  core_->io_debug_float_writeData_1_bits_addr(debug_io_.float_writeData_1_bits_addr);
-  core_->io_debug_float_writeData_0_bits_data(debug_io_.float_writeData_0_bits_data);
-  core_->io_debug_float_writeData_1_bits_data(debug_io_.float_writeData_1_bits_data);
+  core_->io_debug_float_writeData_0_bits_addr(
+      debug_io_.float_writeData_0_bits_addr);
+  core_->io_debug_float_writeData_1_bits_addr(
+      debug_io_.float_writeData_1_bits_addr);
+  core_->io_debug_float_writeData_0_bits_data(
+      debug_io_.float_writeData_0_bits_data);
+  core_->io_debug_float_writeData_1_bits_data(
+      debug_io_.float_writeData_1_bits_data);
 #endif
 #if (KP_enableRvv == true)
-#define BIND_RB_DEBUG_IO_VEC(x, y) \
-  core_->io_debug_rb_inst_##x##_bits_vecWrites_##y##_valid(debug_io_.rb_inst_##x##_bits_vecWrites_##y##_valid); \
-  core_->io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_data(debug_io_.rb_inst_##x##_bits_vecWrites_##y##_bits_data); \
-  core_->io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_idx(debug_io_.rb_inst_##x##_bits_vecWrites_##y##_bits_idx);
-#define BIND_RB_DEBUG_IO_VECS_8(x) \
-  BIND_RB_DEBUG_IO_VEC(x, 0) BIND_RB_DEBUG_IO_VEC(x, 1) BIND_RB_DEBUG_IO_VEC(x, 2) BIND_RB_DEBUG_IO_VEC(x, 3) \
-  BIND_RB_DEBUG_IO_VEC(x, 4) BIND_RB_DEBUG_IO_VEC(x, 5) BIND_RB_DEBUG_IO_VEC(x, 6) BIND_RB_DEBUG_IO_VEC(x, 7)
+#define BIND_RB_DEBUG_IO_VEC(x, y)                                             \
+  core_->io_debug_rb_inst_##x##_bits_vecWrites_##y##_valid(                    \
+      debug_io_.rb_inst_##x##_bits_vecWrites_##y##_valid);                     \
+  core_->io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_data(                \
+      debug_io_.rb_inst_##x##_bits_vecWrites_##y##_bits_data);                 \
+  core_->io_debug_rb_inst_##x##_bits_vecWrites_##y##_bits_idx(                 \
+      debug_io_.rb_inst_##x##_bits_vecWrites_##y##_bits_idx);
+#define BIND_RB_DEBUG_IO_VECS_8(x)                                             \
+  BIND_RB_DEBUG_IO_VEC(x, 0)                                                   \
+  BIND_RB_DEBUG_IO_VEC(x, 1) BIND_RB_DEBUG_IO_VEC(x, 2)                        \
+      BIND_RB_DEBUG_IO_VEC(x, 3) BIND_RB_DEBUG_IO_VEC(x, 4)                    \
+          BIND_RB_DEBUG_IO_VEC(x, 5) BIND_RB_DEBUG_IO_VEC(x, 6)                \
+              BIND_RB_DEBUG_IO_VEC(x, 7)
 #else
 #define BIND_RB_DEBUG_IO_VECS_8(x)
 #endif
-#define BIND_RB_DEBUG_IO(x) \
-  core_->io_debug_rb_inst_##x##_valid(debug_io_.rb_inst_##x##_valid); \
-  core_->io_debug_rb_inst_##x##_bits_pc(debug_io_.rb_inst_##x##_bits_pc); \
-  core_->io_debug_rb_inst_##x##_bits_inst(debug_io_.rb_inst_##x##_bits_inst); \
-  core_->io_debug_rb_inst_##x##_bits_idx(debug_io_.rb_inst_##x##_bits_idx); \
-  core_->io_debug_rb_inst_##x##_bits_data(debug_io_.rb_inst_##x##_bits_data); \
-  core_->io_debug_rb_inst_##x##_bits_trap(debug_io_.rb_inst_##x##_bits_trap); \
+#define BIND_RB_DEBUG_IO(x)                                                    \
+  core_->io_debug_rb_inst_##x##_valid(debug_io_.rb_inst_##x##_valid);          \
+  core_->io_debug_rb_inst_##x##_bits_pc(debug_io_.rb_inst_##x##_bits_pc);      \
+  core_->io_debug_rb_inst_##x##_bits_inst(debug_io_.rb_inst_##x##_bits_inst);  \
+  core_->io_debug_rb_inst_##x##_bits_idx(debug_io_.rb_inst_##x##_bits_idx);    \
+  core_->io_debug_rb_inst_##x##_bits_data(debug_io_.rb_inst_##x##_bits_data);  \
+  core_->io_debug_rb_inst_##x##_bits_trap(debug_io_.rb_inst_##x##_bits_trap);  \
   BIND_RB_DEBUG_IO_VECS_8(x)
   CORALNPU_SIM_REPEAT(BIND_RB_DEBUG_IO, KP_retirementBufferSize);
 #undef BIND_RB_DEBUG_IO
 #undef BIND_RB_DEBUG_IO_VECS_8
 #undef BIND_RB_DEBUG_IO_VEC
+#endif
   core_->io_dm_req_valid(dm_io_.req_valid);
   core_->io_dm_req_ready(dm_io_.req_ready);
   core_->io_dm_req_bits_address(dm_io_.req_bits_address);
@@ -324,50 +352,87 @@ absl::Status CoreMiniAxiTb::LoadElfAsync(absl::string_view file_name) {
   close(fd);
 
   uint32_t elf_magic = 0x464c457f;
-  uint8_t* data8 = reinterpret_cast<uint8_t*>(file_data);
+  uint8_t *data8 = reinterpret_cast<uint8_t *>(file_data);
   if (memcmp(file_data, &elf_magic, sizeof(elf_magic)) == 0) {
     std::vector<DataTransfer> elf_transfers;
     class AxiDebugAdapter : public mpact::sim::generic::CoreDebugInterface {
-     public:
-      CoreMiniAxiTb* tb_;
-      std::vector<DataTransfer>* transfers_;
-      AxiDebugAdapter(CoreMiniAxiTb* tb, std::vector<DataTransfer>* t) : tb_(tb), transfers_(t) {}
+    public:
+      CoreMiniAxiTb *tb_;
+      std::vector<DataTransfer> *transfers_;
+      AxiDebugAdapter(CoreMiniAxiTb *tb, std::vector<DataTransfer> *t)
+          : tb_(tb), transfers_(t) {}
       absl::Status Halt() override { return absl::UnimplementedError(""); }
-      absl::Status Halt(HaltReason halt_reason) override { return absl::UnimplementedError(""); }
-      absl::Status Halt(HaltReasonValueType halt_reason) override { return absl::UnimplementedError(""); }
-      absl::StatusOr<int> Step(int num) override { return absl::UnimplementedError(""); }
+      absl::Status Halt(HaltReason halt_reason) override {
+        return absl::UnimplementedError("");
+      }
+      absl::Status Halt(HaltReasonValueType halt_reason) override {
+        return absl::UnimplementedError("");
+      }
+      absl::StatusOr<int> Step(int num) override {
+        return absl::UnimplementedError("");
+      }
       absl::Status Run() override { return absl::UnimplementedError(""); }
       absl::Status Wait() override { return absl::UnimplementedError(""); }
-      absl::StatusOr<RunStatus> GetRunStatus() override { return RunStatus::kNone; }
-      absl::StatusOr<HaltReasonValueType> GetLastHaltReason() override { return 0; }
-      absl::StatusOr<uint64_t> ReadRegister(const std::string& name) override { return absl::UnimplementedError(""); }
-      absl::Status WriteRegister(const std::string& name, uint64_t value) override { return absl::UnimplementedError(""); }
-      absl::StatusOr<mpact::sim::generic::DataBuffer*> GetRegisterDataBuffer(const std::string& name) override { return absl::UnimplementedError(""); }
-      absl::StatusOr<size_t> ReadMemory(uint64_t address, void* buf, size_t length) override { return length; }
+      absl::StatusOr<RunStatus> GetRunStatus() override {
+        return RunStatus::kNone;
+      }
+      absl::StatusOr<HaltReasonValueType> GetLastHaltReason() override {
+        return 0;
+      }
+      absl::StatusOr<uint64_t> ReadRegister(const std::string &name) override {
+        return absl::UnimplementedError("");
+      }
+      absl::Status WriteRegister(const std::string &name,
+                                 uint64_t value) override {
+        return absl::UnimplementedError("");
+      }
+      absl::StatusOr<mpact::sim::generic::DataBuffer *>
+      GetRegisterDataBuffer(const std::string &name) override {
+        return absl::UnimplementedError("");
+      }
+      absl::StatusOr<size_t> ReadMemory(uint64_t address, void *buf,
+                                        size_t length) override {
+        return length;
+      }
       bool HasBreakpoint(uint64_t address) override { return false; }
-      absl::Status SetSwBreakpoint(uint64_t address) override { return absl::UnimplementedError(""); }
-      absl::Status ClearSwBreakpoint(uint64_t address) override { return absl::UnimplementedError(""); }
-      absl::Status ClearAllSwBreakpoints() override { return absl::UnimplementedError(""); }
-      absl::StatusOr<mpact::sim::generic::Instruction*> GetInstruction(uint64_t address) override { return absl::UnimplementedError(""); }
-      absl::StatusOr<std::string> GetDisassembly(uint64_t address) override { return absl::UnimplementedError(""); }
+      absl::Status SetSwBreakpoint(uint64_t address) override {
+        return absl::UnimplementedError("");
+      }
+      absl::Status ClearSwBreakpoint(uint64_t address) override {
+        return absl::UnimplementedError("");
+      }
+      absl::Status ClearAllSwBreakpoints() override {
+        return absl::UnimplementedError("");
+      }
+      absl::StatusOr<mpact::sim::generic::Instruction *>
+      GetInstruction(uint64_t address) override {
+        return absl::UnimplementedError("");
+      }
+      absl::StatusOr<std::string> GetDisassembly(uint64_t address) override {
+        return absl::UnimplementedError("");
+      }
 
-      absl::StatusOr<size_t> WriteMemory(uint64_t address, const void* src, size_t count) override {
+      absl::StatusOr<size_t> WriteMemory(uint64_t address, const void *src,
+                                         size_t count) override {
         uint32_t itcm_size = KP_itcmSizeKBytes * 1024;
         uint32_t dtcm_size = KP_dtcmSizeKBytes * 1024;
-        uint32_t dtcm_base = (KP_itcmSizeKBytes == 8 && KP_dtcmSizeKBytes == 32) ? 0x10000 : 0x100000;
-        bool in_tcm = (address < itcm_size) || (address >= dtcm_base && address < dtcm_base + dtcm_size);
+        uint32_t dtcm_base = (KP_itcmSizeKBytes == 8 && KP_dtcmSizeKBytes == 32)
+                                 ? 0x10000
+                                 : 0x100000;
+        bool in_tcm = (address < itcm_size) ||
+                      (address >= dtcm_base && address < dtcm_base + dtcm_size);
 
         bool use_backdoor = tb_->backdoor_load_;
         if (use_backdoor && in_tcm) {
-          tb_->BackdoorLoad(address, reinterpret_cast<const uint8_t*>(src), count);
+          tb_->BackdoorLoad(address, reinterpret_cast<const uint8_t *>(src),
+                            count);
         } else {
           transfers_->push_back(utils::Write(
-              address,
-              reinterpret_cast<uint8_t*>(const_cast<void*>(src)), count));
-          transfers_->push_back(
-              utils::Read(address, count));
+              address, reinterpret_cast<uint8_t *>(const_cast<void *>(src)),
+              count));
+          transfers_->push_back(utils::Read(address, count));
           transfers_->push_back(utils::Expect(
-              reinterpret_cast<uint8_t*>(const_cast<void*>(src)), count));
+              reinterpret_cast<uint8_t *>(const_cast<void *>(src)), count));
         }
         return count;
       }
@@ -379,12 +444,12 @@ absl::Status CoreMiniAxiTb::LoadElfAsync(absl::string_view file_name) {
     CHECK_OK(entry_point_or.status());
     uint32_t entry_point = entry_point_or.value();
 
-    elf_transfers.push_back(utils::Write(
-      kCsrAddr + 0x4, reinterpret_cast<uint8_t*>(&entry_point), sizeof(entry_point)
-    ));
+    elf_transfers.push_back(
+        utils::Write(kCsrAddr + 0x4, reinterpret_cast<uint8_t *>(&entry_point),
+                     sizeof(entry_point)));
     transfer_queue_.push(
         std::make_unique<TrafficDesc>(utils::merge(elf_transfers)));
-    
+
     auto tohost_or = elf_loader.GetSymbol("tohost");
     if (tohost_or.ok()) {
       uint32_t tohost = tohost_or.value().first;
@@ -424,11 +489,11 @@ absl::Status CoreMiniAxiTb::ClockGateSync(bool enable) {
 absl::Status CoreMiniAxiTb::ClockGateAsync(bool enable) {
   absl::MutexLock lock(&transfer_queue_mtx_);
   uint8_t enable8 = enable ? 3 : 1;
-  uint8_t enable_[4] = { enable8, 0, 0, 0 };;
+  uint8_t enable_[4] = {enable8, 0, 0, 0};
+  ;
   transfer_queue_.push(
       std::make_unique<TrafficDesc>(utils::merge(std::vector<DataTransfer>(
-          {utils::Write(kCsrAddr, enable_),
-           utils::Read(kCsrAddr, 4),
+          {utils::Write(kCsrAddr, enable_), utils::Read(kCsrAddr, 4),
            utils::Expect(enable_, 4)}))));
   return absl::OkStatus();
 }
@@ -443,11 +508,11 @@ absl::Status CoreMiniAxiTb::ResetSync(bool enable) {
 absl::Status CoreMiniAxiTb::ResetAsync(bool enable) {
   absl::MutexLock lock(&transfer_queue_mtx_);
   uint8_t enable8 = enable ? 1 : 0;
-  uint8_t enable_[4] = { enable8, 0, 0, 0 };;
+  uint8_t enable_[4] = {enable8, 0, 0, 0};
+  ;
   transfer_queue_.push(
       std::make_unique<TrafficDesc>(utils::merge(std::vector<DataTransfer>(
-          {utils::Write(kCsrAddr, enable_),
-           utils::Read(kCsrAddr, 4),
+          {utils::Write(kCsrAddr, enable_), utils::Read(kCsrAddr, 4),
            utils::Expect(enable_, 4)}))));
   return absl::OkStatus();
 }
@@ -468,27 +533,28 @@ absl::Status CoreMiniAxiTb::CheckStatusAsync() {
 }
 
 void CoreMiniAxiTb::TraceInstructions() {
-#define TRACE_INSTRUCTION(x) do { \
-  uint32_t pc, inst, idx; \
-  pc = debug_io_.rb_inst_##x##_bits_pc.read().get_word(0); \
-  inst = debug_io_.rb_inst_##x##_bits_inst.read().get_word(0); \
-  idx = debug_io_.rb_inst_##x##_bits_idx.read().get_word(0); \
-  bool trap = debug_io_.rb_inst_##x##_bits_trap.read(); \
-  if (debug_io_.rb_inst_##x##_valid.read()) { \
-    auto data = debug_io_.rb_inst_##x##_bits_data.read(); \
-    std::vector<uint8_t> data_vec(data.length() / 8); \
-    int num_words = data.length() / 32; \
-    for (int i = 0; i < num_words; ++i) { \
-      uint32_t word = data.get_word((num_words - 1) - i); \
-      data_vec[i*4+0] = (word >> 24) & 0xff; \
-      data_vec[i*4+1] = (word >> 16) & 0xff; \
-      data_vec[i*4+2] = (word >> 8) & 0xff; \
-      data_vec[i*4+3] = word & 0xff; \
-    } \
-    tracer_.TraceInstructionRaw(pc, inst, idx, data_vec, trap); \
-  } \
-} while (0);
-CORALNPU_SIM_REPEAT(TRACE_INSTRUCTION, KP_retirementBufferSize);
+#define TRACE_INSTRUCTION(x)                                                   \
+  do {                                                                         \
+    uint32_t pc, inst, idx;                                                    \
+    pc = debug_io_.rb_inst_##x##_bits_pc.read().get_word(0);                   \
+    inst = debug_io_.rb_inst_##x##_bits_inst.read().get_word(0);               \
+    idx = debug_io_.rb_inst_##x##_bits_idx.read().get_word(0);                 \
+    bool trap = debug_io_.rb_inst_##x##_bits_trap.read();                      \
+    if (debug_io_.rb_inst_##x##_valid.read()) {                                \
+      auto data = debug_io_.rb_inst_##x##_bits_data.read();                    \
+      std::vector<uint8_t> data_vec(data.length() / 8);                        \
+      int num_words = data.length() / 32;                                      \
+      for (int i = 0; i < num_words; ++i) {                                    \
+        uint32_t word = data.get_word((num_words - 1) - i);                    \
+        data_vec[i * 4 + 0] = (word >> 24) & 0xff;                             \
+        data_vec[i * 4 + 1] = (word >> 16) & 0xff;                             \
+        data_vec[i * 4 + 2] = (word >> 8) & 0xff;                              \
+        data_vec[i * 4 + 3] = word & 0xff;                                     \
+      }                                                                        \
+      tracer_.TraceInstructionRaw(pc, inst, idx, data_vec, trap);              \
+    }                                                                          \
+  } while (0);
+  CORALNPU_SIM_REPEAT(TRACE_INSTRUCTION, KP_retirementBufferSize);
 #undef TRACE_INSTRUCTION
 }
 
@@ -505,7 +571,7 @@ void CoreMiniAxiTb::tohost_reader_thread() {
       uint64_t tohost_payload = 0;
       trans.set_command(tlm::TLM_READ_COMMAND);
       trans.set_address(tohost_addr_.value());
-      trans.set_data_ptr(reinterpret_cast<uint8_t*>(&tohost_payload));
+      trans.set_data_ptr(reinterpret_cast<uint8_t *>(&tohost_payload));
       trans.set_data_length(8);
       trans.set_streaming_width(8);
       trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
@@ -520,7 +586,8 @@ void CoreMiniAxiTb::tohost_reader_thread() {
       addr = tohost_payload;
     }
 
-    if (addr == 0) continue;
+    if (addr == 0)
+      continue;
 
     uint8_t data[64];
 
@@ -537,14 +604,15 @@ void CoreMiniAxiTb::tohost_reader_thread() {
 
     uint64_t resp_val = 0;
     if (trans.is_response_error()) {
-      LOG(ERROR) << "tohost read error at " << std::hex << addr << ": " << trans.get_response_string();
+      LOG(ERROR) << "tohost read error at " << std::hex << addr << ": "
+                 << trans.get_response_string();
     } else {
       // Clear tohost to acknowledge receipt of the address.
       if (tohost_addr_.has_value()) {
         uint64_t zero64 = 0;
         trans.set_command(tlm::TLM_WRITE_COMMAND);
         trans.set_address(tohost_addr_.value());
-        trans.set_data_ptr(reinterpret_cast<uint8_t*>(&zero64));
+        trans.set_data_ptr(reinterpret_cast<uint8_t *>(&zero64));
         trans.set_data_length(8);
         trans.set_streaming_width(8);
         trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
@@ -555,235 +623,246 @@ void CoreMiniAxiTb::tohost_reader_thread() {
       uint64_t words[8];
       memcpy(words, data, sizeof(words));
       switch (words[0]) {
-        case 56:  // sys_openat
-        {
-          int64_t dirfd_guest = static_cast<int64_t>(words[1]);
-          int dirfd = (dirfd_guest == -100) ? AT_FDCWD : static_cast<int>(dirfd_guest);
-          auto iter = fd_map_.find(words[1]);
-          if (iter != fd_map_.end()) {
-            dirfd = iter->second;
-          }
-          uint64_t name_addr = words[2];
-          size_t name_len = static_cast<size_t>(words[3]);
-          int flags = static_cast<int>(words[4]);
-          int mode = static_cast<int>(words[5]);
+      case 56: // sys_openat
+      {
+        int64_t dirfd_guest = static_cast<int64_t>(words[1]);
+        int dirfd =
+            (dirfd_guest == -100) ? AT_FDCWD : static_cast<int>(dirfd_guest);
+        auto iter = fd_map_.find(words[1]);
+        if (iter != fd_map_.end()) {
+          dirfd = iter->second;
+        }
+        uint64_t name_addr = words[2];
+        size_t name_len = static_cast<size_t>(words[3]);
+        int flags = static_cast<int>(words[4]);
+        int mode = static_cast<int>(words[5]);
 
-          std::vector<char> name(name_len + 1, 0);
-          trans.set_command(tlm::TLM_READ_COMMAND);
-          trans.set_address(name_addr);
-          trans.set_data_ptr(reinterpret_cast<uint8_t*>(name.data()));
-          trans.set_data_length(name_len);
-          trans.set_streaming_width(name_len);
+        std::vector<char> name(name_len + 1, 0);
+        trans.set_command(tlm::TLM_READ_COMMAND);
+        trans.set_address(name_addr);
+        trans.set_data_ptr(reinterpret_cast<uint8_t *>(name.data()));
+        trans.set_data_length(name_len);
+        trans.set_streaming_width(name_len);
+        trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+        delay = SC_ZERO_TIME;
+        tohost_initiator_socket_->b_transport(trans, delay);
+        if (trans.is_response_error()) {
+          resp_val = -1;
+        } else {
+          int host_flags = 0;
+          if (flags & 0x0001)
+            host_flags |= O_WRONLY;
+          if (flags & 0x0002)
+            host_flags |= O_RDWR;
+          if (flags & 0x0200)
+            host_flags |= O_CREAT;
+          if (flags & 0x0400)
+            host_flags |= O_TRUNC;
+          if (flags & 0x0800)
+            host_flags |= O_EXCL;
+          if (flags & 0x4000)
+            host_flags |= O_APPEND;
+
+          int host_fd = openat(dirfd, name.data(), host_flags, mode);
+          if (host_fd >= 0) {
+            resp_val = host_fd + 3; // Offset to avoid overlapping with stdio
+            fd_map_[resp_val] = host_fd;
+          } else {
+            resp_val = -1;
+          }
+        }
+      } break;
+
+      case 57: // sys_close
+      {
+        uint64_t guest_fd = words[1];
+        auto iter = fd_map_.find(guest_fd);
+        if (iter != fd_map_.end()) {
+          resp_val = close(iter->second);
+          fd_map_.erase(iter);
+        } else {
+          resp_val = -1;
+        }
+      } break;
+
+      case 62: // sys_lseek
+      {
+        uint64_t guest_fd = words[1];
+        auto iter = fd_map_.find(guest_fd);
+        int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
+        off_t offset = static_cast<off_t>(words[2]);
+        int whence = static_cast<int>(words[3]);
+        resp_val = lseek(host_fd, offset, whence);
+      } break;
+
+      case 63: // sys_read
+      {
+        uint64_t guest_fd = words[1];
+        uint64_t buf_addr = words[2];
+        size_t buf_len = static_cast<size_t>(words[3]);
+        std::vector<uint8_t> buf(buf_len);
+        ssize_t bytes_read;
+        if (guest_fd == 0) {
+          bytes_read = read(0, buf.data(), buf_len);
+        } else {
+          auto iter = fd_map_.find(guest_fd);
+          int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
+          bytes_read = read(host_fd, buf.data(), buf_len);
+        }
+
+        if (bytes_read > 0) {
+          trans.set_command(tlm::TLM_WRITE_COMMAND);
+          trans.set_address(buf_addr);
+          trans.set_data_ptr(buf.data());
+          trans.set_data_length(bytes_read);
+          trans.set_streaming_width(bytes_read);
           trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
           delay = SC_ZERO_TIME;
           tohost_initiator_socket_->b_transport(trans, delay);
           if (trans.is_response_error()) {
+            LOG(ERROR) << "sys_read buf write error at " << std::hex
+                       << buf_addr;
             resp_val = -1;
           } else {
-            int host_flags = 0;
-            if (flags & 0x0001) host_flags |= O_WRONLY;
-            if (flags & 0x0002) host_flags |= O_RDWR;
-            if (flags & 0x0200) host_flags |= O_CREAT;
-            if (flags & 0x0400) host_flags |= O_TRUNC;
-            if (flags & 0x0800) host_flags |= O_EXCL;
-            if (flags & 0x4000) host_flags |= O_APPEND;
-
-            int host_fd = openat(dirfd, name.data(), host_flags, mode);
-            if (host_fd >= 0) {
-              resp_val = host_fd + 3; // Offset to avoid overlapping with stdio
-              fd_map_[resp_val] = host_fd;
-            } else {
-              resp_val = -1;
-            }
+            resp_val = bytes_read;
           }
-        } break;
+        } else {
+          resp_val = bytes_read;
+        }
+      } break;
 
-        case 57:  // sys_close
-        {
-          uint64_t guest_fd = words[1];
-          auto iter = fd_map_.find(guest_fd);
-          if (iter != fd_map_.end()) {
-            resp_val = close(iter->second);
-            fd_map_.erase(iter);
-          } else {
-            resp_val = -1;
-          }
-        } break;
-
-        case 62:  // sys_lseek
-        {
-          uint64_t guest_fd = words[1];
-          auto iter = fd_map_.find(guest_fd);
-          int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
-          off_t offset = static_cast<off_t>(words[2]);
-          int whence = static_cast<int>(words[3]);
-          resp_val = lseek(host_fd, offset, whence);
-        } break;
-
-        case 63:  // sys_read
-        {
-          uint64_t guest_fd = words[1];
-          uint64_t buf_addr = words[2];
-          size_t buf_len = static_cast<size_t>(words[3]);
-          std::vector<uint8_t> buf(buf_len);
-          ssize_t bytes_read;
-          if (guest_fd == 0) {
-            bytes_read = read(0, buf.data(), buf_len);
+      case 64: // sys_write
+      {
+        uint64_t guest_fd = words[1];
+        uint64_t buf_addr = words[2];
+        size_t buf_len = static_cast<size_t>(words[3]);
+        std::vector<uint8_t> buf(buf_len);
+        trans.set_command(tlm::TLM_READ_COMMAND);
+        trans.set_address(buf_addr);
+        trans.set_data_ptr(buf.data());
+        trans.set_data_length(buf_len);
+        trans.set_streaming_width(buf_len);
+        trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+        delay = SC_ZERO_TIME;
+        tohost_initiator_socket_->b_transport(trans, delay);
+        if (trans.is_response_error()) {
+          LOG(ERROR) << "sys_write buf read error at " << std::hex << buf_addr;
+          resp_val = -1;
+        } else {
+          if (guest_fd == 1 || guest_fd == 2) {
+            std::string s(reinterpret_cast<char *>(buf.data()), buf_len);
+            std::cout << s << std::flush;
+            resp_val = buf_len;
           } else {
             auto iter = fd_map_.find(guest_fd);
             int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
-            bytes_read = read(host_fd, buf.data(), buf_len);
+            resp_val = write(host_fd, buf.data(), buf_len);
           }
+        }
+      } break;
 
-          if (bytes_read > 0) {
-            trans.set_command(tlm::TLM_WRITE_COMMAND);
-            trans.set_address(buf_addr);
-            trans.set_data_ptr(buf.data());
-            trans.set_data_length(bytes_read);
-            trans.set_streaming_width(bytes_read);
-            trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
-            delay = SC_ZERO_TIME;
-            tohost_initiator_socket_->b_transport(trans, delay);
-            if (trans.is_response_error()) {
-              LOG(ERROR) << "sys_read buf write error at " << std::hex << buf_addr;
-              resp_val = -1;
-            } else {
-              resp_val = bytes_read;
-            }
-          } else {
-            resp_val = bytes_read;
-          }
-        } break;
-
-        case 64:  // sys_write
-        {
-          uint64_t guest_fd = words[1];
-          uint64_t buf_addr = words[2];
-          size_t buf_len = static_cast<size_t>(words[3]);
-          std::vector<uint8_t> buf(buf_len);
-          trans.set_command(tlm::TLM_READ_COMMAND);
+      case 67: // sys_pread
+      {
+        uint64_t guest_fd = words[1];
+        auto iter = fd_map_.find(guest_fd);
+        int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
+        uint64_t buf_addr = words[2];
+        size_t buf_len = static_cast<size_t>(words[3]);
+        off_t offset = static_cast<off_t>(words[4]);
+        std::vector<uint8_t> buf(buf_len);
+        ssize_t bytes_read = pread(host_fd, buf.data(), buf_len, offset);
+        if (bytes_read > 0) {
+          trans.set_command(tlm::TLM_WRITE_COMMAND);
           trans.set_address(buf_addr);
           trans.set_data_ptr(buf.data());
-          trans.set_data_length(buf_len);
-          trans.set_streaming_width(buf_len);
+          trans.set_data_length(bytes_read);
+          trans.set_streaming_width(bytes_read);
           trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
           delay = SC_ZERO_TIME;
           tohost_initiator_socket_->b_transport(trans, delay);
           if (trans.is_response_error()) {
-            LOG(ERROR) << "sys_write buf read error at " << std::hex << buf_addr;
+            LOG(ERROR) << "sys_pread buf write error at " << std::hex
+                       << buf_addr;
             resp_val = -1;
-          } else {
-            if (guest_fd == 1 || guest_fd == 2) {
-              std::string s(reinterpret_cast<char*>(buf.data()), buf_len);
-              std::cout << s << std::flush;
-              resp_val = buf_len;
-            } else {
-              auto iter = fd_map_.find(guest_fd);
-              int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
-              resp_val = write(host_fd, buf.data(), buf_len);
-            }
-          }
-        } break;
-
-        case 67:  // sys_pread
-        {
-          uint64_t guest_fd = words[1];
-          auto iter = fd_map_.find(guest_fd);
-          int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
-          uint64_t buf_addr = words[2];
-          size_t buf_len = static_cast<size_t>(words[3]);
-          off_t offset = static_cast<off_t>(words[4]);
-          std::vector<uint8_t> buf(buf_len);
-          ssize_t bytes_read = pread(host_fd, buf.data(), buf_len, offset);
-          if (bytes_read > 0) {
-            trans.set_command(tlm::TLM_WRITE_COMMAND);
-            trans.set_address(buf_addr);
-            trans.set_data_ptr(buf.data());
-            trans.set_data_length(bytes_read);
-            trans.set_streaming_width(bytes_read);
-            trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
-            delay = SC_ZERO_TIME;
-            tohost_initiator_socket_->b_transport(trans, delay);
-            if (trans.is_response_error()) {
-              LOG(ERROR) << "sys_pread buf write error at " << std::hex << buf_addr;
-              resp_val = -1;
-            } else {
-              resp_val = bytes_read;
-            }
           } else {
             resp_val = bytes_read;
           }
-        } break;
+        } else {
+          resp_val = bytes_read;
+        }
+      } break;
 
-        case 68:  // sys_pwrite
-        {
-          uint64_t guest_fd = words[1];
-          auto iter = fd_map_.find(guest_fd);
-          int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
-          uint64_t buf_addr = words[2];
-          size_t buf_len = static_cast<size_t>(words[3]);
-          off_t offset = static_cast<off_t>(words[4]);
-          std::vector<uint8_t> buf(buf_len);
-          trans.set_command(tlm::TLM_READ_COMMAND);
-          trans.set_address(buf_addr);
-          trans.set_data_ptr(buf.data());
-          trans.set_data_length(buf_len);
-          trans.set_streaming_width(buf_len);
-          trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
-          delay = SC_ZERO_TIME;
-          tohost_initiator_socket_->b_transport(trans, delay);
-          if (trans.is_response_error()) {
-            LOG(ERROR) << "sys_pwrite buf read error at " << std::hex << buf_addr;
-            resp_val = -1;
-          } else {
-            resp_val = pwrite(host_fd, buf.data(), buf_len, offset);
-          }
-        } break;
-
-        case 93:  // sys_exit
-          tohost_halt = true;
-          tohost_val = words[1];
-          break;
-
-        case 2011:  // sys_getmainvars
-        {
-          uint64_t buf_addr = words[1];
-          uint64_t limit = words[2];
-          uint64_t argc = 1;
-          const char* arg0 = "coralnpu.elf";
-          uint64_t arg0_addr = buf_addr + 16; // Place string after argc and argv[0] pointer
-          std::vector<uint64_t> packet(2);
-          packet[0] = argc;
-          packet[1] = arg0_addr;
-          if (limit >= (16 + strlen(arg0) + 1)) {
-            // Write argc and argv pointers
-            trans.set_command(tlm::TLM_WRITE_COMMAND);
-            trans.set_address(buf_addr);
-            trans.set_data_ptr(reinterpret_cast<uint8_t*>(packet.data()));
-            trans.set_data_length(16);
-            trans.set_streaming_width(16);
-            trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
-            delay = SC_ZERO_TIME;
-            tohost_initiator_socket_->b_transport(trans, delay);
-
-            // Write the string
-            trans.set_command(tlm::TLM_WRITE_COMMAND);
-            trans.set_address(arg0_addr);
-            trans.set_data_ptr(reinterpret_cast<uint8_t*>(const_cast<char*>(arg0)));
-            trans.set_data_length(strlen(arg0) + 1);
-            trans.set_streaming_width(strlen(arg0) + 1);
-            trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
-            tohost_initiator_socket_->b_transport(trans, delay);
-
-            resp_val = 0; // Success
-          } else {
-            resp_val = -1;
-          }
-        } break;
-
-        default:
+      case 68: // sys_pwrite
+      {
+        uint64_t guest_fd = words[1];
+        auto iter = fd_map_.find(guest_fd);
+        int host_fd = (iter == fd_map_.end()) ? -1 : iter->second;
+        uint64_t buf_addr = words[2];
+        size_t buf_len = static_cast<size_t>(words[3]);
+        off_t offset = static_cast<off_t>(words[4]);
+        std::vector<uint8_t> buf(buf_len);
+        trans.set_command(tlm::TLM_READ_COMMAND);
+        trans.set_address(buf_addr);
+        trans.set_data_ptr(buf.data());
+        trans.set_data_length(buf_len);
+        trans.set_streaming_width(buf_len);
+        trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+        delay = SC_ZERO_TIME;
+        tohost_initiator_socket_->b_transport(trans, delay);
+        if (trans.is_response_error()) {
+          LOG(ERROR) << "sys_pwrite buf read error at " << std::hex << buf_addr;
           resp_val = -1;
-          break;
+        } else {
+          resp_val = pwrite(host_fd, buf.data(), buf_len, offset);
+        }
+      } break;
+
+      case 93: // sys_exit
+        tohost_halt = true;
+        tohost_val = words[1];
+        break;
+
+      case 2011: // sys_getmainvars
+      {
+        uint64_t buf_addr = words[1];
+        uint64_t limit = words[2];
+        uint64_t argc = 1;
+        const char *arg0 = "coralnpu.elf";
+        uint64_t arg0_addr =
+            buf_addr + 16; // Place string after argc and argv[0] pointer
+        std::vector<uint64_t> packet(2);
+        packet[0] = argc;
+        packet[1] = arg0_addr;
+        if (limit >= (16 + strlen(arg0) + 1)) {
+          // Write argc and argv pointers
+          trans.set_command(tlm::TLM_WRITE_COMMAND);
+          trans.set_address(buf_addr);
+          trans.set_data_ptr(reinterpret_cast<uint8_t *>(packet.data()));
+          trans.set_data_length(16);
+          trans.set_streaming_width(16);
+          trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+          delay = SC_ZERO_TIME;
+          tohost_initiator_socket_->b_transport(trans, delay);
+
+          // Write the string
+          trans.set_command(tlm::TLM_WRITE_COMMAND);
+          trans.set_address(arg0_addr);
+          trans.set_data_ptr(
+              reinterpret_cast<uint8_t *>(const_cast<char *>(arg0)));
+          trans.set_data_length(strlen(arg0) + 1);
+          trans.set_streaming_width(strlen(arg0) + 1);
+          trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
+          tohost_initiator_socket_->b_transport(trans, delay);
+
+          resp_val = 0; // Success
+        } else {
+          resp_val = -1;
+        }
+      } break;
+
+      default:
+        resp_val = -1;
+        break;
       }
     }
 
@@ -794,7 +873,7 @@ void CoreMiniAxiTb::tohost_reader_thread() {
 
     trans.set_command(tlm::TLM_WRITE_COMMAND);
     trans.set_address(addr);
-    trans.set_data_ptr(reinterpret_cast<uint8_t*>(&resp_low));
+    trans.set_data_ptr(reinterpret_cast<uint8_t *>(&resp_low));
     trans.set_data_length(4);
     trans.set_streaming_width(4);
     trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
@@ -802,7 +881,7 @@ void CoreMiniAxiTb::tohost_reader_thread() {
     tohost_initiator_socket_->b_transport(trans, delay);
 
     trans.set_address(addr + 4);
-    trans.set_data_ptr(reinterpret_cast<uint8_t*>(&resp_high));
+    trans.set_data_ptr(reinterpret_cast<uint8_t *>(&resp_high));
     tohost_initiator_socket_->b_transport(trans, delay);
 
     // Write completion response to fromhost.
@@ -814,7 +893,7 @@ void CoreMiniAxiTb::tohost_reader_thread() {
 
       trans.set_command(tlm::TLM_WRITE_COMMAND);
       trans.set_address(fromhost_addr_.value());
-      trans.set_data_ptr(reinterpret_cast<uint8_t*>(&resp_low));
+      trans.set_data_ptr(reinterpret_cast<uint8_t *>(&resp_low));
       trans.set_data_length(4);
       trans.set_streaming_width(4);
       trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
@@ -822,7 +901,7 @@ void CoreMiniAxiTb::tohost_reader_thread() {
       tohost_initiator_socket_->b_transport(trans, delay);
 
       trans.set_address(fromhost_addr_.value() + 4);
-      trans.set_data_ptr(reinterpret_cast<uint8_t*>(&resp_high));
+      trans.set_data_ptr(reinterpret_cast<uint8_t *>(&resp_high));
       tohost_initiator_socket_->b_transport(trans, delay);
     }
 
@@ -830,7 +909,7 @@ void CoreMiniAxiTb::tohost_reader_thread() {
       uint64_t one64 = 1;
       trans.set_command(tlm::TLM_WRITE_COMMAND);
       trans.set_address(fromhost_ready_addr_.value());
-      trans.set_data_ptr(reinterpret_cast<uint8_t*>(&one64));
+      trans.set_data_ptr(reinterpret_cast<uint8_t *>(&one64));
       trans.set_data_length(8);
       trans.set_streaming_width(8);
       trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
@@ -843,7 +922,7 @@ void CoreMiniAxiTb::tohost_reader_thread() {
       uint64_t zero64 = 0;
       trans.set_command(tlm::TLM_WRITE_COMMAND);
       trans.set_address(tohost_ready_addr_.value());
-      trans.set_data_ptr(reinterpret_cast<uint8_t*>(&zero64));
+      trans.set_data_ptr(reinterpret_cast<uint8_t *>(&zero64));
       trans.set_data_length(8);
       trans.set_streaming_width(8);
       trans.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
@@ -856,28 +935,36 @@ void CoreMiniAxiTb::tohost_reader_thread() {
 void CoreMiniAxiTb::Posedge() {
   const bool core_io_dbus_valid = debug_io_.dbus_valid.read();
   const bool core_io_dbus_write = debug_io_.dbus_bits_write.read();
-  const uint32_t core_io_dbus_addr = debug_io_.dbus_bits_addr.read().get_word(0);
+  const uint32_t core_io_dbus_addr =
+      debug_io_.dbus_bits_addr.read().get_word(0);
 
   // If we have tohost_ready, trigger only when it's written with 1.
-  if (tohost_ready_addr_.has_value() && core_io_dbus_valid && core_io_dbus_write && (core_io_dbus_addr == tohost_ready_addr_.value())) {
+  if (tohost_ready_addr_.has_value() && core_io_dbus_valid &&
+      core_io_dbus_write && (core_io_dbus_addr == tohost_ready_addr_.value())) {
     const uint32_t wdata0 = debug_io_.dbus_bits_wdata.read().get_word(0);
-    if (wdata0 != 1) return;
+    if (wdata0 != 1)
+      return;
 
     // We trigger the read event, which will read from 'tohost' symbol address.
-    // The tohost_reader_thread already uses tohost_read_addr_ which we should update here.
-    // Wait, the tohost_reader_thread uses tohost_read_addr_ set in posedge.
-    // We need to READ the current value of tohost from memory.
-    // But posedge() shouldn't do bus transactions.
-    // Let's modify tohost_reader_thread to read tohost if it's not provided.
-    tohost_read_addr_ = 0; // Signal to thread to read 'tohost' from its known address
+    // The tohost_reader_thread already uses tohost_read_addr_ which we should
+    // update here. Wait, the tohost_reader_thread uses tohost_read_addr_ set in
+    // posedge. We need to READ the current value of tohost from memory. But
+    // posedge() shouldn't do bus transactions. Let's modify
+    // tohost_reader_thread to read tohost if it's not provided.
+    tohost_read_addr_ =
+        0; // Signal to thread to read 'tohost' from its known address
     tohost_read_event_.notify();
     return;
   }
 
-  // Fallback/Legacy support: trigger on tohost write if tohost_ready is not present.
-  if (!tohost_ready_addr_.has_value() && tohost_addr_.has_value() && core_io_dbus_valid && core_io_dbus_write && (core_io_dbus_addr == tohost_addr_.value())) {
+  // Fallback/Legacy support: trigger on tohost write if tohost_ready is not
+  // present.
+  if (!tohost_ready_addr_.has_value() && tohost_addr_.has_value() &&
+      core_io_dbus_valid && core_io_dbus_write &&
+      (core_io_dbus_addr == tohost_addr_.value())) {
     const uint32_t wdata0 = debug_io_.dbus_bits_wdata.read().get_word(0);
-    if (wdata0 == 0) return;
+    if (wdata0 == 0)
+      return;
     if (wdata0 & 1) {
       tohost_halt = true;
       tohost_val = wdata0;
@@ -892,7 +979,8 @@ void CoreMiniAxiTb::Posedge() {
   }
 
   static bool invoked_halted_cb = false;
-  if ((io_halted.read() || io_fault.read() || tohost_halt) && !invoked_halted_cb) {
+  if ((io_halted.read() || io_fault.read() || tohost_halt) &&
+      !invoked_halted_cb) {
     // If instruction tracing is enabled,
     // print the data about the instruction trace.
     if (instr_trace_) {
@@ -918,11 +1006,10 @@ void CoreMiniAxiTb::Posedge() {
     io_irq = false;
   }
 
-
   if (!transfer_in_progress_) {
     absl::MutexLock lock(&transfer_queue_mtx_);
     if (!transfer_queue_.empty()) {
-      ITrafficDesc* transfer = transfer_queue_.front().get();
+      ITrafficDesc *transfer = transfer_queue_.front().get();
       tg_.addTransfers(transfer, 0, CoreMiniAxiTb::axi_transaction_done_cb);
       transfer_in_progress_ = true;
     }
@@ -942,13 +1029,13 @@ void CoreMiniAxiTb::EnqueueTransactionAsync(
   transfer_queue_.push(std::make_unique<TrafficDesc>(utils::merge(transfers)));
 }
 
-void CoreMiniAxiTb::axi_transaction_done_cb(TLMTrafficGenerator* gen,
-                                             int threadId) {
+void CoreMiniAxiTb::axi_transaction_done_cb(TLMTrafficGenerator *gen,
+                                            int threadId) {
   getSingleton()->axi_transaction_done_cb_(gen, threadId);
 }
 
-void CoreMiniAxiTb::axi_transaction_done_cb_(TLMTrafficGenerator* gen,
-                                              int threadId) {
+void CoreMiniAxiTb::axi_transaction_done_cb_(TLMTrafficGenerator *gen,
+                                             int threadId) {
   absl::MutexLock lock(&transfer_queue_mtx_);
   CHECK(!transfer_queue_.empty());
   transfer_queue_.pop();
@@ -956,8 +1043,9 @@ void CoreMiniAxiTb::axi_transaction_done_cb_(TLMTrafficGenerator* gen,
   transfer_queue_cv_.SignalAll();
 }
 
-CoreMiniAxiTb* CoreMiniAxiTb::singleton_ = nullptr;
+CoreMiniAxiTb *CoreMiniAxiTb::singleton_ = nullptr;
 
-void CoreMiniAxiTb::BackdoorLoad(uint64_t addr, const uint8_t* data, size_t len) {
+void CoreMiniAxiTb::BackdoorLoad(uint64_t addr, const uint8_t *data,
+                                 size_t len) {
   CHECK(coralnpu::SramBackdoorLoad(addr, data, len));
 }

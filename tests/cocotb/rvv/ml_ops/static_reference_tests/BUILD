@@ -37,7 +37,7 @@ coralnpu_v2_binary(
         "float_matmul_16x48x16_runner.cc",
     ],
     deps = [
-        "//sw/utils:utils",
+        "//sw/utils",
     ],
 )
 
@@ -49,7 +49,7 @@ coralnpu_v2_binary(
         "int_matmul_16x48x16_runner.cc",
     ],
     deps = [
-        "//sw/utils:utils",
+        "//sw/utils",
     ],
 )
 

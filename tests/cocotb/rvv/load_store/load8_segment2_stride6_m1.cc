@@ -22,9 +22,8 @@ __attribute__((used, retain)) void test_intrinsic(const uint8_t *x,
                                                   uint8_t *y) {
   vuint8m1x2_t v = __riscv_vlsseg2e8_v_u8m1x2(in_buf, 6, 16);
 
-  vuint8m2_t vv = __riscv_vcreate_v_u8m1_u8m2(
-      __riscv_vget_v_u8m1x2_u8m1(v, 0),
-      __riscv_vget_v_u8m1x2_u8m1(v, 1));
+  vuint8m2_t vv = __riscv_vcreate_v_u8m1_u8m2(__riscv_vget_v_u8m1x2_u8m1(v, 0),
+                                              __riscv_vget_v_u8m1x2_u8m1(v, 1));
 
   __riscv_vse8_v_u8m2(y, vv, /*vl=*/32);
 }

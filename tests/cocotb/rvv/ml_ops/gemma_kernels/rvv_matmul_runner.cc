@@ -17,11 +17,11 @@
 
 #include "sw/utils/utils.h"
 extern "C" {
-void rvv_tiled_matmul_2d_f32(const float* __restrict__ A,
-                             const float* __restrict__ B, float* __restrict__ C,
+void rvv_tiled_matmul_2d_f32(const float *__restrict__ A,
+                             const float *__restrict__ B, float *__restrict__ C,
                              int M, int K, int N);
-void rvv_gemv_1d_f32(const float* __restrict__ A, const float* __restrict__ B,
-                     float* __restrict__ C, int K, int N);
+void rvv_gemv_1d_f32(const float *__restrict__ A, const float *__restrict__ B,
+                     float *__restrict__ C, int K, int N);
 }
 
 // Max sizes for allocation

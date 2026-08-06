@@ -60,4 +60,4 @@ uint8_t spi_xfer(uint32_t base_addr, uint8_t tx);
 }
 #endif
 
-#endif  // FPGA_SW_SPI_H_
+#endif // FPGA_SW_SPI_H_

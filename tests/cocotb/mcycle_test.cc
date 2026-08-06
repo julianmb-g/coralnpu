@@ -19,7 +19,7 @@ volatile unsigned int g_start = 0;
 volatile unsigned int g_end = 0;
 volatile unsigned int g_delta = 0;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   unsigned int start_cycle = 0;
   unsigned int end_cycle = 0;
   unsigned int delta = 0;

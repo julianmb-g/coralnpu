@@ -18,7 +18,7 @@
 namespace {
 // Double sized so we can check trailing regions are not read/written.
 constexpr size_t buf_size = 256;
-}  // namespace
+} // namespace
 
 size_t vl __attribute__((section(".data"))) = 16;
 // These instructions don't differentiate signed/unsigned so we only need to
@@ -253,7 +253,7 @@ __attribute__((used, retain)) void vsseg8e8_v_u8m1x8() {
 
 void (*impl)() __attribute__((section(".data"))) = &vsseg2e8_v_u8m1x2;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

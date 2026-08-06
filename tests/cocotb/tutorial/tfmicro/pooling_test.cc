@@ -21,7 +21,7 @@
 
 namespace {
 constexpr size_t kMaxOutDepth = 256;
-}  // namespace
+} // namespace
 
 static tflite::PoolParams params = {
     .padding_values =

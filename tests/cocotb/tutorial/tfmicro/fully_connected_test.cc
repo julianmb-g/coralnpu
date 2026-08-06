@@ -21,13 +21,13 @@
 
 namespace {
 constexpr size_t kMaxDepth = 1024;
-}  // namespace
+} // namespace
 
 static tflite::FullyConnectedParams params = {
     .input_offset = 0,
     .weights_offset = 0,
     .output_offset = 0,
-    .output_multiplier = 1073741824,  // 0.5 in Q31
+    .output_multiplier = 1073741824, // 0.5 in Q31
     .output_shift = -1,
     .quantized_activation_min = -128,
     .quantized_activation_max = 127,

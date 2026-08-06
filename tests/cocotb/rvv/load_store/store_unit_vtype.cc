@@ -24,32 +24,32 @@ uint8_t store_data[256] __attribute__((section(".data")));
 
 extern "C" {
 
-#define CREATE_STORE_FN(name, data_bits)                              \
-  __attribute__((used, retain)) void name() {                         \
-    size_t load_vl = 8 * __riscv_vlenb();                             \
-    asm("vsetvli zero, %[load_vl], e8, m8, ta, ma;"                   \
-        "vle8.v v8, %[load_data];"                                    \
-        "vsetvl zero, %[vl], %[vtype];"                               \
-        "vse" #data_bits ".v v8, %[store_data];"                      \
-        : [store_data] "=A"(store_data)                               \
-        : [vl] "r"(vl), [load_vl] "r"(load_vl), [vtype] "r"(vtype),   \
-          [load_data] "A"(load_data)                                  \
-        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl", \
-          "vtype");                                                   \
+#define CREATE_STORE_FN(name, data_bits)                                       \
+  __attribute__((used, retain)) void name() {                                  \
+    size_t load_vl = 8 * __riscv_vlenb();                                      \
+    asm("vsetvli zero, %[load_vl], e8, m8, ta, ma;"                            \
+        "vle8.v v8, %[load_data];"                                             \
+        "vsetvl zero, %[vl], %[vtype];"                                        \
+        "vse" #data_bits ".v v8, %[store_data];"                               \
+        : [store_data] "=A"(store_data)                                        \
+        : [vl] "r"(vl), [load_vl] "r"(load_vl), [vtype] "r"(vtype),            \
+          [load_data] "A"(load_data)                                           \
+        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",          \
+          "vtype");                                                            \
   }
 
-#define CREATE_SEGMENT_STORE_FN(name, data_bits, segment)             \
-  __attribute__((used, retain)) void name() {                         \
-    size_t load_vl = 8 * __riscv_vlenb();                             \
-    asm("vsetvli zero, %[load_vl], e8, m8, ta, ma;"                   \
-        "vle8.v v8, %[load_data];"                                    \
-        "vsetvl zero, %[vl], %[vtype];"                               \
-        "vsseg" #segment "e" #data_bits ".v v8, %[store_data];"       \
-        : [store_data] "=A"(store_data)                               \
-        : [vl] "r"(vl), [load_vl] "r"(load_vl), [vtype] "r"(vtype),   \
-          [load_data] "A"(load_data)                                  \
-        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl", \
-          "vtype");                                                   \
+#define CREATE_SEGMENT_STORE_FN(name, data_bits, segment)                      \
+  __attribute__((used, retain)) void name() {                                  \
+    size_t load_vl = 8 * __riscv_vlenb();                                      \
+    asm("vsetvli zero, %[load_vl], e8, m8, ta, ma;"                            \
+        "vle8.v v8, %[load_data];"                                             \
+        "vsetvl zero, %[vl], %[vtype];"                                        \
+        "vsseg" #segment "e" #data_bits ".v v8, %[store_data];"                \
+        : [store_data] "=A"(store_data)                                        \
+        : [vl] "r"(vl), [load_vl] "r"(load_vl), [vtype] "r"(vtype),            \
+          [load_data] "A"(load_data)                                           \
+        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",          \
+          "vtype");                                                            \
   }
 
 CREATE_STORE_FN(test_vse8, 8)
@@ -78,12 +78,11 @@ CREATE_SEGMENT_STORE_FN(test_vsseg5e32, 32, 5)
 CREATE_SEGMENT_STORE_FN(test_vsseg6e32, 32, 6)
 CREATE_SEGMENT_STORE_FN(test_vsseg7e32, 32, 7)
 CREATE_SEGMENT_STORE_FN(test_vsseg8e32, 32, 8)
-
 }
 
 void (*impl)() __attribute__((section(".data"))) = &test_vse8;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

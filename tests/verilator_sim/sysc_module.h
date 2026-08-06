@@ -19,7 +19,7 @@
 using sc_dt::sc_bv;
 
 class SyscModule : public sc_module {
- public:
+public:
   sc_in_clk clock;
   sc_in<bool> reset;
 
@@ -31,4 +31,4 @@ class SyscModule : public sc_module {
   }
 };
 
-#endif  // TESTS_VERILATOR_SIM_SYSC_MODULE_H_
+#endif // TESTS_VERILATOR_SIM_SYSC_MODULE_H_

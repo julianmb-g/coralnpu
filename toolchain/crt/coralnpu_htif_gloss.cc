@@ -55,7 +55,8 @@ long htif_syscall_6args(long n, long a0, long a1, long a2, long a3, long a4,
 
   // Poll for completion. We check both fromhost (standard Spike/HTIF)
   // and fromhost_ready (MPACT-style) for broad compatibility.
-  while (fromhost == 0 && fromhost_ready == 0);
+  while (fromhost == 0 && fromhost_ready == 0)
+    ;
   fromhost = 0;
   fromhost_ready = 0;
 
@@ -63,7 +64,7 @@ long htif_syscall_6args(long n, long a0, long a1, long a2, long a3, long a4,
   return buf[0];
 }
 
-__attribute__((weak)) int _open(const char* name, int flags, int mode) {
+__attribute__((weak)) int _open(const char *name, int flags, int mode) {
   uintptr_t name_addr = (uintptr_t)name;
   size_t name_len = strlen(name) + 1;
 
@@ -71,22 +72,26 @@ __attribute__((weak)) int _open(const char* name, int flags, int mode) {
   // This is required because HTIF (mpact-riscv) passes flags directly to the
   // host's openat().
   int host_flags =
-      flags & 3;  // O_RDONLY, O_WRONLY, O_RDWR are the same (0, 1, 2)
-  if (flags & 0x0008) host_flags |= 0x400;  // newlib O_APPEND -> linux O_APPEND
-  if (flags & 0x0200) host_flags |= 0x40;   // newlib O_CREAT  -> linux O_CREAT
-  if (flags & 0x0400) host_flags |= 0x200;  // newlib O_TRUNC  -> linux O_TRUNC
-  if (flags & 0x0800) host_flags |= 0x80;   // newlib O_EXCL   -> linux O_EXCL
+      flags & 3; // O_RDONLY, O_WRONLY, O_RDWR are the same (0, 1, 2)
+  if (flags & 0x0008)
+    host_flags |= 0x400; // newlib O_APPEND -> linux O_APPEND
+  if (flags & 0x0200)
+    host_flags |= 0x40; // newlib O_CREAT  -> linux O_CREAT
+  if (flags & 0x0400)
+    host_flags |= 0x200; // newlib O_TRUNC  -> linux O_TRUNC
+  if (flags & 0x0800)
+    host_flags |= 0x80; // newlib O_EXCL   -> linux O_EXCL
   // Note: Other flags might need translation if used.
 
   return htif_syscall_6args(SYS_openat, AT_FDCWD, name_addr, name_len,
                             host_flags, mode, 0);
 }
 
-__attribute__((weak)) int _read(int file, char* ptr, int len) {
+__attribute__((weak)) int _read(int file, char *ptr, int len) {
   return htif_syscall_6args(SYS_read, file, (uintptr_t)ptr, len, 0, 0, 0);
 }
 
-__attribute__((weak)) int _write(int file, char* ptr, int len) {
+__attribute__((weak)) int _write(int file, char *ptr, int len) {
   return htif_syscall_6args(SYS_write, file, (uintptr_t)ptr, len, 0, 0, 0);
 }
 
@@ -98,7 +103,7 @@ __attribute__((weak)) int _lseek(int file, int ptr, int dir) {
   return htif_syscall_6args(SYS_lseek, file, ptr, dir, 0, 0, 0);
 }
 
-__attribute__((weak)) int _fstat(int file, struct stat* st) {
+__attribute__((weak)) int _fstat(int file, struct stat *st) {
   // For now, return a dummy fstat or implement it if needed.
   // Spike's HTIF doesn't have a direct fstat, it uses stat/lstat.
   // But we can implement a basic one if the test uses it.
@@ -130,18 +135,18 @@ int _kill(int pid, int sig) {
 
 int _getpid(void) { return 1; }
 
-__attribute__((weak)) void* _sbrk(int bytes) {
+__attribute__((weak)) void *_sbrk(int bytes) {
   extern char __heap_start__, __heap_end__;
-  static char* _heap_ptr = &__heap_start__;
-  char* prev_heap_end;
+  static char *_heap_ptr = &__heap_start__;
+  char *prev_heap_end;
   if ((bytes < 0) || (_heap_ptr + bytes > &__heap_end__)) {
     errno = ENOMEM;
-    return reinterpret_cast<void*>(-1);
+    return reinterpret_cast<void *>(-1);
   }
 
   prev_heap_end = _heap_ptr;
   _heap_ptr += bytes;
 
-  return reinterpret_cast<void*>(prev_heap_end);
+  return reinterpret_cast<void *>(prev_heap_end);
 }
 }

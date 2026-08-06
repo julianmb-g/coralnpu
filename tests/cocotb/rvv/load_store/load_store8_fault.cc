@@ -18,9 +18,9 @@
 int32_t fault_count __attribute__((section(".data"))) = 0;
 
 uint8_t buffer[4096] __attribute__((section(".data")));
-uint8_t *in_ptr __attribute__((section(".data")))  = &(buffer[0]);
+uint8_t *in_ptr __attribute__((section(".data"))) = &(buffer[0]);
 uint8_t *out_ptr __attribute__((section(".data"))) = &(buffer[0]);
-size_t vl __attribute__((section(".data")))        = 32;
+size_t vl __attribute__((section(".data"))) = 32;
 
 extern "C" {
 void coralnpu_exception_handler() {

@@ -117,16 +117,15 @@ class BinaryRunner:
 
         if self.exit_after_start:
             logger.info(f"Loading ELF file: {self.elf_path}")
-            self.spi_master.load_elf(
-                self.elf_path, start_core=True, verify=self.verify
-            )
+            self.spi_master.load_elf(self.elf_path,
+                                     start_core=True,
+                                     verify=self.verify)
             logger.info("Exiting after start as requested.")
             return
 
         # 1. Load, Start and Poll for halt in a single call to avoid subprocess overhead.
         logger.info(
-            f"Loading {self.elf_path}, starting core and polling for halt..."
-        )
+            f"Loading {self.elf_path}, starting core and polling for halt...")
         timeout = 60.0
         try:
             self.spi_master.load_elf(
@@ -138,8 +137,7 @@ class BinaryRunner:
                 status_size=self.status_msg_size,
             )
             logger.info(
-                "Binary execution COMPLETED: Core halted successfully."
-            )
+                "Binary execution COMPLETED: Core halted successfully.")
         except Exception as e:
             logger.error(f"Binary execution FAILED: {e}")
             sys.exit(1)
@@ -147,20 +145,15 @@ class BinaryRunner:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Load and run a binary on CoralNPU."
-    )
+        description="Load and run a binary on CoralNPU.")
     parser.add_argument("elf_file", help="Path to the ELF file to run.")
-    parser.add_argument(
-        "--usb-serial",
-        required=True,
-        help="USB serial number of the FTDI device."
-    )
-    parser.add_argument(
-        "--ftdi-port",
-        type=int,
-        default=1,
-        help="Port number of the FTDI device."
-    )
+    parser.add_argument("--usb-serial",
+                        required=True,
+                        help="USB serial number of the FTDI device.")
+    parser.add_argument("--ftdi-port",
+                        type=int,
+                        default=1,
+                        help="Port number of the FTDI device.")
     parser.add_argument(
         "--csr-base-addr",
         type=lambda x: int(x, 0),

@@ -32,49 +32,44 @@ void coralnpu_exception_handler() {
 }
 
 __attribute__((used, retain, noreturn)) void mpause() {
-  asm volatile(
-      ".word 0x08000073;"
-      "j -0x1000;");
+  asm volatile(".word 0x08000073;"
+               "j -0x1000;");
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void ecall() {
-  asm volatile(
-      "ecall;"
-      "j -0x1000;");
+  asm volatile("ecall;"
+               "j -0x1000;");
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void ebreak() {
-  asm volatile(
-      "ebreak;"
-      "j -0x1000;");
+  asm volatile("ebreak;"
+               "j -0x1000;");
   while (true) {
   }
 }
 
 __attribute__((used, retain)) void jalr() {
-  asm volatile(
-      "1:"
-      "auipc a0, %%pcrel_hi(2f);"  // +0x1000
-      "addi a0, a0, %%pcrel_lo(1b);"
-      "jr a0;"
-      "j -0x1000;"
-      "2:"
-      "nop;" ::[ff0] "r"(0xff0)
-      : "a0");
+  asm volatile("1:"
+               "auipc a0, %%pcrel_hi(2f);" // +0x1000
+               "addi a0, a0, %%pcrel_lo(1b);"
+               "jr a0;"
+               "j -0x1000;"
+               "2:"
+               "nop;" ::[ff0] "r"(0xff0)
+               : "a0");
 }
 
 __attribute__((used, retain)) void branch_forward() {
-  asm volatile(
-      "li a0, 0;"
-      "beqz a0, 1f;"
-      "j -0x1000;"
-      "1:"
-      "nop;" ::
-          : "a0");
+  asm volatile("li a0, 0;"
+               "beqz a0, 1f;"
+               "j -0x1000;"
+               "1:"
+               "nop;" ::
+                   : "a0");
 }
 
 __attribute__((used, retain)) void branch_backward() {
@@ -94,76 +89,68 @@ __attribute__((used, retain)) void branch_backward() {
 
 __attribute__((used, retain, noreturn)) void vill1() {
   // This behaves as illegal instructions when vector is disabled
-  asm volatile(
-      "vsetvl zero, %[vl], %[vtype];"
-      "vadd.vi v0, v0, 0;"
-      "j -0x1000;" ::[vl] "r"(1),
-      [vtype] "r"(0x80000000)  // vill set
-      : "a0", "v0");
+  asm volatile("vsetvl zero, %[vl], %[vtype];"
+               "vadd.vi v0, v0, 0;"
+               "j -0x1000;" ::[vl] "r"(1),
+               [vtype] "r"(0x80000000) // vill set
+               : "a0", "v0");
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void vill2() {
   // This behaves as illegal instructions when vector is disabled
-  asm volatile(
-      "vsetvl zero, %[vl], %[vtype];"
-      "vadd.vi v0, v0, 0;"
-      "j -0x1000;" ::[vl] "r"(1),
-      [vtype] "r"(0x00000004)  // reserved lmul
-      : "a0", "v0");
+  asm volatile("vsetvl zero, %[vl], %[vtype];"
+               "vadd.vi v0, v0, 0;"
+               "j -0x1000;" ::[vl] "r"(1),
+               [vtype] "r"(0x00000004) // reserved lmul
+               : "a0", "v0");
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void unimp() {
-  asm volatile(
-      "unimp;"
-      "j -0x1000;");
+  asm volatile("unimp;"
+               "j -0x1000;");
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void wfi() {
-  asm volatile(
-      "li t0, 0x800;"
-      "csrs mie, t0;"
-      "wfi;"
-      "j -0x1000;");
+  asm volatile("li t0, 0x800;"
+               "csrs mie, t0;"
+               "wfi;"
+               "j -0x1000;");
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void load() {
-  asm volatile(
-      "lb a0, %[addr];"
-      "j -0x1000;" ::[addr] "m"(*(const uint8_t*)0xFFFFFFFF)
-      : "a0");
+  asm volatile("lb a0, %[addr];"
+               "j -0x1000;" ::[addr] "m"(*(const uint8_t *)0xFFFFFFFF)
+               : "a0");
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void store() {
-  asm volatile(
-      "sb a0, %[addr];"
-      "j -0x1000;" ::[addr] "m"(*(const uint8_t*)0xFFFFFFFF));
+  asm volatile("sb a0, %[addr];"
+               "j -0x1000;" ::[addr] "m"(*(const uint8_t *)0xFFFFFFFF));
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void csrr() {
-  asm volatile(
-      "csrr a0, 0xfff;"
-      "j -0x1000;" ::
-          : "a0");
+  asm volatile("csrr a0, 0xfff;"
+               "j -0x1000;" ::
+                   : "a0");
   while (true) {
   }
 }
 
 __attribute__((used, retain, noreturn)) void csrw() {
-  asm volatile(
-      "csrw 0xfff, a0;"
-      "j -0x1000;");
+  asm volatile("csrw 0xfff, a0;"
+               "j -0x1000;");
   while (true) {
   }
 }
@@ -171,7 +158,7 @@ __attribute__((used, retain, noreturn)) void csrw() {
 
 void (*impl)() __attribute__((section(".data"))) = mpause;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
 
   return 0;

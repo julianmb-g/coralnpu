@@ -32,7 +32,7 @@ namespace {
 using MobilenetOpResolver = tflite::MicroMutableOpResolver<10>;
 using coralnpu_v2::opt::litert_micro::Register_CONV_2D;
 using coralnpu_v2::opt::litert_micro::Register_DEPTHWISE_CONV_2D;
-TfLiteStatus RegisterOps(MobilenetOpResolver& op_resolver) {
+TfLiteStatus RegisterOps(MobilenetOpResolver &op_resolver) {
   TF_LITE_ENSURE_STATUS(op_resolver.AddConv2D(Register_CONV_2D()));
   TF_LITE_ENSURE_STATUS(
       op_resolver.AddDepthwiseConv2D(Register_DEPTHWISE_CONV_2D()));
@@ -46,11 +46,11 @@ TfLiteStatus RegisterOps(MobilenetOpResolver& op_resolver) {
   TF_LITE_ENSURE_STATUS(op_resolver.AddPack());
   return kTfLiteOk;
 }
-}  // namespace
+} // namespace
 
 extern "C" {
 // aligned(16)
-constexpr size_t kTensorArenaSize = 4 * 1024 * 1024;  // 3MB
+constexpr size_t kTensorArenaSize = 4 * 1024 * 1024; // 3MB
 int8_t inference_status = -1;
 uint8_t inference_input[224 * 224 * 3]
     __attribute__((section(".data"), aligned(16)));
@@ -59,8 +59,8 @@ uint8_t tensor_arena[kTensorArenaSize]
     __attribute__((section(".extdata"), aligned(16)));
 }
 
-int main(int argc, char** argv) {
-  const tflite::Model* model = tflite::GetModel(g_25_224_int8_dummy_model_data);
+int main(int argc, char **argv) {
+  const tflite::Model *model = tflite::GetModel(g_25_224_int8_dummy_model_data);
   MobilenetOpResolver op_resolver;
   RegisterOps(op_resolver);
   printf("Halted after op resolver\n");
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
     printf("Error during AllocateTensors\n");
     return -1;
   }
-  TfLiteTensor* input = interpreter.input(0);
+  TfLiteTensor *input = interpreter.input(0);
   if (input == nullptr) {
     printf("Error getting input tensor\n");
     return -1;
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  TfLiteTensor* output = interpreter.output(0);
+  TfLiteTensor *output = interpreter.output(0);
   if (output == nullptr) {
     printf("Error getting output tensor\n");
     return -1;

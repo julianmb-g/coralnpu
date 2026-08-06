@@ -26,32 +26,32 @@ uint8_t store_data[256] __attribute__((section(".data")));
 
 extern "C" {
 
-#define CREATE_STRIDED_LOAD_FN(name, data_bits)                           \
-  __attribute__((used, retain)) void name() {                             \
-    size_t store_vl = 8 * __riscv_vlenb();                                \
-    asm("vsetvl zero, %[vl], %[vtype];"                                    \
-        "vlse" #data_bits ".v v8, %[load_data], %[stride];"                \
-        "vsetvli zero, %[store_vl], e8, m8, ta, ma;"                       \
-        "vse8.v v8, %[store_data];"                                       \
-        : [store_data] "=m"(store_data)                                   \
-        : [vl] "r"(vl), [store_vl] "r"(store_vl), [vtype] "r"(vtype),      \
-          [stride] "r"(stride), [load_data] "m"(load_data)                \
-        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",      \
-          "vtype");                                                       \
+#define CREATE_STRIDED_LOAD_FN(name, data_bits)                                \
+  __attribute__((used, retain)) void name() {                                  \
+    size_t store_vl = 8 * __riscv_vlenb();                                     \
+    asm("vsetvl zero, %[vl], %[vtype];"                                        \
+        "vlse" #data_bits ".v v8, %[load_data], %[stride];"                    \
+        "vsetvli zero, %[store_vl], e8, m8, ta, ma;"                           \
+        "vse8.v v8, %[store_data];"                                            \
+        : [store_data] "=m"(store_data)                                        \
+        : [vl] "r"(vl), [store_vl] "r"(store_vl), [vtype] "r"(vtype),          \
+          [stride] "r"(stride), [load_data] "m"(load_data)                     \
+        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",          \
+          "vtype");                                                            \
   }
 
-#define CREATE_SEGMENT_STRIDED_LOAD_FN(name, data_bits, segment)            \
-  __attribute__((used, retain)) void name() {                               \
-    size_t store_vl = 8 * __riscv_vlenb();                                  \
-    asm("vsetvl zero, %[vl], %[vtype];"                                      \
-        "vlsseg" #segment "e" #data_bits ".v v8, %[load_data], %[stride];"   \
-        "vsetvli zero, %[store_vl], e8, m8, ta, ma;"                         \
-        "vse8.v v8, %[store_data];"                                         \
-        : [store_data] "=m"(store_data)                                     \
-        : [vl] "r"(vl), [store_vl] "r"(store_vl), [vtype] "r"(vtype),        \
-          [stride] "r"(stride), [load_data] "m"(load_data)                  \
-        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",        \
-          "vtype");                                                         \
+#define CREATE_SEGMENT_STRIDED_LOAD_FN(name, data_bits, segment)               \
+  __attribute__((used, retain)) void name() {                                  \
+    size_t store_vl = 8 * __riscv_vlenb();                                     \
+    asm("vsetvl zero, %[vl], %[vtype];"                                        \
+        "vlsseg" #segment "e" #data_bits ".v v8, %[load_data], %[stride];"     \
+        "vsetvli zero, %[store_vl], e8, m8, ta, ma;"                           \
+        "vse8.v v8, %[store_data];"                                            \
+        : [store_data] "=m"(store_data)                                        \
+        : [vl] "r"(vl), [store_vl] "r"(store_vl), [vtype] "r"(vtype),          \
+          [stride] "r"(stride), [load_data] "m"(load_data)                     \
+        : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",          \
+          "vtype");                                                            \
   }
 
 CREATE_STRIDED_LOAD_FN(test_vlse8, 8)
@@ -84,7 +84,7 @@ CREATE_SEGMENT_STRIDED_LOAD_FN(test_vlsseg8e32, 32, 8)
 
 void (*impl)() __attribute__((section(".data"))) = &test_vlse8;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

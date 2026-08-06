@@ -21,7 +21,7 @@ namespace {
 constexpr size_t kMaxOutDepth = 48;
 constexpr size_t kMaxInDepth = 48;
 constexpr size_t kFilterBufSize = kMaxInDepth * 4 * 4 * kMaxOutDepth;
-}  // namespace
+} // namespace
 
 static tflite::ConvParams params = {
     .padding_values =
@@ -113,7 +113,7 @@ static coralnpu_v2::opt::litert_micro::OpDataConvCustom dummy_data;
 // Moving to .extdata to avoid overflowing DTCM (1MB)
 static int32_t scratch_buf[120 * 160 * kMaxOutDepth]
     __attribute__((section(".extdata"), aligned(16)));
-static void* GetScratchBuffer(TfLiteContext* ctx, int idx) {
+static void *GetScratchBuffer(TfLiteContext *ctx, int idx) {
   return scratch_buf;
 }
 

@@ -21,7 +21,7 @@ uint8_t mask_data[16] __attribute__((section(".data")));
 uint8_t load_data[128] __attribute__((section(".data")));
 uint8_t store_data[128] __attribute__((section(".data")));
 // Allow store_addr to be overwritten to exercise AXI memory
-uint8_t* store_addr __attribute__((section(".data"))) = store_data;
+uint8_t *store_addr __attribute__((section(".data"))) = store_data;
 
 extern "C" {
 __attribute__((used, retain)) void test_unit_store8() {
@@ -29,7 +29,7 @@ __attribute__((used, retain)) void test_unit_store8() {
       "vlm.v v0, %[mask_data];"
       "vle8.v v8, %[load_data];"
       "vse8.v v8, %[store_addr], v0.t;"
-      : [store_addr] "=A"(*reinterpret_cast<uint8_t (*)[128]>(store_addr))
+      : [store_addr] "=A"(*reinterpret_cast<uint8_t(*)[128]>(store_addr))
       : [vl] "r"(vl), [vtype] "r"(vtype), [mask_data] "A"(mask_data),
         [load_data] "A"(load_data)
       : "v0", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",
@@ -41,7 +41,7 @@ __attribute__((used, retain)) void test_unit_store16() {
       "vlm.v v0, %[mask_data];"
       "vle16.v v8, %[load_data];"
       "vse16.v v8, %[store_addr], v0.t;"
-      : [store_addr] "=A"(*reinterpret_cast<uint16_t (*)[64]>(store_addr))
+      : [store_addr] "=A"(*reinterpret_cast<uint16_t(*)[64]>(store_addr))
       : [vl] "r"(vl), [vtype] "r"(vtype), [mask_data] "A"(mask_data),
         [load_data] "A"(load_data)
       : "v0", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",
@@ -53,7 +53,7 @@ __attribute__((used, retain)) void test_unit_store32() {
       "vlm.v v0, %[mask_data];"
       "vle32.v v8, %[load_data];"
       "vse32.v v8, %[store_addr], v0.t;"
-      : [store_addr] "=A"(*reinterpret_cast<uint32_t (*)[32]>(store_addr))
+      : [store_addr] "=A"(*reinterpret_cast<uint32_t(*)[32]>(store_addr))
       : [vl] "r"(vl), [vtype] "r"(vtype), [mask_data] "A"(mask_data),
         [load_data] "A"(load_data)
       : "v0", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "vl",
@@ -63,7 +63,7 @@ __attribute__((used, retain)) void test_unit_store32() {
 
 void (*impl)() __attribute__((section(".data"))) = &test_unit_store8;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
 
   return 0;

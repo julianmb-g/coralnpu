@@ -13,20 +13,20 @@
 // limitations under the License.
 
 #include <riscv_vector.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 // Assume rhs is column major.
-extern "C" void MatMul(size_t lhs_rows, size_t inner, size_t rhs_cols, const int8_t* lhs,
-                       const int8_t* rhs, int32_t* result) {
+extern "C" void MatMul(size_t lhs_rows, size_t inner, size_t rhs_cols,
+                       const int8_t *lhs, const int8_t *rhs, int32_t *result) {
   size_t vlmax = __riscv_vsetvl_e8m2(inner);
 
   for (size_t r = 0; r < lhs_rows; r++) {
-    int32_t* result_row = result + (r * rhs_cols);
+    int32_t *result_row = result + (r * rhs_cols);
 
     for (size_t c = 0; c < rhs_cols; c++) {
-      const int8_t* lhs_row = lhs + (r * inner);
-      const int8_t* rhs_col = rhs + (c * inner);
+      const int8_t *lhs_row = lhs + (r * inner);
+      const int8_t *rhs_col = rhs + (c * inner);
       vint32m8_t vacc = __riscv_vmv_v_x_i32m8(0, vlmax);
       vint32m1_t vzero = __riscv_vmv_v_x_i32m1(0, 1);
       size_t k = inner;

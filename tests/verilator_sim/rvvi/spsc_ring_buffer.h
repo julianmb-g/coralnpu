@@ -15,22 +15,21 @@
 #ifndef TESTS_VERILATOR_SIM_RVVI_SPSC_RING_BUFFER_H_
 #define TESTS_VERILATOR_SIM_RVVI_SPSC_RING_BUFFER_H_
 
-#include <atomic>
+#include "trace_packet.h"
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <thread>
-#include "trace_packet.h"
 
 namespace mpact::sim::riscv::rvvi {
 
-template <typename T = TracePacket, size_t Size = 4096>
-class SpscRingBuffer {
+template <typename T = TracePacket, size_t Size = 4096> class SpscRingBuffer {
   static_assert((Size & (Size - 1)) == 0, "Size must be a power of 2");
 
- public:
+public:
   SpscRingBuffer() : head_(0), tail_(0) {}
 
-  bool Push(const T& item) {
+  bool Push(const T &item) {
     size_t head = head_.load(std::memory_order_relaxed);
     size_t tail = tail_.load(std::memory_order_acquire);
     if (head - tail >= Size) {
@@ -41,7 +40,7 @@ class SpscRingBuffer {
     return true;
   }
 
-  bool Pop(T& item) {
+  bool Pop(T &item) {
     size_t tail = tail_.load(std::memory_order_relaxed);
     size_t head = head_.load(std::memory_order_acquire);
     if (head == tail) {
@@ -53,7 +52,8 @@ class SpscRingBuffer {
   }
 
   bool IsEmpty() const {
-    return head_.load(std::memory_order_acquire) == tail_.load(std::memory_order_acquire);
+    return head_.load(std::memory_order_acquire) ==
+           tail_.load(std::memory_order_acquire);
   }
 
   void WaitUntilEmpty() const {
@@ -62,17 +62,16 @@ class SpscRingBuffer {
     }
   }
 
-  void Flush() {
-    WaitUntilEmpty();
-  }
+  void Flush() { WaitUntilEmpty(); }
 
- private:
+private:
   std::array<T, Size> buffer_;
   alignas(64) std::atomic<size_t> head_;
   alignas(64) std::atomic<size_t> tail_;
-  char padding_[64 - sizeof(std::atomic<size_t>)]; // Ensure tail_ is padded at the end.
+  char padding_[64 - sizeof(std::atomic<size_t>)]; // Ensure tail_ is padded at
+                                                   // the end.
 };
 
 } // namespace mpact::sim::riscv::rvvi
 
-#endif  // TESTS_VERILATOR_SIM_RVVI_SPSC_RING_BUFFER_H_
+#endif // TESTS_VERILATOR_SIM_RVVI_SPSC_RING_BUFFER_H_

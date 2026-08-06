@@ -23,20 +23,20 @@
 #include "absl/status/status.h"
 #include "sim/coralnpu_simulator.h"
 
-using coralnpu::sim::CoralNPUV2MemoryRegion;
 using coralnpu::sim::CoralNPUSimulator;
 using coralnpu::sim::CoralNPUSimulatorOptions;
+using coralnpu::sim::CoralNPUV2MemoryRegion;
 using coralnpu::sim::MemoryPermission;
 
 namespace py = pybind11;
 
 class CoralNPUV2SimulatorPy {
- public:
+public:
   explicit CoralNPUV2SimulatorPy(
-      const coralnpu::sim::CoralNPUSimulatorOptions& options);
+      const coralnpu::sim::CoralNPUSimulatorOptions &options);
   ~CoralNPUV2SimulatorPy() = default;
 
-  void LoadProgram(const std::string& elf_file_path,
+  void LoadProgram(const std::string &elf_file_path,
                    std::optional<uint32_t> entry_point = std::nullopt);
   void Run();
   void Wait();
@@ -45,19 +45,19 @@ class CoralNPUV2SimulatorPy {
   void ClearSwBreakpoint(uint64_t address);
   int Step(const int num_steps);
   uint64_t GetCycleCount();
-  uint64_t ReadRegister(const std::string& name);
-  void WriteRegister(const std::string& name, uint64_t value);
+  uint64_t ReadRegister(const std::string &name);
+  void WriteRegister(const std::string &name, uint64_t value);
   py::array_t<uint8_t> ReadMemory(uint64_t address, size_t length);
   void WriteMemory(uint64_t address, py::array_t<uint8_t> input_buffer,
                    size_t length);
   void WriteWord(uint64_t address, uint32_t data);
   void WritePtr(uint64_t address, uint64_t ptr_address);
 
- private:
+private:
   coralnpu::sim::CoralNPUSimulator sim_;
 };
 
-void CoralNPUV2SimulatorPy::LoadProgram(const std::string& elf_file_path,
+void CoralNPUV2SimulatorPy::LoadProgram(const std::string &elf_file_path,
                                         std::optional<uint32_t> entry_point) {
   absl::Status status = sim_.LoadProgram(elf_file_path, entry_point);
   if (!status.ok()) {
@@ -123,7 +123,7 @@ uint64_t CoralNPUV2SimulatorPy::GetCycleCount() {
   return 0;
 }
 
-uint64_t CoralNPUV2SimulatorPy::ReadRegister(const std::string& name) {
+uint64_t CoralNPUV2SimulatorPy::ReadRegister(const std::string &name) {
   absl::StatusOr<uint64_t> word_status = sim_.ReadRegister(name);
   if (!word_status.ok()) {
     LOG(ERROR) << "ReadRegister failed: " << word_status;
@@ -131,7 +131,7 @@ uint64_t CoralNPUV2SimulatorPy::ReadRegister(const std::string& name) {
   return word_status.value();
 }
 
-void CoralNPUV2SimulatorPy::WriteRegister(const std::string& name,
+void CoralNPUV2SimulatorPy::WriteRegister(const std::string &name,
                                           uint64_t value) {
   absl::Status status = sim_.WriteRegister(name, value);
   if (!status.ok()) {
@@ -144,7 +144,7 @@ void CoralNPUV2SimulatorPy::WriteMemory(uint64_t address,
                                         py::array_t<uint8_t> input_buffer,
                                         size_t length) {
   py::buffer_info info = input_buffer.request();
-  const void* input_buffer_ptr = static_cast<const void*>(info.ptr);
+  const void *input_buffer_ptr = static_cast<const void *>(info.ptr);
 
   absl::StatusOr<size_t> write_status =
       sim_.WriteMemory(address, input_buffer_ptr, length);
@@ -184,7 +184,7 @@ py::array_t<uint8_t> CoralNPUV2SimulatorPy::ReadMemory(uint64_t address,
                                                        size_t length) {
   auto result = py::array_t<uint8_t>(length);
   py::buffer_info info = result.request();
-  void* buffer_ptr = info.ptr;
+  void *buffer_ptr = info.ptr;
 
   absl::StatusOr<size_t> read_status =
       sim_.ReadMemory(address, buffer_ptr, length);
@@ -198,7 +198,7 @@ py::array_t<uint8_t> CoralNPUV2SimulatorPy::ReadMemory(uint64_t address,
 }
 
 CoralNPUV2SimulatorPy::CoralNPUV2SimulatorPy(
-    const coralnpu::sim::CoralNPUSimulatorOptions& options)
+    const coralnpu::sim::CoralNPUSimulatorOptions &options)
     : sim_(options) {}
 
 PYBIND11_MODULE(coralnpu_v2_sim_pybind, module) {
@@ -232,8 +232,7 @@ PYBIND11_MODULE(coralnpu_v2_sim_pybind, module) {
                      &CoralNPUSimulatorOptions::memory_regions)
       .def_readwrite("exit_on_ebreak",
                      &CoralNPUSimulatorOptions::exit_on_ebreak)
-      .def_readwrite("semihost_htif",
-                     &CoralNPUSimulatorOptions::semihost_htif);
+      .def_readwrite("semihost_htif", &CoralNPUSimulatorOptions::semihost_htif);
 
   py::class_<CoralNPUV2SimulatorPy>(module, "CoralNPUSimulatorPy")
       .def(py::init<const CoralNPUSimulatorOptions>())

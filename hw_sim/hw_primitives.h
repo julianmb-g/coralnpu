@@ -30,28 +30,27 @@ namespace coralnpu::sim {
 // A class that wraps and controls a verilator clock signal. Also provides an
 // observer mechanism
 class Clock {
- public:
+public:
   // A class that observes changes to the clock signal. The constructor and
   // destructor will automatically subscribe/unsubscribe from the clock.
   class Observer {
-   public:
-    explicit Observer(Clock* clock);
+  public:
+    explicit Observer(Clock *clock);
     virtual ~Observer();
 
     virtual void OnRisingEdge() {}
     virtual void OnFallingEdge() {}
 
-   protected:
-    Clock& clock() { return *clock_; }
+  protected:
+    Clock &clock() { return *clock_; }
 
-   private:
-    Clock* const clock_;
+  private:
+    Clock *const clock_;
   };
 
   template <typename Model>
-  Clock(VerilatedContext* context, uint8_t* clock, Model* model)
-      : context_(context),
-        clock_(clock),
+  Clock(VerilatedContext *context, uint8_t *clock, Model *model)
+      : context_(context), clock_(clock),
         eval_function_([model]() { model->eval(); }) {}
   ~Clock() = default;
 
@@ -62,14 +61,14 @@ class Clock {
   // they should call this function to ensure internal signals get updated.
   void Eval();
 
- private:
-  void AddObserver(Observer* observer);
-  void RemoveObserver(Observer* observer);
+private:
+  void AddObserver(Observer *observer);
+  void RemoveObserver(Observer *observer);
 
-  VerilatedContext* const context_;
-  uint8_t* const clock_;
+  VerilatedContext *const context_;
+  uint8_t *const clock_;
   std::function<void()> eval_function_;
-  std::vector<Observer*> observers_;
+  std::vector<Observer *> observers_;
 };
 
 // Struct representing the data transferred in an AXI4 read/write addr channel.
@@ -99,21 +98,20 @@ struct AxiWData {
 
 // A driver to control interactions of the write channels in an AXI4 slave.
 class AxiSlaveWriteDriver : Clock::Observer {
- public:
+public:
   AxiSlaveWriteDriver(
-      Clock* clock, uint8_t* write_addr_valid, uint32_t* write_addr_bits_addr,
-      uint8_t* write_addr_bits_prot, uint8_t* write_addr_bits_id,
-      uint8_t* write_addr_bits_len, uint8_t* write_addr_bits_size,
-      uint8_t* write_addr_bits_burst, uint8_t* write_addr_bits_lock,
-      uint8_t* write_addr_bits_cache, uint8_t* write_addr_bits_qos,
-      uint8_t* write_addr_bits_region, const uint8_t* write_addr_ready,
-      uint8_t* write_data_valid, VlWide<4>* write_data_bits_data,
-      uint16_t* write_data_bits_strb, uint8_t* write_data_bits_last,
-      const uint8_t* write_data_ready, const uint8_t* write_resp_valid,
-      const uint8_t* write_resp_bits_id, const uint8_t* write_resp_bits_resp,
-      uint8_t* write_resp_ready)
-      : Clock::Observer(clock),
-        write_addr_valid_(write_addr_valid),
+      Clock *clock, uint8_t *write_addr_valid, uint32_t *write_addr_bits_addr,
+      uint8_t *write_addr_bits_prot, uint8_t *write_addr_bits_id,
+      uint8_t *write_addr_bits_len, uint8_t *write_addr_bits_size,
+      uint8_t *write_addr_bits_burst, uint8_t *write_addr_bits_lock,
+      uint8_t *write_addr_bits_cache, uint8_t *write_addr_bits_qos,
+      uint8_t *write_addr_bits_region, const uint8_t *write_addr_ready,
+      uint8_t *write_data_valid, VlWide<4> *write_data_bits_data,
+      uint16_t *write_data_bits_strb, uint8_t *write_data_bits_last,
+      const uint8_t *write_data_ready, const uint8_t *write_resp_valid,
+      const uint8_t *write_resp_bits_id, const uint8_t *write_resp_bits_resp,
+      uint8_t *write_resp_ready)
+      : Clock::Observer(clock), write_addr_valid_(write_addr_valid),
         write_addr_bits_addr_(write_addr_bits_addr),
         write_addr_bits_prot_(write_addr_bits_prot),
         write_addr_bits_id_(write_addr_bits_id),
@@ -155,8 +153,8 @@ class AxiSlaveWriteDriver : Clock::Observer {
       absl::Span<const uint8_t> local_data = data.subspan(0, bytes_to_write);
 
       AxiWData axi_data;
-      uint8_t* data_ptr =
-          reinterpret_cast<uint8_t*>(&(axi_data.write_data_bits_data[0])) +
+      uint8_t *data_ptr =
+          reinterpret_cast<uint8_t *>(&(axi_data.write_data_bits_data[0])) +
           sub_addr;
       memcpy(data_ptr, local_data.data(), bytes_to_write);
       axi_data.write_data_bits_strb = 0;
@@ -178,10 +176,10 @@ class AxiSlaveWriteDriver : Clock::Observer {
     return it->second;
   }
 
- private:
-  void EnqueueAddr(const AxiAddr& addr) { addr_queue_.push(addr); }
+private:
+  void EnqueueAddr(const AxiAddr &addr) { addr_queue_.push(addr); }
 
-  void EnqueueData(const AxiWData& data) { data_queue_.push(data); }
+  void EnqueueData(const AxiWData &data) { data_queue_.push(data); }
 
   void OnFallingEdge() final {
     // Send Addr
@@ -230,29 +228,29 @@ class AxiSlaveWriteDriver : Clock::Observer {
 
   // Signals
   // WAddr
-  uint8_t* const write_addr_valid_;
-  uint32_t* const write_addr_bits_addr_;
-  uint8_t* const write_addr_bits_prot_;
-  uint8_t* const write_addr_bits_id_;
-  uint8_t* const write_addr_bits_len_;
-  uint8_t* const write_addr_bits_size_;
-  uint8_t* const write_addr_bits_burst_;
-  uint8_t* const write_addr_bits_lock_;
-  uint8_t* const write_addr_bits_cache_;
-  uint8_t* const write_addr_bits_qos_;
-  uint8_t* const write_addr_bits_region_;
-  const uint8_t* const write_addr_ready_;
+  uint8_t *const write_addr_valid_;
+  uint32_t *const write_addr_bits_addr_;
+  uint8_t *const write_addr_bits_prot_;
+  uint8_t *const write_addr_bits_id_;
+  uint8_t *const write_addr_bits_len_;
+  uint8_t *const write_addr_bits_size_;
+  uint8_t *const write_addr_bits_burst_;
+  uint8_t *const write_addr_bits_lock_;
+  uint8_t *const write_addr_bits_cache_;
+  uint8_t *const write_addr_bits_qos_;
+  uint8_t *const write_addr_bits_region_;
+  const uint8_t *const write_addr_ready_;
   // WData
-  uint8_t* const write_data_valid_;
-  VlWide<4>* const write_data_bits_data_;
-  uint16_t* const write_data_bits_strb_;
-  uint8_t* const write_data_bits_last_;
-  const uint8_t* const write_data_ready_;
+  uint8_t *const write_data_valid_;
+  VlWide<4> *const write_data_bits_data_;
+  uint16_t *const write_data_bits_strb_;
+  uint8_t *const write_data_bits_last_;
+  const uint8_t *const write_data_ready_;
   // WResp
-  const uint8_t* const write_resp_valid_;
-  const uint8_t* const write_resp_bits_id_;
-  const uint8_t* const write_resp_bits_resp_;
-  uint8_t* const write_resp_ready_;
+  const uint8_t *const write_resp_valid_;
+  const uint8_t *const write_resp_bits_id_;
+  const uint8_t *const write_resp_bits_resp_;
+  uint8_t *const write_resp_ready_;
 
   std::queue<AxiAddr> addr_queue_;
   std::queue<AxiWData> data_queue_;
@@ -261,7 +259,7 @@ class AxiSlaveWriteDriver : Clock::Observer {
 
 // A driver to control interactions of the read channels in an AXI4 slave.
 class AxiSlaveReadDriver : Clock::Observer {
- public:
+public:
   struct Transaction {
     bool finished;
     uint32_t start_addr;
@@ -269,17 +267,16 @@ class AxiSlaveReadDriver : Clock::Observer {
     std::vector<uint8_t> data;
   };
   AxiSlaveReadDriver(
-      Clock* clock, uint8_t* read_addr_valid, uint32_t* read_addr_bits_addr,
-      uint8_t* read_addr_bits_prot, uint8_t* read_addr_bits_id,
-      uint8_t* read_addr_bits_len, uint8_t* read_addr_bits_size,
-      uint8_t* read_addr_bits_burst, uint8_t* read_addr_bits_lock,
-      uint8_t* read_addr_bits_cache, uint8_t* read_addr_bits_qos,
-      uint8_t* read_addr_bits_region, const uint8_t* read_addr_ready,
-      const uint8_t* read_data_valid, const VlWide<4>* read_data_bits_data,
-      const uint8_t* read_data_bits_id, const uint8_t* read_data_bits_resp,
-      const uint8_t* read_data_bits_last, uint8_t* read_data_ready)
-      : Clock::Observer(clock),
-        read_addr_valid_(read_addr_valid),
+      Clock *clock, uint8_t *read_addr_valid, uint32_t *read_addr_bits_addr,
+      uint8_t *read_addr_bits_prot, uint8_t *read_addr_bits_id,
+      uint8_t *read_addr_bits_len, uint8_t *read_addr_bits_size,
+      uint8_t *read_addr_bits_burst, uint8_t *read_addr_bits_lock,
+      uint8_t *read_addr_bits_cache, uint8_t *read_addr_bits_qos,
+      uint8_t *read_addr_bits_region, const uint8_t *read_addr_ready,
+      const uint8_t *read_data_valid, const VlWide<4> *read_data_bits_data,
+      const uint8_t *read_data_bits_id, const uint8_t *read_data_bits_resp,
+      const uint8_t *read_data_bits_last, uint8_t *read_data_ready)
+      : Clock::Observer(clock), read_addr_valid_(read_addr_valid),
         read_addr_bits_addr_(read_addr_bits_addr),
         read_addr_bits_prot_(read_addr_bits_prot),
         read_addr_bits_id_(read_addr_bits_id),
@@ -290,8 +287,7 @@ class AxiSlaveReadDriver : Clock::Observer {
         read_addr_bits_cache_(read_addr_bits_cache),
         read_addr_bits_qos_(read_addr_bits_qos),
         read_addr_bits_region_(read_addr_bits_region),
-        read_addr_ready_(read_addr_ready),
-        read_data_valid_(read_data_valid),
+        read_addr_ready_(read_addr_ready), read_data_valid_(read_data_valid),
         read_data_bits_data(read_data_bits_data),
         read_data_bits_id_(read_data_bits_id),
         read_data_bits_resp_(read_data_bits_resp),
@@ -318,7 +314,7 @@ class AxiSlaveReadDriver : Clock::Observer {
     return it->second;
   }
 
- private:
+private:
   void OnFallingEdge() final {
     // Send Addr
     *read_addr_valid_ = !addr_queue_.empty();
@@ -354,8 +350,8 @@ class AxiSlaveReadDriver : Clock::Observer {
       uint32_t bytes_to_read = 16 - sub_addr;
       bytes_to_read = std::min(bytes_to_read,
                                it->second->end_addr - it->second->start_addr);
-      const uint8_t* read_data =
-          reinterpret_cast<const uint8_t*>(&(*read_data_bits_data)[0]);
+      const uint8_t *read_data =
+          reinterpret_cast<const uint8_t *>(&(*read_data_bits_data)[0]);
       for (uint32_t i = 0; i < bytes_to_read; i++) {
         it->second->data.push_back(read_data[i + sub_addr]);
       }
@@ -369,25 +365,25 @@ class AxiSlaveReadDriver : Clock::Observer {
 
   // Signals
   // RAddr
-  uint8_t* const read_addr_valid_;
-  uint32_t* const read_addr_bits_addr_;
-  uint8_t* const read_addr_bits_prot_;
-  uint8_t* const read_addr_bits_id_;
-  uint8_t* const read_addr_bits_len_;
-  uint8_t* const read_addr_bits_size_;
-  uint8_t* const read_addr_bits_burst_;
-  uint8_t* const read_addr_bits_lock_;
-  uint8_t* const read_addr_bits_cache_;
-  uint8_t* const read_addr_bits_qos_;
-  uint8_t* const read_addr_bits_region_;
-  const uint8_t* const read_addr_ready_;
+  uint8_t *const read_addr_valid_;
+  uint32_t *const read_addr_bits_addr_;
+  uint8_t *const read_addr_bits_prot_;
+  uint8_t *const read_addr_bits_id_;
+  uint8_t *const read_addr_bits_len_;
+  uint8_t *const read_addr_bits_size_;
+  uint8_t *const read_addr_bits_burst_;
+  uint8_t *const read_addr_bits_lock_;
+  uint8_t *const read_addr_bits_cache_;
+  uint8_t *const read_addr_bits_qos_;
+  uint8_t *const read_addr_bits_region_;
+  const uint8_t *const read_addr_ready_;
   // RData
-  const uint8_t* const read_data_valid_;
-  const VlWide<4>* const read_data_bits_data;
-  const uint8_t* const read_data_bits_id_;
-  const uint8_t* const read_data_bits_resp_;
-  const uint8_t* const read_data_bits_last_;
-  uint8_t* const read_data_ready_;
+  const uint8_t *const read_data_valid_;
+  const VlWide<4> *const read_data_bits_data;
+  const uint8_t *const read_data_bits_id_;
+  const uint8_t *const read_data_bits_resp_;
+  const uint8_t *const read_data_bits_last_;
+  uint8_t *const read_data_ready_;
 
   std::queue<AxiAddr> addr_queue_;
   std::map<uint8_t /*id*/, std::shared_ptr<Transaction>>
@@ -404,20 +400,19 @@ struct AxiRData {
 
 // A driver to control interactions of the read channels in an AXI4 master.
 class AxiMasterReadDriver : Clock::Observer {
- public:
+public:
   AxiMasterReadDriver(
-      Clock* clock, const uint8_t* read_addr_valid,
-      const uint32_t* read_addr_bits_addr, const uint8_t* read_addr_bits_prot,
-      const uint8_t* read_addr_bits_id, const uint8_t* read_addr_bits_len,
-      const uint8_t* read_addr_bits_size, const uint8_t* read_addr_bits_burst,
-      const uint8_t* read_addr_bits_lock, const uint8_t* read_addr_bits_cache,
-      const uint8_t* read_addr_bits_qos, const uint8_t* read_addr_bits_region,
-      uint8_t* read_addr_ready, uint8_t* read_data_valid,
-      VlWide<4>* read_data_bits_data, uint8_t* read_data_bits_id,
-      uint8_t* read_data_bits_resp, uint8_t* read_data_bits_last,
-      const uint8_t* read_data_ready)
-      : Clock::Observer(clock),
-        read_addr_valid_(read_addr_valid),
+      Clock *clock, const uint8_t *read_addr_valid,
+      const uint32_t *read_addr_bits_addr, const uint8_t *read_addr_bits_prot,
+      const uint8_t *read_addr_bits_id, const uint8_t *read_addr_bits_len,
+      const uint8_t *read_addr_bits_size, const uint8_t *read_addr_bits_burst,
+      const uint8_t *read_addr_bits_lock, const uint8_t *read_addr_bits_cache,
+      const uint8_t *read_addr_bits_qos, const uint8_t *read_addr_bits_region,
+      uint8_t *read_addr_ready, uint8_t *read_data_valid,
+      VlWide<4> *read_data_bits_data, uint8_t *read_data_bits_id,
+      uint8_t *read_data_bits_resp, uint8_t *read_data_bits_last,
+      const uint8_t *read_data_ready)
+      : Clock::Observer(clock), read_addr_valid_(read_addr_valid),
         read_addr_bits_addr_(read_addr_bits_addr),
         read_addr_bits_prot_(read_addr_bits_prot),
         read_addr_bits_id_(read_addr_bits_id),
@@ -428,8 +423,7 @@ class AxiMasterReadDriver : Clock::Observer {
         read_addr_bits_cache_(read_addr_bits_cache),
         read_addr_bits_qos_(read_addr_bits_qos),
         read_addr_bits_region_(read_addr_bits_region),
-        read_addr_ready_(read_addr_ready),
-        read_data_valid_(read_data_valid),
+        read_addr_ready_(read_addr_ready), read_data_valid_(read_data_valid),
         read_data_bits_data_(read_data_bits_data),
         read_data_bits_id_(read_data_bits_id),
         read_data_bits_resp_(read_data_bits_resp),
@@ -438,12 +432,12 @@ class AxiMasterReadDriver : Clock::Observer {
     (*read_addr_ready_) = 1;
   }
 
-  void RegisterReadCallback(
-      std::function<AxiRData(const AxiAddr& addr)> read_cb) {
+  void
+  RegisterReadCallback(std::function<AxiRData(const AxiAddr &addr)> read_cb) {
     read_cb_ = read_cb;
   }
 
- private:
+private:
   void OnFallingEdge() final {
     // Send Data
     *read_data_valid_ = !data_queue_.empty();
@@ -483,29 +477,29 @@ class AxiMasterReadDriver : Clock::Observer {
 
   // Signals
   // RAddr
-  const uint8_t* const read_addr_valid_;
-  const uint32_t* const read_addr_bits_addr_;
-  const uint8_t* const read_addr_bits_prot_;
-  const uint8_t* const read_addr_bits_id_;
-  const uint8_t* const read_addr_bits_len_;
-  const uint8_t* const read_addr_bits_size_;
-  const uint8_t* const read_addr_bits_burst_;
-  const uint8_t* const read_addr_bits_lock_;
-  const uint8_t* const read_addr_bits_cache_;
-  const uint8_t* const read_addr_bits_qos_;
-  const uint8_t* const read_addr_bits_region_;
-  uint8_t* const read_addr_ready_;
+  const uint8_t *const read_addr_valid_;
+  const uint32_t *const read_addr_bits_addr_;
+  const uint8_t *const read_addr_bits_prot_;
+  const uint8_t *const read_addr_bits_id_;
+  const uint8_t *const read_addr_bits_len_;
+  const uint8_t *const read_addr_bits_size_;
+  const uint8_t *const read_addr_bits_burst_;
+  const uint8_t *const read_addr_bits_lock_;
+  const uint8_t *const read_addr_bits_cache_;
+  const uint8_t *const read_addr_bits_qos_;
+  const uint8_t *const read_addr_bits_region_;
+  uint8_t *const read_addr_ready_;
   // RData
-  uint8_t* const read_data_valid_;
-  VlWide<4>* const read_data_bits_data_;
-  uint8_t* const read_data_bits_id_;
-  uint8_t* const read_data_bits_resp_;
-  uint8_t* const read_data_bits_last_;
-  const uint8_t* const read_data_ready_;
+  uint8_t *const read_data_valid_;
+  VlWide<4> *const read_data_bits_data_;
+  uint8_t *const read_data_bits_id_;
+  uint8_t *const read_data_bits_resp_;
+  uint8_t *const read_data_bits_last_;
+  const uint8_t *const read_data_ready_;
 
   std::queue<AxiRData> data_queue_;
   AxiAddr axi_addr_;
-  std::function<AxiRData(const AxiAddr&)> read_cb_;
+  std::function<AxiRData(const AxiAddr &)> read_cb_;
 };
 
 // Struct representing the data transferred in an AXI4 read data channel.
@@ -516,22 +510,21 @@ struct AxiWResp {
 
 // A driver to control interactions of the write channels in an AXI4 slave.
 class AxiMasterWriteDriver : Clock::Observer {
- public:
+public:
   AxiMasterWriteDriver(
-      Clock* clock, const uint8_t* write_addr_valid,
-      const uint32_t* write_addr_bits_addr, const uint8_t* write_addr_bits_prot,
-      const uint8_t* write_addr_bits_id, const uint8_t* write_addr_bits_len,
-      const uint8_t* write_addr_bits_size, const uint8_t* write_addr_bits_burst,
-      const uint8_t* write_addr_bits_lock, const uint8_t* write_addr_bits_cache,
-      const uint8_t* write_addr_bits_qos, const uint8_t* write_addr_bits_region,
-      uint8_t* write_addr_ready, const uint8_t* write_data_valid,
-      const VlWide<4>* write_data_bits_data,
-      const uint16_t* write_data_bits_strb, const uint8_t* write_data_bits_last,
-      uint8_t* write_data_ready, uint8_t* write_resp_valid,
-      uint8_t* write_resp_bits_id, uint8_t* write_resp_bits_resp,
-      const uint8_t* write_resp_ready)
-      : Clock::Observer(clock),
-        write_addr_valid_(write_addr_valid),
+      Clock *clock, const uint8_t *write_addr_valid,
+      const uint32_t *write_addr_bits_addr, const uint8_t *write_addr_bits_prot,
+      const uint8_t *write_addr_bits_id, const uint8_t *write_addr_bits_len,
+      const uint8_t *write_addr_bits_size, const uint8_t *write_addr_bits_burst,
+      const uint8_t *write_addr_bits_lock, const uint8_t *write_addr_bits_cache,
+      const uint8_t *write_addr_bits_qos, const uint8_t *write_addr_bits_region,
+      uint8_t *write_addr_ready, const uint8_t *write_data_valid,
+      const VlWide<4> *write_data_bits_data,
+      const uint16_t *write_data_bits_strb, const uint8_t *write_data_bits_last,
+      uint8_t *write_data_ready, uint8_t *write_resp_valid,
+      uint8_t *write_resp_bits_id, uint8_t *write_resp_bits_resp,
+      const uint8_t *write_resp_ready)
+      : Clock::Observer(clock), write_addr_valid_(write_addr_valid),
         write_addr_bits_addr_(write_addr_bits_addr),
         write_addr_bits_prot_(write_addr_bits_prot),
         write_addr_bits_id_(write_addr_bits_id),
@@ -558,12 +551,12 @@ class AxiMasterWriteDriver : Clock::Observer {
   ~AxiMasterWriteDriver() final = default;
 
   void RegisterWriteCallback(
-      std::function<AxiWResp(const AxiAddr& addr, const AxiWData& data)>
+      std::function<AxiWResp(const AxiAddr &addr, const AxiWData &data)>
           write_cb) {
     write_cb_ = write_cb;
   }
 
- private:
+private:
   void OnFallingEdge() final {
     // Send Response
     *write_resp_valid_ = !resp_queue_.empty();
@@ -614,36 +607,36 @@ class AxiMasterWriteDriver : Clock::Observer {
 
   // Signals
   // WAddr
-  const uint8_t* const write_addr_valid_;
-  const uint32_t* const write_addr_bits_addr_;
-  const uint8_t* const write_addr_bits_prot_;
-  const uint8_t* const write_addr_bits_id_;
-  const uint8_t* const write_addr_bits_len_;
-  const uint8_t* const write_addr_bits_size_;
-  const uint8_t* const write_addr_bits_burst_;
-  const uint8_t* const write_addr_bits_lock_;
-  const uint8_t* const write_addr_bits_cache_;
-  const uint8_t* const write_addr_bits_qos_;
-  const uint8_t* const write_addr_bits_region_;
-  uint8_t* const write_addr_ready_;
+  const uint8_t *const write_addr_valid_;
+  const uint32_t *const write_addr_bits_addr_;
+  const uint8_t *const write_addr_bits_prot_;
+  const uint8_t *const write_addr_bits_id_;
+  const uint8_t *const write_addr_bits_len_;
+  const uint8_t *const write_addr_bits_size_;
+  const uint8_t *const write_addr_bits_burst_;
+  const uint8_t *const write_addr_bits_lock_;
+  const uint8_t *const write_addr_bits_cache_;
+  const uint8_t *const write_addr_bits_qos_;
+  const uint8_t *const write_addr_bits_region_;
+  uint8_t *const write_addr_ready_;
   // WData
-  const uint8_t* const write_data_valid_;
-  const VlWide<4>* const write_data_bits_data_;
-  const uint16_t* const write_data_bits_strb_;
-  const uint8_t* const write_data_bits_last_;
-  uint8_t* const write_data_ready_;
+  const uint8_t *const write_data_valid_;
+  const VlWide<4> *const write_data_bits_data_;
+  const uint16_t *const write_data_bits_strb_;
+  const uint8_t *const write_data_bits_last_;
+  uint8_t *const write_data_ready_;
   // WResp
-  uint8_t* const write_resp_valid_;
-  uint8_t* const write_resp_bits_id_;
-  uint8_t* const write_resp_bits_resp_;
-  const uint8_t* const write_resp_ready_;
+  uint8_t *const write_resp_valid_;
+  uint8_t *const write_resp_bits_id_;
+  uint8_t *const write_resp_bits_resp_;
+  const uint8_t *const write_resp_ready_;
 
   std::queue<AxiWResp> resp_queue_;
   AxiAddr axi_addr_;
   AxiWData axi_data_;
-  std::function<AxiWResp(const AxiAddr&, const AxiWData&)> write_cb_;
+  std::function<AxiWResp(const AxiAddr &, const AxiWData &)> write_cb_;
 };
 
-}  // namespace coralnpu::sim
+} // namespace coralnpu::sim
 
-#endif  // HW_SIM_HW_PRIMITIVES_H_
+#endif // HW_SIM_HW_PRIMITIVES_H_

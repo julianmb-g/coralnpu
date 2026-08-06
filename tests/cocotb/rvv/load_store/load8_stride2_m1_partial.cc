@@ -20,8 +20,8 @@
 // possible.
 
 // Enough space for full m1.
-uint8_t in_buf[32] __attribute__((section(".data")));   // 29 in use.
-uint8_t out_buf[16] __attribute__((section(".data")));  // 15 in use.
+uint8_t in_buf[32] __attribute__((section(".data")));  // 29 in use.
+uint8_t out_buf[16] __attribute__((section(".data"))); // 15 in use.
 
 __attribute__((used, retain)) void test_intrinsic(const uint8_t *x,
                                                   uint8_t *y) {

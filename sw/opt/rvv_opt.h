@@ -20,9 +20,9 @@
 #include <riscv_vector.h>
 
 namespace coralnpu_v2::opt {
-inline void* Memcpy(void* dst, const void* src, size_t n) {
-  const uint8_t* s = reinterpret_cast<const uint8_t*>(src);
-  uint8_t* d = reinterpret_cast<uint8_t*>(dst);
+inline void *Memcpy(void *dst, const void *src, size_t n) {
+  const uint8_t *s = reinterpret_cast<const uint8_t *>(src);
+  uint8_t *d = reinterpret_cast<uint8_t *>(dst);
   size_t vl = 0;
 
   while (n > 0) {
@@ -37,8 +37,8 @@ inline void* Memcpy(void* dst, const void* src, size_t n) {
   return dst;
 }
 
-inline void* Memset(void* dst, int val, size_t n) {
-  uint8_t* d = reinterpret_cast<uint8_t*>(dst);
+inline void *Memset(void *dst, int val, size_t n) {
+  uint8_t *d = reinterpret_cast<uint8_t *>(dst);
   uint8_t v = static_cast<uint8_t>(val);
   size_t vl = 0;
   vl = __riscv_vsetvl_e8m8(n);
@@ -54,6 +54,6 @@ inline void* Memset(void* dst, int val, size_t n) {
   return dst;
 }
 
-}  // namespace coralnpu_v2::opt
+} // namespace coralnpu_v2::opt
 
-#endif  // SW_OPT_RVV_OPT_H_
+#endif // SW_OPT_RVV_OPT_H_

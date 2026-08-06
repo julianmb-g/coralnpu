@@ -24,15 +24,15 @@
 
 // "Crossbar" containing a memory and a UART.
 class Xbar : sc_core::sc_module {
- public:
+public:
   Xbar(sc_core::sc_module_name name) : sc_core::sc_module(std::move(name)) {
     memset(memory_, 0xa5, kMemorySizeBytes);
     socket_.register_b_transport(this, &Xbar::b_transport);
   }
 
-  tlm_utils::simple_target_socket<Xbar>& socket() { return socket_; }
+  tlm_utils::simple_target_socket<Xbar> &socket() { return socket_; }
 
-  void b_transport(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+  void b_transport(tlm::tlm_generic_payload &trans, sc_core::sc_time &delay) {
     sc_dt::uint64 addr = trans.get_address();
     unsigned int len = trans.get_data_length();
 
@@ -47,13 +47,14 @@ class Xbar : sc_core::sc_module {
     }
   }
 
- private:
-  void memory_b_transport_(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+private:
+  void memory_b_transport_(tlm::tlm_generic_payload &trans,
+                           sc_core::sc_time &delay) {
     sc_dt::uint64 addr = trans.get_address() & ~kMemoryAddr;
-    unsigned char* ptr = trans.get_data_ptr();
+    unsigned char *ptr = trans.get_data_ptr();
     unsigned int len = trans.get_data_length();
     unsigned int streaming_width = trans.get_streaming_width();
-    unsigned char* be = trans.get_byte_enable_ptr();
+    unsigned char *be = trans.get_byte_enable_ptr();
     unsigned int be_len = trans.get_byte_enable_length();
     if (streaming_width == 0) {
       streaming_width = len;
@@ -65,7 +66,8 @@ class Xbar : sc_core::sc_module {
           do_access = be[pos % be_len] == TLM_BYTE_ENABLED;
         }
         if (do_access) {
-          if ((addr + (pos % streaming_width)) >= sc_dt::uint64(kMemorySizeBytes)) {
+          if ((addr + (pos % streaming_width)) >=
+              sc_dt::uint64(kMemorySizeBytes)) {
             trans.set_response_status(tlm::TLM_ADDRESS_ERROR_RESPONSE);
             SC_REPORT_FATAL("Memory", "Bad address\n");
             return;
@@ -98,12 +100,13 @@ class Xbar : sc_core::sc_module {
     trans.set_response_status(tlm::TLM_OK_RESPONSE);
   }
 
-  void uart_b_transport_(tlm::tlm_generic_payload& trans, sc_core::sc_time& delay) {
+  void uart_b_transport_(tlm::tlm_generic_payload &trans,
+                         sc_core::sc_time &delay) {
     sc_dt::uint64 addr = trans.get_address() & ~kUartAddr;
-    unsigned char* ptr = trans.get_data_ptr();
+    unsigned char *ptr = trans.get_data_ptr();
     unsigned int len = trans.get_data_length();
     unsigned int streaming_width = trans.get_streaming_width();
-    unsigned char* be = trans.get_byte_enable_ptr();
+    unsigned char *be = trans.get_byte_enable_ptr();
     unsigned int be_len = trans.get_byte_enable_length();
     if (streaming_width == 0) {
       streaming_width = len;
@@ -151,4 +154,4 @@ class Xbar : sc_core::sc_module {
   tlm_utils::simple_target_socket<Xbar> socket_;
 };
 
-#endif  // TESTS_SYSTEMC_XBAR_H_
+#endif // TESTS_SYSTEMC_XBAR_H_

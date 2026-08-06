@@ -50,18 +50,18 @@ int8_t persistent_buffer[262144]
     __attribute__((section(".data"), aligned(16))) = {0};
 size_t persistent_offset = 0;
 
-TfLiteStatus MockRequestScratchBuffer(TfLiteContext* context, size_t bytes,
-                                      int* buffer_idx) {
-  *buffer_idx = 0;  // Only one scratch buffer supported for now
+TfLiteStatus MockRequestScratchBuffer(TfLiteContext *context, size_t bytes,
+                                      int *buffer_idx) {
+  *buffer_idx = 0; // Only one scratch buffer supported for now
   return kTfLiteOk;
 }
 
-void* MockGetScratchBuffer(TfLiteContext* context, int buffer_idx) {
+void *MockGetScratchBuffer(TfLiteContext *context, int buffer_idx) {
   return scratch_buffer;
 }
 
-void* MockAllocatePersistentBuffer(TfLiteContext* context, size_t bytes) {
-  void* ptr = persistent_buffer + persistent_offset;
+void *MockAllocatePersistentBuffer(TfLiteContext *context, size_t bytes) {
+  void *ptr = persistent_buffer + persistent_offset;
   persistent_offset += (bytes + 15) & ~15;
   return ptr;
 }
@@ -133,9 +133,9 @@ __attribute__((used, retain)) void run_optimized() {
       output_depth == 48) {
     size_t repacked_weights_size = output_depth * filter_height * filter_width *
                                    input_depth * sizeof(int16_t);
-    data.repacked_weights =
-        (int16_t*)MockAllocatePersistentBuffer(&context, repacked_weights_size);
-    data.weight_sums = (int32_t*)MockAllocatePersistentBuffer(
+    data.repacked_weights = (int16_t *)MockAllocatePersistentBuffer(
+        &context, repacked_weights_size);
+    data.weight_sums = (int32_t *)MockAllocatePersistentBuffer(
         &context, output_depth * sizeof(int32_t));
     RepackWeightsD48(filter_data, data.repacked_weights, data.weight_sums,
                      output_depth, filter_height, filter_width, input_depth);
@@ -143,8 +143,8 @@ __attribute__((used, retain)) void run_optimized() {
     size_t repacked_size =
         output_depth * filter_height * filter_width * input_depth;
     data.repacked_weights_generic =
-        (int8_t*)MockAllocatePersistentBuffer(&context, repacked_size);
-    int8_t* dst = data.repacked_weights_generic;
+        (int8_t *)MockAllocatePersistentBuffer(&context, repacked_size);
+    int8_t *dst = data.repacked_weights_generic;
     for (int ky = 0; ky < filter_height; ++ky) {
       for (int kx = 0; kx < filter_width; ++kx) {
         for (int ic = 0; ic < input_depth; ++ic) {

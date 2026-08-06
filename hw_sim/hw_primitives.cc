@@ -16,20 +16,17 @@
 
 namespace coralnpu::sim {
 
-Clock::Observer::Observer(Clock* clock)
-  : clock_(clock) {
+Clock::Observer::Observer(Clock *clock) : clock_(clock) {
   clock_->AddObserver(this);
 }
 
-Clock::Observer::~Observer() {
-  clock_->RemoveObserver(this);
-}
+Clock::Observer::~Observer() { clock_->RemoveObserver(this); }
 
 void Clock::Step() {
   context_->timeInc(1);
   (*clock_) = 1;
   Eval();
-  for (auto& observer : observers_) {
+  for (auto &observer : observers_) {
     observer->OnRisingEdge();
     Eval();
   }
@@ -37,21 +34,17 @@ void Clock::Step() {
   context_->timeInc(1);
   (*clock_) = 0;
   Eval();
-  for (auto& observer : observers_) {
+  for (auto &observer : observers_) {
     observer->OnFallingEdge();
     Eval();
   }
 }
 
-void Clock::Eval() {
-  eval_function_();
-}
+void Clock::Eval() { eval_function_(); }
 
-void Clock::AddObserver(Observer* observer) {
-  observers_.push_back(observer);
-}
+void Clock::AddObserver(Observer *observer) { observers_.push_back(observer); }
 
-void Clock::RemoveObserver(Observer* observer) {
+void Clock::RemoveObserver(Observer *observer) {
   auto it = std::find(observers_.begin(), observers_.end(), observer);
   if (it != observers_.end()) {
     observers_.erase(it);
@@ -73,7 +66,7 @@ AxiAddr AxiAddr::FromIdAddrSize(int id, uint32_t addr, uint32_t byte_length) {
   axi_addr.addr_bits_id = id;
   axi_addr.addr_bits_len = beats - 1;
   axi_addr.addr_bits_size = size;
-  axi_addr.addr_bits_burst = 1;  // INCR
+  axi_addr.addr_bits_burst = 1; // INCR
   axi_addr.addr_bits_lock = 0;
   axi_addr.addr_bits_cache = 0;
   axi_addr.addr_bits_qos = 0;
@@ -81,5 +74,4 @@ AxiAddr AxiAddr::FromIdAddrSize(int id, uint32_t addr, uint32_t byte_length) {
   return axi_addr;
 }
 
-}  // namespace coralnpu::sim
-
+} // namespace coralnpu::sim

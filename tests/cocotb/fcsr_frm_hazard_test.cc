@@ -1,10 +1,10 @@
 #include <bit>
 #include <cstdint>
 
-uint32_t result __attribute__((section(".data")))  = 0;
+uint32_t result __attribute__((section(".data"))) = 0;
 uint32_t faulted __attribute__((section(".data"))) = 0;
-uint32_t mcause __attribute__((section(".data")))  = 0;
-uint32_t mtval __attribute__((section(".data")))   = 0;
+uint32_t mcause __attribute__((section(".data"))) = 0;
+uint32_t mtval __attribute__((section(".data"))) = 0;
 
 extern "C" {
 void coralnpu_exception_handler() {
@@ -29,12 +29,11 @@ int main() {
   float a = std::bit_cast<float>(0x3f800001U);
   float b = std::bit_cast<float>(0x3f800001U);
   float res;
-  uint32_t fcsr_val = 0x60;  // frm = 3 (RUP)
-  asm volatile(
-      "csrw fcsr, %[fcsr];"
-      "fmul.s %[res], %[a], %[b], dyn;"
-      : [res] "=f"(res)
-      : [fcsr] "r"(fcsr_val), [a] "f"(a), [b] "f"(b));
+  uint32_t fcsr_val = 0x60; // frm = 3 (RUP)
+  asm volatile("csrw fcsr, %[fcsr];"
+               "fmul.s %[res], %[a], %[b], dyn;"
+               : [res] "=f"(res)
+               : [fcsr] "r"(fcsr_val), [a] "f"(a), [b] "f"(b));
   result = std::bit_cast<uint32_t>(res);
   return 0;
 }

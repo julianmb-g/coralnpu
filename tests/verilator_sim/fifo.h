@@ -20,28 +20,30 @@
 
 // A SystemC CRT transaction queue.
 
-template <typename T>
-class Fifo {
- public:
+template <typename T> class Fifo {
+public:
   bool Empty() { return entries_.empty(); }
 
   void Write(T v) { entries_.emplace_back(v); }
 
-  bool Read(T& v) {
-    if (entries_.empty()) return false;
+  bool Read(T &v) {
+    if (entries_.empty())
+      return false;
     v = entries_.at(0);
     entries_.erase(entries_.begin());
     return true;
   }
 
-  bool Next(T& v, int index = 0) {
-    if (index >= Count()) return false;
+  bool Next(T &v, int index = 0) {
+    if (index >= Count())
+      return false;
     v = entries_.at(index);
     return true;
   }
 
-  bool Rand(T& v) {
-    if (entries_.empty()) return false;
+  bool Rand(T &v) {
+    if (entries_.empty())
+      return false;
     int index = ::rand() % Count();
     v = entries_.at(index);
     return true;
@@ -50,14 +52,16 @@ class Fifo {
   void Clear() { entries_.clear(); }
 
   bool Remove(int index = 0) {
-    if (index >= Count()) return false;
+    if (index >= Count())
+      return false;
     entries_.erase(entries_.begin() + index);
     return true;
   }
 
   void Shuffle() {
     const int count = entries_.size();
-    if (count < 2) return;
+    if (count < 2)
+      return;
     for (int i = 0; i < count; ++i) {
       const int index = ::rand() % count;
       T v = entries_.at(index);
@@ -68,8 +72,8 @@ class Fifo {
 
   int Count() { return entries_.size(); }
 
- private:
+private:
   std::vector<T> entries_;
 };
 
-#endif  // TESTS_VERILATOR_SIM_FIFO_H_
+#endif // TESTS_VERILATOR_SIM_FIFO_H_

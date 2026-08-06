@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdint.h>
-#include <stddef.h>
 #include "sw/utils/utils.h"
+#include <stddef.h>
+#include <stdint.h>
 
 // Fully frozen dimensions
 constexpr size_t kLhsRows = 16;
@@ -31,16 +31,19 @@ volatile uint32_t csr_cycle_count = 0;
 
 // Statically allocated and padded buffers
 float lhs_input[kLhsRows * kInner]
-    __attribute__((section(".data"), used, retain)) __attribute__((aligned(16)));
+    __attribute__((section(".data"), used, retain))
+    __attribute__((aligned(16)));
 float rhs_input[kInner * kRhsCols]
-    __attribute__((section(".data"), used, retain)) __attribute__((aligned(16)));
+    __attribute__((section(".data"), used, retain))
+    __attribute__((aligned(16)));
 float result_output[kLhsRows * kRhsCols]
-    __attribute__((section(".data"), used, retain)) __attribute__((aligned(16)));
+    __attribute__((section(".data"), used, retain))
+    __attribute__((aligned(16)));
 
 extern "C" void MatMulF(size_t lhs_rows, size_t inner, size_t rhs_cols,
-                        const float* lhs, const float* rhs, float* result);
+                        const float *lhs, const float *rhs, float *result);
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   // Flag start of power-critical section (write to mcontext0)
   uint32_t mcontext0_write_value = 1;
   asm volatile("csrw 0x7C0, %0" : : "r"(mcontext0_write_value));

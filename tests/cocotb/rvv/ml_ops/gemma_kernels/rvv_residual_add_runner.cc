@@ -18,7 +18,7 @@
 #include "sw/utils/utils.h"
 
 extern "C" {
-void rvv_residual_add_f32(const float* A, const float* B, float* Y,
+void rvv_residual_add_f32(const float *A, const float *B, float *Y,
                           size_t total_elements);
 
 #define MAX_ELEMENTS (256 * 640)

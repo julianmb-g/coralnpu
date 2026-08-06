@@ -158,15 +158,13 @@ class ReadyValidInterface:
 # )
 class CoreMiniAxiInterface:
 
-    def __init__(
-        self,
-        dut,
-        clock_ns=1.25,
-        csr_base_addr=0x30000,
-        ext_mem_base_addr=0x20000000,
-        ext_mem_size=(4 * 1024 * 1024),
-        **kwargs
-    ):
+    def __init__(self,
+                 dut,
+                 clock_ns=1.25,
+                 csr_base_addr=0x30000,
+                 ext_mem_base_addr=0x20000000,
+                 ext_mem_size=(4 * 1024 * 1024),
+                 **kwargs):
         # Allow overriding clock_ns from plusargs or environment.
         if "CLOCK_NS" in cocotb.plusargs:
             clock_ns = float(cocotb.plusargs["CLOCK_NS"])
@@ -184,26 +182,21 @@ class CoreMiniAxiInterface:
         self.dut.io_dm_req_valid.value = 0
         self.dut.io_dm_rsp_ready.value = 0
         self.axi_slave_read_addr = ReadyValidInterface(
-            self.dut, "io_axi_slave_read_addr"
-        )
+            self.dut, "io_axi_slave_read_addr")
         self.axi_slave_read_addr.clear_valid()
         self.dut.io_axi_slave_read_data_ready.value = 0
         self.axi_slave_write_addr = ReadyValidInterface(
-            self.dut, "io_axi_slave_write_addr"
-        )
+            self.dut, "io_axi_slave_write_addr")
         self.axi_slave_write_addr.clear_valid()
         self.axi_slave_write_data = ReadyValidInterface(
-            self.dut, "io_axi_slave_write_data"
-        )
+            self.dut, "io_axi_slave_write_data")
         self.axi_slave_write_data.clear_valid()
         self.dut.io_axi_slave_write_resp_ready.value = 0
         self.axi_master_read_data = ReadyValidInterface(
-            self.dut, "io_axi_master_read_data"
-        )
+            self.dut, "io_axi_master_read_data")
         self.axi_master_read_data.clear_valid()
         self.axi_master_write_resp = ReadyValidInterface(
-            self.dut, "io_axi_master_write_resp"
-        )
+            self.dut, "io_axi_master_write_resp")
         self.axi_master_write_resp.clear_valid()
         self.clock_ns = clock_ns
         self.clock = Clock(dut.io_aclk, clock_ns, unit="ns")
@@ -301,10 +294,10 @@ class CoreMiniAxiInterface:
             if self.dut.io_axi_slave_write_resp_valid.value == 1:
                 try:
                     bdata = dict()
-                    bdata["id"
-                          ] = self.dut.io_axi_slave_write_resp_bits_id.value
-                    bdata["resp"
-                          ] = self.dut.io_axi_slave_write_resp_bits_resp.value
+                    bdata[
+                        "id"] = self.dut.io_axi_slave_write_resp_bits_id.value
+                    bdata[
+                        "resp"] = self.dut.io_axi_slave_write_resp_bits_resp.value
                     await self.slave_bfifo.put(bdata)
                 except Exception as e:
                     print("X seen in slave_bagent: " + str(e))
@@ -316,8 +309,7 @@ class CoreMiniAxiInterface:
                     val = self.dut.io_axi_slave_read_data_bits_data.value
                     if val.is_resolvable:
                         rdata["data"] = np.frombuffer(
-                            val.to_bytes(byteorder="big"), dtype=np.uint8
-                        )
+                            val.to_bytes(byteorder="big"), dtype=np.uint8)
                     else:
                         nonx_data = val.binstr.replace("X",
                                                        "0").replace("z", "0")
@@ -327,10 +319,10 @@ class CoreMiniAxiInterface:
                         ],
                                                  dtype=np.uint8)
                     rdata["id"] = self.dut.io_axi_slave_read_data_bits_id.value
-                    rdata["last"
-                          ] = self.dut.io_axi_slave_read_data_bits_last.value
-                    rdata["resp"
-                          ] = self.dut.io_axi_slave_read_data_bits_resp.value
+                    rdata[
+                        "last"] = self.dut.io_axi_slave_read_data_bits_last.value
+                    rdata[
+                        "resp"] = self.dut.io_axi_slave_read_data_bits_resp.value
                     await self.slave_rfifo.put(rdata)
                 except Exception as e:
                     print("X seen in slave_ragent: " + str(e))
@@ -340,25 +332,20 @@ class CoreMiniAxiInterface:
                 try:
                     ardata = dict()
                     ardata[
-                        "id"
-                    ] = self.dut.io_axi_master_read_addr_bits_id.value.to_unsigned(
-                    )
+                        "id"] = self.dut.io_axi_master_read_addr_bits_id.value.to_unsigned(
+                        )
                     ardata[
-                        "addr"
-                    ] = self.dut.io_axi_master_read_addr_bits_addr.value.to_unsigned(
-                    )
+                        "addr"] = self.dut.io_axi_master_read_addr_bits_addr.value.to_unsigned(
+                        )
                     ardata[
-                        "size"
-                    ] = self.dut.io_axi_master_read_addr_bits_size.value.to_unsigned(
-                    )
+                        "size"] = self.dut.io_axi_master_read_addr_bits_size.value.to_unsigned(
+                        )
                     ardata[
-                        "len"
-                    ] = self.dut.io_axi_master_read_addr_bits_len.value.to_unsigned(
-                    )
+                        "len"] = self.dut.io_axi_master_read_addr_bits_len.value.to_unsigned(
+                        )
                     ardata[
-                        "burst"
-                    ] = self.dut.io_axi_master_read_addr_bits_burst.value.to_unsigned(
-                    )
+                        "burst"] = self.dut.io_axi_master_read_addr_bits_burst.value.to_unsigned(
+                        )
                     await self.master_arfifo.put(ardata)
                 except Exception as e:
                     print("X seen in master_aragent: " + str(e))
@@ -369,21 +356,17 @@ class CoreMiniAxiInterface:
                 try:
                     awdata = dict()
                     awdata[
-                        "id"
-                    ] = self.dut.io_axi_master_write_addr_bits_id.value.to_unsigned(
-                    )
+                        "id"] = self.dut.io_axi_master_write_addr_bits_id.value.to_unsigned(
+                        )
                     awdata[
-                        "addr"
-                    ] = self.dut.io_axi_master_write_addr_bits_addr.value.to_unsigned(
-                    )
+                        "addr"] = self.dut.io_axi_master_write_addr_bits_addr.value.to_unsigned(
+                        )
                     awdata[
-                        "size"
-                    ] = self.dut.io_axi_master_write_addr_bits_size.value.to_unsigned(
-                    )
+                        "size"] = self.dut.io_axi_master_write_addr_bits_size.value.to_unsigned(
+                        )
                     awdata[
-                        "len"
-                    ] = self.dut.io_axi_master_write_addr_bits_len.value.to_unsigned(
-                    )
+                        "len"] = self.dut.io_axi_master_write_addr_bits_len.value.to_unsigned(
+                        )
                     await self.master_awfifo.put(awdata)
                 except Exception as e:
                     print("X seen in master_awagent: " + str(e))
@@ -393,14 +376,12 @@ class CoreMiniAxiInterface:
                 try:
                     wdata = dict()
                     wdata[
-                        "data"
-                    ] = self.dut.io_axi_master_write_data_bits_data.value.to_bytes(
-                        byteorder="big"
-                    )
-                    wdata["strb"
-                          ] = self.dut.io_axi_master_write_data_bits_strb.value
-                    wdata["last"
-                          ] = self.dut.io_axi_master_write_data_bits_last.value
+                        "data"] = self.dut.io_axi_master_write_data_bits_data.value.to_bytes(
+                            byteorder="big")
+                    wdata[
+                        "strb"] = self.dut.io_axi_master_write_data_bits_strb.value
+                    wdata[
+                        "last"] = self.dut.io_axi_master_write_data_bits_last.value
                     await self.master_wfifo.put(wdata)
                 except Exception as e:
                     print("X seen in master_wagent: " + str(e))
@@ -542,8 +523,7 @@ class CoreMiniAxiInterface:
 
         rsp = dict()
         rsp["data"] = int(
-            (await self.read_csr(DebugCsrAddr.RSP_DATA)).view(np.uint32)[0]
-        )
+            (await self.read_csr(DebugCsrAddr.RSP_DATA)).view(np.uint32)[0])
         rsp["op"] = (await
                      self.read_csr(DebugCsrAddr.RSP_OP)).view(np.uint32)[0]
         await self.write_csr(DebugCsrAddr.STATUS, 0)  # Acknowledge response.
@@ -562,8 +542,7 @@ class CoreMiniAxiInterface:
 
         rsp = dict()
         rsp["data"] = int(
-            (await self.read_csr(DebugCsrAddr.RSP_DATA)).view(np.uint32)[0]
-        )
+            (await self.read_csr(DebugCsrAddr.RSP_DATA)).view(np.uint32)[0])
         rsp["op"] = (await
                      self.read_csr(DebugCsrAddr.RSP_OP)).view(np.uint32)[0]
         await self.write_csr(DebugCsrAddr.STATUS, 0)  # Acknowledge response.
@@ -590,9 +569,11 @@ class CoreMiniAxiInterface:
         assert (cmderr == 0)
         return data
 
-    async def dm_write_mem(
-        self, addr, data, size_bytes, expected_op=DmRspOp.SUCCESS
-    ):
+    async def dm_write_mem(self,
+                           addr,
+                           data,
+                           size_bytes,
+                           expected_op=DmRspOp.SUCCESS):
         # Set data1 to the target address for memory access
         rsp = await self.dm_write(DmAddress.DATA1, addr)
         assert rsp["op"] == DmRspOp.SUCCESS
@@ -688,9 +669,12 @@ class CoreMiniAxiInterface:
         await RisingEdge(self.dut.io_aclk)
         self.dut.io_debug_req.value = 0
 
-    async def _write_addr(
-        self, addr, size, burst_len=1, axi_id=0, burst=AxiBurst.INCR
-    ):
+    async def _write_addr(self,
+                          addr,
+                          size,
+                          burst_len=1,
+                          axi_id=0,
+                          burst=AxiBurst.INCR):
         awdata = dict()
         awdata["addr"] = addr
         awdata["id"] = axi_id
@@ -756,15 +740,13 @@ class CoreMiniAxiInterface:
             beats_sent = beats_sent + 1
         assert beats_sent == beats
 
-    async def _write_transaction(
-        self,
-        addr: int,
-        data: np.array,
-        masks: np.array,
-        delay_bready: int = 0,
-        axi_id: int = 0,
-        burst: AxiBurst = AxiBurst.INCR
-    ) -> None:
+    async def _write_transaction(self,
+                                 addr: int,
+                                 data: np.array,
+                                 masks: np.array,
+                                 delay_bready: int = 0,
+                                 axi_id: int = 0,
+                                 burst: AxiBurst = AxiBurst.INCR) -> None:
         # Compute number of beats
         start_addr = addr
         end_addr = addr + len(data) - 1  # Last address written
@@ -775,9 +757,8 @@ class CoreMiniAxiInterface:
         # TODO(derekjchow): Fuzz element size?
         write_addr_size = math.ceil(math.log2(len(data)))
         write_addr_size = min(write_addr_size, 4)  # Size of 16 for increment
-        write_addr_task = self._write_addr(
-            addr, write_addr_size, beats, axi_id, burst
-        )
+        write_addr_task = self._write_addr(addr, write_addr_size, beats,
+                                           axi_id, burst)
         write_data_task = self._write_data(addr, data, masks, beats)
         await write_addr_task
         await write_data_task
@@ -786,17 +767,14 @@ class CoreMiniAxiInterface:
 
     async def _axi_valid_memory_addr(self, addr, data_len) -> bool:
         return (addr >= self.memory_base_addr) and (
-            addr + data_len < self.memory_base_addr + len(self.memory)
-        )
+            addr + data_len < self.memory_base_addr + len(self.memory))
 
-    async def write(
-        self,
-        addr: int,
-        data: np.array,
-        delay_bready: int = 0,
-        masks: np.array = None,
-        burst: AxiBurst = AxiBurst.INCR
-    ) -> None:
+    async def write(self,
+                    addr: int,
+                    data: np.array,
+                    delay_bready: int = 0,
+                    masks: np.array = None,
+                    burst: AxiBurst = AxiBurst.INCR) -> None:
         """Writes data into CoralNPU memory."""
         axi_id = random.randint(0, 63)
         data = data.view(np.uint8)
@@ -804,8 +782,7 @@ class CoreMiniAxiInterface:
             masks = np.copy(np.ones_like(data, dtype=bool))
         while len(data) > 0:
             transaction_size = self._determine_transaction_size(
-                addr, len(data)
-            )
+                addr, len(data))
             local_data = data[0:transaction_size]
             local_masks = masks[0:transaction_size]
             if await self._axi_valid_memory_addr(addr, len(local_data)):
@@ -813,9 +790,8 @@ class CoreMiniAxiInterface:
                     self.memory[addr - self.memory_base_addr +
                                 i] = local_data[i]
             else:
-                await self._write_transaction(
-                    addr, local_data, local_masks, delay_bready, axi_id, burst
-                )
+                await self._write_transaction(addr, local_data, local_masks,
+                                              delay_bready, axi_id, burst)
             addr += len(local_data)
             data = data[transaction_size:]
             masks = masks[transaction_size:]
@@ -824,14 +800,12 @@ class CoreMiniAxiInterface:
         axi_id = random.randint(0, 63)
         await self.write(addr, np.array([data], dtype=np.uint32), axi_id)
 
-    async def _read_addr(
-        self,
-        addr: int,
-        size: int,
-        beats: int = 1,
-        axi_id: int = 0,
-        burst: AxiBurst = AxiBurst.INCR
-    ):
+    async def _read_addr(self,
+                         addr: int,
+                         size: int,
+                         beats: int = 1,
+                         axi_id: int = 0,
+                         burst: AxiBurst = AxiBurst.INCR):
         ardata = dict()
         ardata["addr"] = addr
         ardata["id"] = axi_id
@@ -849,14 +823,12 @@ class CoreMiniAxiInterface:
 
         return last, np.flip(data)
 
-    async def _read_transaction(
-        self,
-        addr: int,
-        bytes_to_read: int,
-        expected_resp: AxiResp = AxiResp.OKAY,
-        axi_id: int = 0,
-        burst: AxiBurst = AxiBurst.INCR
-    ):
+    async def _read_transaction(self,
+                                addr: int,
+                                bytes_to_read: int,
+                                expected_resp: AxiResp = AxiResp.OKAY,
+                                axi_id: int = 0,
+                                burst: AxiBurst = AxiBurst.INCR):
         # Compute number of beats
         start_addr = addr
         end_addr = addr + bytes_to_read - 1  # Last address written
@@ -886,17 +858,14 @@ class CoreMiniAxiInterface:
         data = []
         while bytes_to_read > 0:
             transaction_size = self._determine_transaction_size(
-                addr, bytes_to_read
-            )
+                addr, bytes_to_read)
             if await self._axi_valid_memory_addr(addr, transaction_size):
                 rel_addr = addr - self.memory_base_addr
                 data.append(self.memory[rel_addr:rel_addr + transaction_size])
             else:
-                data.append(
-                    await self._read_transaction(
-                        addr, transaction_size, 0, axi_id, burst
-                    )
-                )
+                data.append(await
+                            self._read_transaction(addr, transaction_size, 0,
+                                                   axi_id, burst))
             bytes_to_read -= transaction_size
             addr += transaction_size
         if len(data) == 0:

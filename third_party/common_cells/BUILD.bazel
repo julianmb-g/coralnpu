@@ -25,8 +25,17 @@ pkg_files(
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["**/*.v", "**/*.sv", "**/*.svh"]),
+    srcs = glob([
+        "**/*.v",
+        "**/*.sv",
+        "**/*.svh",
+    ]),
 )
+
 exports_files(
-    srcs = glob(["**/*.v", "**/*.sv", "**/*.svh"]),
+    srcs = glob([
+        "**/*.v",
+        "**/*.sv",
+        "**/*.svh",
+    ]),
 )

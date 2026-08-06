@@ -48,4 +48,4 @@ uint32_t dma_make_len_flags(uint32_t len, uint32_t width_log2, int src_fixed,
 }
 #endif
 
-#endif  // FPGA_SW_DMA_H_
+#endif // FPGA_SW_DMA_H_

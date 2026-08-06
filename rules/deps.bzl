@@ -24,7 +24,6 @@ load(
     rules_hdl_dependency_support = "dependency_support",
 )
 
-
 def coralnpu_deps():
     """Full coralnpu dependent repositories
 

@@ -30,32 +30,33 @@ float o_buf[kTotalElements] __attribute__((section(".ddr_data"), used, retain))
 __attribute__((aligned(16)));
 
 extern "C" {
-volatile uint32_t active_num_heads    = 4;
+volatile uint32_t active_num_heads = 4;
 volatile uint32_t active_num_kv_heads = 4;
-volatile uint32_t active_seq_len      = 256;
-volatile uint32_t active_q_seq_len    = 256;
-volatile uint32_t active_kv_seq_len   = 256;
-volatile uint32_t active_dim          = 256;
+volatile uint32_t active_seq_len = 256;
+volatile uint32_t active_q_seq_len = 256;
+volatile uint32_t active_kv_seq_len = 256;
+volatile uint32_t active_dim = 256;
 
 volatile uint32_t csr_cycle_count = 0;
 }
 
-extern "C" void FlashAttentionRVV(const float *Q, const float *K, const float *V, float *O,
-                                  size_t q_heads, size_t kv_heads, size_t q_seq_len,
+extern "C" void FlashAttentionRVV(const float *Q, const float *K,
+                                  const float *V, float *O, size_t q_heads,
+                                  size_t kv_heads, size_t q_seq_len,
                                   size_t kv_seq_len, size_t dim);
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   uint32_t mcontext0_write_value = 1;
   asm volatile("csrw 0x7C0, %0" : : "r"(mcontext0_write_value));
 
   cycle_counter_reset();
   uint64_t start_cycles = mcycle_read();
 
-  size_t q_len  = active_q_seq_len != 0 ? active_q_seq_len : active_seq_len;
+  size_t q_len = active_q_seq_len != 0 ? active_q_seq_len : active_seq_len;
   size_t kv_len = active_kv_seq_len != 0 ? active_kv_seq_len : active_seq_len;
 
-  FlashAttentionRVV(q_buf, k_buf, v_buf, o_buf, active_num_heads, active_num_kv_heads, q_len,
-                    kv_len, active_dim);
+  FlashAttentionRVV(q_buf, k_buf, v_buf, o_buf, active_num_heads,
+                    active_num_kv_heads, q_len, kv_len, active_dim);
 
   uint64_t end_cycles = mcycle_read();
   csr_cycle_count = static_cast<uint32_t>(end_cycles - start_cycles);

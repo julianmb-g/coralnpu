@@ -16,10 +16,10 @@
 #include <stdint.h>
 
 namespace {
-constexpr size_t lut_size = 32000;  // DTCM is 32KB.
+constexpr size_t lut_size = 32000; // DTCM is 32KB.
 // Double sized so we can check trailing regions are not read/written.
 constexpr size_t buf_size = 128;
-}  // namespace
+} // namespace
 
 size_t vl __attribute__((section(".data"))) = 8;
 // Indices are always unsigned.
@@ -95,7 +95,7 @@ __attribute__((used, retain)) void vloxei16_v_u8m4() {
 
 void (*impl)() __attribute__((section(".data"))) = &vluxei16_v_u8m1;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   impl();
   return 0;
 }

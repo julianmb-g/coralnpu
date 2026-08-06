@@ -640,7 +640,6 @@ coralnpu_v2_binary(
     ],
 )
 
-
 # This test is used for baseline vector power analysis.
 coralnpu_v2_binary(
     name = "nop_test",

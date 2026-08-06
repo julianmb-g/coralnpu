@@ -22,15 +22,15 @@
 // Reference PyTorch implementation:
 // https://github.com/google/gemma_pytorch/blob/main/gemma/model.py#L179
 extern "C" void RmsNormF(size_t seq_len, size_t hidden_size, float epsilon,
-                         const float* input, const float* weight,
-                         float* output) {
+                         const float *input, const float *weight,
+                         float *output) {
   size_t vlmax = __riscv_vsetvlmax_e32m4();
   vfloat32m1_t vzero_m1 =
       __riscv_vfmv_v_f_f32m1(0.0f, __riscv_vsetvlmax_e32m1());
 
   for (size_t s = 0; s < seq_len; ++s) {
-    const float* token_in = input + (s * hidden_size);
-    float* token_out = output + (s * hidden_size);
+    const float *token_in = input + (s * hidden_size);
+    float *token_out = output + (s * hidden_size);
 
     // -------------------------------------------------------------
     // PASS 1: Calculate Sum of Squares (Reduction)
@@ -38,7 +38,7 @@ extern "C" void RmsNormF(size_t seq_len, size_t hidden_size, float epsilon,
     vfloat32m4_t vacc = __riscv_vfmv_v_f_f32m4(0.0f, vlmax);
 
     size_t k = hidden_size;
-    const float* x_ptr = token_in;
+    const float *x_ptr = token_in;
 
     while (k) {
       size_t vl = __riscv_vsetvl_e32m4(k);
@@ -60,8 +60,8 @@ extern "C" void RmsNormF(size_t seq_len, size_t hidden_size, float epsilon,
     // -------------------------------------------------------------
     k = hidden_size;
     x_ptr = token_in;
-    const float* w_ptr = weight;
-    float* out_ptr = token_out;
+    const float *w_ptr = weight;
+    float *out_ptr = token_out;
 
     while (k) {
       size_t vl = __riscv_vsetvl_e32m4(k);
