@@ -29,7 +29,7 @@ int main() {
   uint32_t val = gpio_read_output();
   if ((val & 0xFF) != 0xAA) {
     uart_puts("GPIO test FAIL!");
-    return 1; // Fail
+    return 1;  // Fail
   }
 
   // 4. Write pattern 0x55
@@ -39,7 +39,7 @@ int main() {
   val = gpio_read_output();
   if ((val & 0xFF) != 0x55) {
     uart_puts("GPIO test FAIL!");
-    return 2; // Fail
+    return 2;  // Fail
   }
 
   // 6. Test Input (Loopback)
@@ -48,10 +48,10 @@ int main() {
   val = gpio_read();
   if ((val & 0xFF) != 0x55) {
     uart_puts("GPIO test FAIL!");
-    return 3; // Fail: Loopback mismatch
+    return 3;  // Fail: Loopback mismatch
   }
 
   uart_puts("GPIO test PASS!");
 
-  return 0; // Pass
+  return 0;  // Pass
 }

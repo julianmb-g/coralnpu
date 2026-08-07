@@ -19,13 +19,13 @@
 #include "fpga/sw/uart.h"
 #include "yocto_isp_register_address.h"
 
-#define ISP_BASE 0x50000000
+#define ISP_BASE    0x50000000
 #define REG32(addr) (*((volatile uint32_t *)(addr)))
 
 // ISP Register Offsets
-#define VI_CCL 0x100
+#define VI_CCL                 0x100
 #define ISP_WRITE(offset, val) REG32(ISP_BASE + (offset)) = (val)
-#define ISP_READ(offset) REG32(ISP_BASE + (offset))
+#define ISP_READ(offset)       REG32(ISP_BASE + (offset))
 
 void isp_config_324x324() {
   // Verbatim copy from _dif_isp_wrapper_set_raw_byp_en

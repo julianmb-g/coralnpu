@@ -18,7 +18,7 @@ uint32_t uart_get_base_addr(void);
 
 void uart_init(void);
 void uart_putc(char c);
-void uart_puts(const char *s);
+void uart_puts(const char* s);
 void uart_puthex8(uint8_t v);
 void uart_puthex32(uint32_t v);
 
@@ -26,4 +26,4 @@ void uart_puthex32(uint32_t v);
 }
 #endif
 
-#endif // FPGA_SW_UART_H_
+#endif  // FPGA_SW_UART_H_

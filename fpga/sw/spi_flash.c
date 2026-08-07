@@ -24,8 +24,8 @@
 #define GPIO_FLASH_RST_BIT (1 << 4)
 
 #define CLINT_BASE 0x02000000u
-#define MTIME_LO (*(volatile uint32_t *)(CLINT_BASE + 0xBFF8))
-#define MTIME_HI (*(volatile uint32_t *)(CLINT_BASE + 0xBFFC))
+#define MTIME_LO (*(volatile uint32_t*)(CLINT_BASE + 0xBFF8))
+#define MTIME_HI (*(volatile uint32_t*)(CLINT_BASE + 0xBFFC))
 
 static uint32_t flash_base(void) { return spi_get_flash_base_addr(); }
 
@@ -65,10 +65,10 @@ void spi_flash_init(void) {
 
 void spi_flash_hw_reset(void) {
   // Pulse Reset (active low)
-  gpio_write(gpio_read_output() & ~GPIO_FLASH_RST_BIT); // Assert
+  gpio_write(gpio_read_output() & ~GPIO_FLASH_RST_BIT);  // Assert
   udelay(10);
-  gpio_write(gpio_read_output() | GPIO_FLASH_RST_BIT); // Deassert
-  udelay(1000);                                        // tRST = 1ms
+  gpio_write(gpio_read_output() | GPIO_FLASH_RST_BIT);  // Deassert
+  udelay(1000);                                         // tRST = 1ms
 }
 
 void spi_flash_cs_assert(void) {
@@ -78,8 +78,7 @@ void spi_flash_cs_assert(void) {
 
 void spi_flash_cs_deassert(void) {
   // Wait until not busy before deasserting
-  while (spi_get_status(flash_base()) & 0x1)
-    ;
+  while (spi_get_status(flash_base()) & 0x1);
   // In manual mode, CSID[0]=0 deasserts CS (drives high)
   spi_set_csid(flash_base(), 0);
   // Small delay for CS deassert timing (tCSH)
@@ -92,7 +91,7 @@ void spi_flash_write_enable(void) {
   spi_flash_cs_deassert();
 }
 
-bool spi_flash_poll_status(uint8_t mask, uint8_t expected, uint8_t *result,
+bool spi_flash_poll_status(uint8_t mask, uint8_t expected, uint8_t* result,
                            uint32_t poll_limit) {
   uint32_t count = 0;
   uint8_t status;
@@ -114,15 +113,12 @@ bool spi_flash_poll_status(uint8_t mask, uint8_t expected, uint8_t *result,
   return ((status & mask) == expected);
 }
 
-void spi_flash_read_id(uint8_t *mfr, uint8_t *id1, uint8_t *id2) {
+void spi_flash_read_id(uint8_t* mfr, uint8_t* id1, uint8_t* id2) {
   spi_flash_cs_assert();
   spi_xfer_local(SPI_FLASH_CMD_READ_ID);
-  if (mfr)
-    *mfr = spi_xfer_local(0x00);
-  if (id1)
-    *id1 = spi_xfer_local(0x00);
-  if (id2)
-    *id2 = spi_xfer_local(0x00);
+  if (mfr) *mfr = spi_xfer_local(0x00);
+  if (id1) *id1 = spi_xfer_local(0x00);
+  if (id2) *id2 = spi_xfer_local(0x00);
   spi_flash_cs_deassert();
 }
 
@@ -137,7 +133,7 @@ bool spi_flash_sector_erase(uint32_t addr) {
   return spi_flash_poll_status(0x01, 0x00, NULL, 10000000);
 }
 
-bool spi_flash_page_program(uint32_t addr, const uint8_t *data, uint32_t len) {
+bool spi_flash_page_program(uint32_t addr, const uint8_t* data, uint32_t len) {
   spi_flash_write_enable();
   spi_flash_cs_assert();
   spi_xfer_local(SPI_FLASH_CMD_PAGE_PROGRAM);
@@ -151,7 +147,7 @@ bool spi_flash_page_program(uint32_t addr, const uint8_t *data, uint32_t len) {
   return spi_flash_poll_status(0x01, 0x00, NULL, 10000000);
 }
 
-void spi_flash_read(uint32_t addr, uint8_t *data, uint32_t len) {
+void spi_flash_read(uint32_t addr, uint8_t* data, uint32_t len) {
   spi_flash_cs_assert();
   spi_xfer_local(SPI_FLASH_CMD_READ);
   spi_xfer_local((addr >> 16) & 0xFF);
@@ -163,9 +159,8 @@ void spi_flash_read(uint32_t addr, uint8_t *data, uint32_t len) {
   spi_flash_cs_deassert();
 }
 
-void spi_flash_read_dma(uint32_t addr, uint8_t *data, uint32_t len) {
-  if (len == 0)
-    return;
+void spi_flash_read_dma(uint32_t addr, uint8_t* data, uint32_t len) {
+  if (len == 0) return;
 
   uint32_t base = flash_base();
   spi_flash_cs_assert();
@@ -194,20 +189,20 @@ void spi_flash_read_dma(uint32_t addr, uint8_t *data, uint32_t len) {
   spi_flash_cs_deassert();
 }
 
-void spi_flash_read_sfdp(uint32_t addr, uint8_t *data, uint32_t len) {
+void spi_flash_read_sfdp(uint32_t addr, uint8_t* data, uint32_t len) {
   spi_flash_cs_assert();
   spi_xfer_local(SPI_FLASH_CMD_READ_SFDP);
   spi_xfer_local((addr >> 16) & 0xFF);
   spi_xfer_local((addr >> 8) & 0xFF);
   spi_xfer_local(addr & 0xFF);
-  spi_xfer_local(0x00); // Dummy byte
+  spi_xfer_local(0x00);  // Dummy byte
   for (uint32_t i = 0; i < len; i++) {
     data[i] = spi_xfer_local(0x00);
   }
   spi_flash_cs_deassert();
 }
 
-bool spi_flash_discover(struct spi_flash_info *info) {
+bool spi_flash_discover(struct spi_flash_info* info) {
   if (!info) {
     return false;
   }
@@ -233,7 +228,7 @@ bool spi_flash_discover(struct spi_flash_info *info) {
   for (int i = 0; i < num_headers; i++) {
     uint8_t phead[8];
     spi_flash_read_sfdp(8 + i * 8, phead, 8);
-    if (phead[0] == 0x00) { // JEDEC ID
+    if (phead[0] == 0x00) {  // JEDEC ID
       uint32_t ptr = phead[4] | (phead[5] << 8) | (phead[6] << 16);
       uint32_t len = phead[3] * 4;
       if (len > table_len) {
@@ -279,7 +274,7 @@ bool spi_flash_discover(struct spi_flash_info *info) {
   if (table_len >= 41) {
     info->page_size_bytes = (1U << ((table[40] >> 4) & 0x0F));
   } else {
-    info->page_size_bytes = 256; // Default
+    info->page_size_bytes = 256;  // Default
   }
 
   return true;

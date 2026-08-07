@@ -45,14 +45,14 @@ enum class CommandType : uint8_t {
 // The command structure sent from the Python client.
 struct SpiCommand {
   CommandType type;
-  uint32_t addr;  // For reg commands
-  uint64_t data;  // For simple writes or expected value
-  uint32_t count; // For bulk commands or wait cycles
+  uint32_t addr;   // For reg commands
+  uint64_t data;   // For simple writes or expected value
+  uint32_t count;  // For bulk commands or wait cycles
 } __attribute__((packed));
 
 // The response packet sent back to the Python client.
 struct SpiResponse {
-  uint64_t data; // For simple reads
+  uint64_t data;  // For simple reads
   uint8_t success;
 } __attribute__((packed));
 
@@ -140,7 +140,7 @@ void server_loop(int port) {
   address.sin_addr.s_addr = INADDR_ANY;
   address.sin_port = htons(port);
 
-  if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+  if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
     perror("bind failed");
     return;
   }
@@ -152,16 +152,14 @@ void server_loop(int port) {
   while (!reset_done.load() && !shutting_down.load()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
-  if (shutting_down)
-    return;
+  if (shutting_down) return;
 
   std::cout << "DPI: Server listening on port " << port << std::endl;
 
   int client_socket;
   if ((client_socket =
-           accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0) {
-    if (!shutting_down)
-      perror("accept");
+           accept(server_fd, (struct sockaddr*)&address, &addrlen)) < 0) {
+    if (!shutting_down) perror("accept");
     return;
   }
 
@@ -170,14 +168,12 @@ void server_loop(int port) {
     size_t header_read = 0;
     while (header_read < sizeof(cmd_header)) {
       int n = read(client_socket,
-                   reinterpret_cast<char *>(&cmd_header) + header_read,
+                   reinterpret_cast<char*>(&cmd_header) + header_read,
                    sizeof(cmd_header) - header_read);
-      if (n <= 0)
-        break;
+      if (n <= 0) break;
       header_read += n;
     }
-    if (header_read < sizeof(cmd_header))
-      break;
+    if (header_read < sizeof(cmd_header)) break;
 
     QueuedSpiCommand q_cmd;
     q_cmd.header = cmd_header;
@@ -195,12 +191,10 @@ void server_loop(int port) {
       while (total_read < payload_size) {
         int n = read(client_socket, q_cmd.payload.data() + total_read,
                      payload_size - total_read);
-        if (n <= 0)
-          break;
+        if (n <= 0) break;
         total_read += n;
       }
-      if (total_read < payload_size)
-        command_ok = false;
+      if (total_read < payload_size) command_ok = false;
     } else if (cmd_header.type == CommandType::PACKED_WRITE) {
       // Legacy packed write for backward compatibility if needed
       size_t payload_size = static_cast<size_t>(cmd_header.count) * 16;
@@ -214,16 +208,13 @@ void server_loop(int port) {
       while (total_read < payload_size) {
         int n = read(client_socket, q_cmd.payload.data() + total_read,
                      payload_size - total_read);
-        if (n <= 0)
-          break;
+        if (n <= 0) break;
         total_read += n;
       }
-      if (total_read < payload_size)
-        command_ok = false;
+      if (total_read < payload_size) command_ok = false;
     }
 
-    if (!command_ok)
-      break;
+    if (!command_ok) break;
 
     {
       std::lock_guard<std::mutex> lock(cmd_mutex);
@@ -256,32 +247,28 @@ void server_loop(int port) {
   close(client_socket);
 }
 
-} // namespace
+}  // namespace
 
 extern "C" {
 
-struct SpiDpiFsmState *spi_dpi_init() {
-  const char *port_str = getenv("SPI_DPI_PORT");
+struct SpiDpiFsmState* spi_dpi_init() {
+  const char* port_str = getenv("SPI_DPI_PORT");
   int port = 5555;
-  if (port_str)
-    port = std::stoi(port_str);
+  if (port_str) port = std::stoi(port_str);
   server_thread = std::thread(server_loop, port);
-  struct SpiDpiFsmState *ctx = new SpiDpiFsmState();
+  struct SpiDpiFsmState* ctx = new SpiDpiFsmState();
   ctx->init();
   return ctx;
 }
 
-void spi_dpi_close(struct SpiDpiFsmState *ctx) {
+void spi_dpi_close(struct SpiDpiFsmState* ctx) {
   shutting_down = true;
-  if (server_fd != -1)
-    shutdown(server_fd, SHUT_RDWR);
-  if (server_thread.joinable())
-    server_thread.join();
-  if (ctx)
-    delete ctx;
+  if (server_fd != -1) shutdown(server_fd, SHUT_RDWR);
+  if (server_thread.joinable()) server_thread.join();
+  if (ctx) delete ctx;
 }
 
-void spi_dpi_reset(struct SpiDpiFsmState *ctx) {
+void spi_dpi_reset(struct SpiDpiFsmState* ctx) {
   reset_seen.store(true, std::memory_order_release);
   reset_done.store(false, std::memory_order_release);
   ctx->init();
@@ -302,155 +289,157 @@ void spi_dpi_reset(struct SpiDpiFsmState *ctx) {
   }
 }
 
-void handle_v2_transaction(unsigned char miso, struct SpiDpiFsmState *ctx) {
+void handle_v2_transaction(unsigned char miso, struct SpiDpiFsmState* ctx) {
   switch (ctx->state) {
-  case V2_START:
-    ctx->signal_state.csb = 0;
-    ctx->signal_state.sck = 0;
-    ctx->byte_idx = 0;
-    ctx->bit_count = 0;
-    ctx->success = true;
-    ctx->state = V2_HEADER;
-    break;
+    case V2_START:
+      ctx->signal_state.csb = 0;
+      ctx->signal_state.sck = 0;
+      ctx->byte_idx = 0;
+      ctx->bit_count = 0;
+      ctx->success = true;
+      ctx->state = V2_HEADER;
+      break;
 
-  case V2_HEADER:
-    if (ctx->bit_count == 0 && !ctx->signal_state.sck) {
-      uint8_t op =
-          (ctx->current_cmd.header.type == CommandType::V2_READ) ? 0x01 : 0x02;
-      switch (ctx->byte_idx) {
-      case 0:
-        ctx->data_out = op;
-        break;
-      case 1:
-        ctx->data_out = (ctx->current_cmd.header.addr >> 24) & 0xFF;
-        break;
-      case 2:
-        ctx->data_out = (ctx->current_cmd.header.addr >> 16) & 0xFF;
-        break;
-      case 3:
-        ctx->data_out = (ctx->current_cmd.header.addr >> 8) & 0xFF;
-        break;
-      case 4:
-        ctx->data_out = ctx->current_cmd.header.addr & 0xFF;
-        break;
-      case 5:
-        ctx->data_out = (ctx->current_cmd.header.count >> 8) & 0xFF;
-        break;
-      case 6:
-        ctx->data_out = ctx->current_cmd.header.count & 0xFF;
-        break;
-      default:
-        ctx->data_out = 0;
-        break;
+    case V2_HEADER:
+      if (ctx->bit_count == 0 && !ctx->signal_state.sck) {
+        uint8_t op = (ctx->current_cmd.header.type == CommandType::V2_READ)
+                         ? 0x01
+                         : 0x02;
+        switch (ctx->byte_idx) {
+          case 0:
+            ctx->data_out = op;
+            break;
+          case 1:
+            ctx->data_out = (ctx->current_cmd.header.addr >> 24) & 0xFF;
+            break;
+          case 2:
+            ctx->data_out = (ctx->current_cmd.header.addr >> 16) & 0xFF;
+            break;
+          case 3:
+            ctx->data_out = (ctx->current_cmd.header.addr >> 8) & 0xFF;
+            break;
+          case 4:
+            ctx->data_out = ctx->current_cmd.header.addr & 0xFF;
+            break;
+          case 5:
+            ctx->data_out = (ctx->current_cmd.header.count >> 8) & 0xFF;
+            break;
+          case 6:
+            ctx->data_out = ctx->current_cmd.header.count & 0xFF;
+            break;
+          default:
+            ctx->data_out = 0;
+            break;
+        }
       }
-    }
-    ctx->signal_state.sck = !ctx->signal_state.sck;
-    if (ctx->signal_state.sck) {
-      ctx->signal_state.mosi = (ctx->data_out >> (7 - ctx->bit_count)) & 1;
-    } else {
-      ctx->bit_count++;
-      if (ctx->bit_count == 8) {
-        ctx->bit_count = 0;
-        ctx->byte_idx++;
-        if (ctx->byte_idx == 7) {
-          ctx->byte_idx = 0;
-          if (ctx->current_cmd.header.type == CommandType::V2_WRITE) {
-            ctx->state = V2_WRITE_DATA;
-          } else {
-            ctx->state = V2_READ_WAIT_TOKEN;
-            ctx->data_in = 0;
-            ctx->cycle_wait_count = 10000; // Timeout for 0xFE
+      ctx->signal_state.sck = !ctx->signal_state.sck;
+      if (ctx->signal_state.sck) {
+        ctx->signal_state.mosi = (ctx->data_out >> (7 - ctx->bit_count)) & 1;
+      } else {
+        ctx->bit_count++;
+        if (ctx->bit_count == 8) {
+          ctx->bit_count = 0;
+          ctx->byte_idx++;
+          if (ctx->byte_idx == 7) {
+            ctx->byte_idx = 0;
+            if (ctx->current_cmd.header.type == CommandType::V2_WRITE) {
+              ctx->state = V2_WRITE_DATA;
+            } else {
+              ctx->state = V2_READ_WAIT_TOKEN;
+              ctx->data_in = 0;
+              ctx->cycle_wait_count = 10000;  // Timeout for 0xFE
+            }
           }
         }
       }
-    }
-    break;
+      break;
 
-  case V2_WRITE_DATA:
-    if (ctx->bit_count == 0 && !ctx->signal_state.sck) {
-      ctx->data_out = ctx->current_cmd.payload[ctx->byte_idx];
-    }
-    ctx->signal_state.sck = !ctx->signal_state.sck;
-    if (ctx->signal_state.sck) {
-      ctx->signal_state.mosi = (ctx->data_out >> (7 - ctx->bit_count)) & 1;
-    } else {
-      ctx->bit_count++;
-      if (ctx->bit_count == 8) {
-        ctx->bit_count = 0;
-        ctx->byte_idx++;
-        if (ctx->byte_idx == ctx->current_cmd.payload.size()) {
-          ctx->state = V2_END;
-          ctx->cycle_wait_count = 200; // CDC drain
+    case V2_WRITE_DATA:
+      if (ctx->bit_count == 0 && !ctx->signal_state.sck) {
+        ctx->data_out = ctx->current_cmd.payload[ctx->byte_idx];
+      }
+      ctx->signal_state.sck = !ctx->signal_state.sck;
+      if (ctx->signal_state.sck) {
+        ctx->signal_state.mosi = (ctx->data_out >> (7 - ctx->bit_count)) & 1;
+      } else {
+        ctx->bit_count++;
+        if (ctx->bit_count == 8) {
+          ctx->bit_count = 0;
+          ctx->byte_idx++;
+          if (ctx->byte_idx == ctx->current_cmd.payload.size()) {
+            ctx->state = V2_END;
+            ctx->cycle_wait_count = 200;  // CDC drain
+          }
         }
       }
-    }
-    break;
+      break;
 
-  case V2_READ_WAIT_TOKEN:
-    ctx->signal_state.sck = !ctx->signal_state.sck;
-    if (!ctx->signal_state.sck) {
-      ctx->data_in = (ctx->data_in << 1) | miso;
-      if (ctx->data_in == 0xFE) {
-        ctx->state = V2_READ_DATA;
-        ctx->byte_idx = 0;
-        ctx->bit_count = 0;
-        ctx->data_in = 0;
-        ctx->bulk_data_buffer.resize((ctx->current_cmd.header.count + 1) * 16);
-      } else if (--ctx->cycle_wait_count <= 0) {
-        std::cerr << "DPI: V2_READ timeout at addr 0x" << std::hex
-                  << ctx->current_cmd.header.addr << std::endl;
-        ctx->success = false;
-        ctx->state = V2_END;
-        ctx->cycle_wait_count = 200;
-      }
-    }
-    break;
-
-  case V2_READ_DATA:
-    ctx->signal_state.sck = !ctx->signal_state.sck;
-    if (!ctx->signal_state.sck) {
-      ctx->data_in = (ctx->data_in << 1) | miso;
-      ctx->bit_count++;
-      if (ctx->bit_count == 8) {
-        ctx->bulk_data_buffer[ctx->byte_idx++] = ctx->data_in;
-        ctx->bit_count = 0;
-        ctx->data_in = 0;
-        if (ctx->byte_idx == ctx->bulk_data_buffer.size()) {
+    case V2_READ_WAIT_TOKEN:
+      ctx->signal_state.sck = !ctx->signal_state.sck;
+      if (!ctx->signal_state.sck) {
+        ctx->data_in = (ctx->data_in << 1) | miso;
+        if (ctx->data_in == 0xFE) {
+          ctx->state = V2_READ_DATA;
+          ctx->byte_idx = 0;
+          ctx->bit_count = 0;
+          ctx->data_in = 0;
+          ctx->bulk_data_buffer.resize((ctx->current_cmd.header.count + 1) *
+                                       16);
+        } else if (--ctx->cycle_wait_count <= 0) {
+          std::cerr << "DPI: V2_READ timeout at addr 0x" << std::hex
+                    << ctx->current_cmd.header.addr << std::endl;
+          ctx->success = false;
           ctx->state = V2_END;
           ctx->cycle_wait_count = 200;
         }
       }
-    }
-    break;
+      break;
 
-  case V2_END:
-    ctx->signal_state.sck = !ctx->signal_state.sck;
-    if (--ctx->cycle_wait_count <= 0) {
-      ctx->signal_state.sck = 0;
-      ctx->signal_state.csb = 1;
-      ctx->signal_state.mosi = 0;
-      ctx->state = IDLE;
-      {
-        std::lock_guard<std::mutex> lock(result_mutex);
-        result_queue.push({0, (uint8_t)ctx->success});
-      }
-      if (ctx->current_cmd.header.type == CommandType::V2_READ &&
-          ctx->success) {
-        {
-          std::lock_guard<std::mutex> lock(bulk_read_mutex);
-          bulk_read_queue.push(ctx->bulk_data_buffer);
+    case V2_READ_DATA:
+      ctx->signal_state.sck = !ctx->signal_state.sck;
+      if (!ctx->signal_state.sck) {
+        ctx->data_in = (ctx->data_in << 1) | miso;
+        ctx->bit_count++;
+        if (ctx->bit_count == 8) {
+          ctx->bulk_data_buffer[ctx->byte_idx++] = ctx->data_in;
+          ctx->bit_count = 0;
+          ctx->data_in = 0;
+          if (ctx->byte_idx == ctx->bulk_data_buffer.size()) {
+            ctx->state = V2_END;
+            ctx->cycle_wait_count = 200;
+          }
         }
-        bulk_read_cv.notify_one();
       }
-    }
-    break;
-  default:
-    abort();
+      break;
+
+    case V2_END:
+      ctx->signal_state.sck = !ctx->signal_state.sck;
+      if (--ctx->cycle_wait_count <= 0) {
+        ctx->signal_state.sck = 0;
+        ctx->signal_state.csb = 1;
+        ctx->signal_state.mosi = 0;
+        ctx->state = IDLE;
+        {
+          std::lock_guard<std::mutex> lock(result_mutex);
+          result_queue.push({0, (uint8_t)ctx->success});
+        }
+        if (ctx->current_cmd.header.type == CommandType::V2_READ &&
+            ctx->success) {
+          {
+            std::lock_guard<std::mutex> lock(bulk_read_mutex);
+            bulk_read_queue.push(ctx->bulk_data_buffer);
+          }
+          bulk_read_cv.notify_one();
+        }
+      }
+      break;
+    default:
+      abort();
   }
 }
 
-void spi_dpi_tick(struct SpiDpiFsmState *ctx, unsigned char *sck,
-                  unsigned char *csb, unsigned char *mosi, unsigned char miso) {
+void spi_dpi_tick(struct SpiDpiFsmState* ctx, unsigned char* sck,
+                  unsigned char* csb, unsigned char* mosi, unsigned char miso) {
   if (!reset_done.load(std::memory_order_relaxed) &&
       reset_seen.load(std::memory_order_acquire)) {
     reset_done.store(true, std::memory_order_release);
@@ -478,29 +467,29 @@ void spi_dpi_tick(struct SpiDpiFsmState *ctx, unsigned char *sck,
   }
 
   switch (ctx->state) {
-  case IDLE:
-    break;
-  case IDLE_TICKING:
-    ctx->signal_state.sck = !ctx->signal_state.sck;
-    if (--ctx->cycle_wait_count <= 0) {
-      ctx->signal_state.sck = 0;
-      ctx->state = IDLE;
-      {
-        std::lock_guard<std::mutex> lock(result_mutex);
-        result_queue.push({0, 1});
+    case IDLE:
+      break;
+    case IDLE_TICKING:
+      ctx->signal_state.sck = !ctx->signal_state.sck;
+      if (--ctx->cycle_wait_count <= 0) {
+        ctx->signal_state.sck = 0;
+        ctx->state = IDLE;
+        {
+          std::lock_guard<std::mutex> lock(result_mutex);
+          result_queue.push({0, 1});
+        }
       }
-    }
-    break;
-  case V2_START:
-  case V2_HEADER:
-  case V2_WRITE_DATA:
-  case V2_READ_WAIT_TOKEN:
-  case V2_READ_DATA:
-  case V2_END:
-    handle_v2_transaction(miso, ctx);
-    break;
-  default:
-    break;
+      break;
+    case V2_START:
+    case V2_HEADER:
+    case V2_WRITE_DATA:
+    case V2_READ_WAIT_TOKEN:
+    case V2_READ_DATA:
+    case V2_END:
+      handle_v2_transaction(miso, ctx);
+      break;
+    default:
+      break;
   }
 
   *sck = ctx->signal_state.sck;
@@ -508,4 +497,4 @@ void spi_dpi_tick(struct SpiDpiFsmState *ctx, unsigned char *sck,
   *mosi = ctx->signal_state.mosi;
 }
 
-} // extern "C"
+}  // extern "C"

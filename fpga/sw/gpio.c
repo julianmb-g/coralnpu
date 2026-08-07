@@ -21,7 +21,7 @@
 #define GPIO_DATA_OUT (GPIO_BASE + 0x04)
 #define GPIO_OUT_EN (GPIO_BASE + 0x08)
 
-#define REG32(addr) (*(volatile uint32_t *)(uintptr_t)(addr))
+#define REG32(addr) (*(volatile uint32_t*)(uintptr_t)(addr))
 
 uint32_t gpio_get_base_addr(void) { return GPIO_BASE; }
 

@@ -103,39 +103,36 @@ struct elf_phdr {
 
 // --- Helpers ---
 
-static int strncmp_local(const char *s1, const char *s2, size_t n) {
+static int strncmp_local(const char* s1, const char* s2, size_t n) {
   for (size_t i = 0; i < n; i++) {
     if (s1[i] != s2[i])
       return (int)((unsigned char)s1[i] - (unsigned char)s2[i]);
-    if (s1[i] == '\0')
-      return 0;
+    if (s1[i] == '\0') return 0;
   }
   return 0;
 }
 
 int main(void) {
   uart_init();
-  uart_putc('B'); // Booting
+  uart_putc('B');  // Booting
 
   spi_flash_init();
 
   // 1. Read ROM header at offset 0
   struct rom_header rh;
-  spi_flash_read(0, (uint8_t *)&rh, sizeof(rh));
+  spi_flash_read(0, (uint8_t*)&rh, sizeof(rh));
 
-  if (rh.magic != 0x544f4f42) { // "BOOT"
-    uart_putc('M');             // Magic error
-    while (1)
-      ;
+  if (rh.magic != 0x544f4f42) {  // "BOOT"
+    uart_putc('M');              // Magic error
+    while (1);
   }
 
   // 2. Read EOCD
   struct zip_eocd eocd;
-  spi_flash_read(rh.eocd_offset, (uint8_t *)&eocd, sizeof(eocd));
+  spi_flash_read(rh.eocd_offset, (uint8_t*)&eocd, sizeof(eocd));
   if (eocd.signature != 0x06054b50) {
-    uart_putc('S'); // Signature error
-    while (1)
-      ;
+    uart_putc('S');  // Signature error
+    while (1);
   }
 
   // 3. Find BOOT.ELF in Central Directory
@@ -144,16 +141,16 @@ int main(void) {
 
   for (int i = 0; i < eocd.total_entries; i++) {
     struct zip_cd_entry cd;
-    spi_flash_read(cd_ptr, (uint8_t *)&cd, sizeof(cd));
+    spi_flash_read(cd_ptr, (uint8_t*)&cd, sizeof(cd));
 
     if (cd.filename_len == 8) {
       char filename[8];
-      spi_flash_read(cd_ptr + sizeof(cd), (uint8_t *)filename, 8);
+      spi_flash_read(cd_ptr + sizeof(cd), (uint8_t*)filename, 8);
       if (strncmp_local(filename, "BOOT.ELF", 8) == 0) {
         // Found it! Get Local Header
         struct zip_lfh lfh;
         uint32_t lfh_addr = rh.zip_start_offset + cd.lfh_offset;
-        spi_flash_read(lfh_addr, (uint8_t *)&lfh, sizeof(lfh));
+        spi_flash_read(lfh_addr, (uint8_t*)&lfh, sizeof(lfh));
         elf_data_start =
             lfh_addr + sizeof(lfh) + lfh.filename_len + lfh.extra_len;
         break;
@@ -163,39 +160,36 @@ int main(void) {
   }
 
   if (elf_data_start == 0) {
-    uart_putc('F'); // File not found
-    while (1)
-      ;
+    uart_putc('F');  // File not found
+    while (1);
   }
 
   // 4. Load ELF
   struct elf_header eh;
-  spi_flash_read(elf_data_start, (uint8_t *)&eh, sizeof(eh));
+  spi_flash_read(elf_data_start, (uint8_t*)&eh, sizeof(eh));
 
   if (eh.e_ident[0] != 0x7f || eh.e_ident[1] != 'E' || eh.e_ident[2] != 'L' ||
       eh.e_ident[3] != 'F') {
-    uart_putc('E'); // ELF header error
-    while (1)
-      ;
+    uart_putc('E');  // ELF header error
+    while (1);
   }
 
   for (int i = 0; i < eh.e_phnum; i++) {
     struct elf_phdr ph;
     spi_flash_read(elf_data_start + eh.e_phoff + i * eh.e_phentsize,
-                   (uint8_t *)&ph, sizeof(ph));
-    if (ph.p_type == 1) { // PT_LOAD
+                   (uint8_t*)&ph, sizeof(ph));
+    if (ph.p_type == 1) {  // PT_LOAD
       // Direct load from SPI to destination (ITCM/DTCM/SRAM) via DMA
       spi_flash_read_dma(elf_data_start + ph.p_offset,
-                         (uint8_t *)(uintptr_t)ph.p_paddr, ph.p_filesz);
+                         (uint8_t*)(uintptr_t)ph.p_paddr, ph.p_filesz);
     }
   }
 
-  uart_putc('J'); // Jumping
+  uart_putc('J');  // Jumping
 
   void (*entry)(void) = (void (*)(void))(uintptr_t)eh.e_entry;
   entry();
 
-  while (1)
-    ;
+  while (1);
   return 0;
 }

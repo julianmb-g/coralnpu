@@ -19,7 +19,7 @@
 #define DMA_STATUS (DMA_BASE + 0x04)
 #define DMA_DESC_ADDR (DMA_BASE + 0x08)
 
-#define REG32(addr) (*(volatile uint32_t *)(uintptr_t)(addr))
+#define REG32(addr) (*(volatile uint32_t*)(uintptr_t)(addr))
 
 uint32_t dma_get_base_addr(void) { return DMA_BASE; }
 
@@ -34,10 +34,9 @@ int dma_wait_done(void) {
   // Bounded poll to avoid hanging forever
   for (int i = 0; i < 1000000; i++) {
     uint32_t s = dma_get_status();
-    if (s & 0x2)
-      return (s & 0x4) ? -1 : 0; // done: check error
+    if (s & 0x2) return (s & 0x4) ? -1 : 0;  // done: check error
   }
-  return -2; // timeout
+  return -2;  // timeout
 }
 
 uint32_t dma_make_len_flags(uint32_t len, uint32_t width_log2, int src_fixed,

@@ -35,8 +35,7 @@ int main() {
   spi_xfer(SPI_MASTER_BASE, 0xEF);
 
   // Wait for TX FIFO to empty (Status bit 2 is TX Full, bit 0 is Busy)
-  while (spi_get_status(SPI_MASTER_BASE) & 1)
-    ;
+  while (spi_get_status(SPI_MASTER_BASE) & 1);
 
   uart_puts("SPI transmit complete!\n");
 

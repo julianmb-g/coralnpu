@@ -28,7 +28,7 @@ struct SimDisplay {
   uint16_t xs, xe, ys, ye;
   uint16_t x, y;
   bool in_reset;
-  bool madctl_mv; // Row/Column Exchange
+  bool madctl_mv;  // Row/Column Exchange
 
   // For handling incoming pixel data
   uint8_t pending_byte;
@@ -53,24 +53,24 @@ struct SimDisplay {
   }
 
   void ProcessCommand(uint8_t cmd) {
-    ramwr_active = false; // New command ends RAMWR
+    ramwr_active = false;  // New command ends RAMWR
     have_pending_byte = false;
 
     switch (cmd) {
-    case 0x2A: // CASET
-    case 0x2B: // RASET
-    case 0x36: // MADCTL
-    case 0x3A: // COLMOD
-      // Wait for data
-      break;
-    case 0x2C: // RAMWR
-      ramwr_active = true;
-      x = xs;
-      y = ys;
-      break;
-    case 0x01: // SWRESET
-      Reset();
-      break;
+      case 0x2A:  // CASET
+      case 0x2B:  // RASET
+      case 0x36:  // MADCTL
+      case 0x3A:  // COLMOD
+        // Wait for data
+        break;
+      case 0x2C:  // RAMWR
+        ramwr_active = true;
+        x = xs;
+        y = ys;
+        break;
+      case 0x01:  // SWRESET
+        Reset();
+        break;
     }
   }
 
@@ -80,54 +80,47 @@ struct SimDisplay {
     // well. Assuming data follows immediately.
 
     switch (last_cmd) {
-    case 0x2A: // CASET
-      if (param_idx == 0)
-        xs = (xs & 0xFF) | (data << 8);
-      if (param_idx == 1)
-        xs = (xs & 0xFF00) | data;
-      if (param_idx == 2)
-        xe = (xe & 0xFF) | (data << 8);
-      if (param_idx == 3) {
-        xe = (xe & 0xFF00) | data;
-        param_idx = -1;
-      }
-      param_idx++;
-      break;
-    case 0x2B: // RASET
-      if (param_idx == 0)
-        ys = (ys & 0xFF) | (data << 8);
-      if (param_idx == 1)
-        ys = (ys & 0xFF00) | data;
-      if (param_idx == 2)
-        ye = (ye & 0xFF) | (data << 8);
-      if (param_idx == 3) {
-        ye = (ye & 0xFF00) | data;
-        param_idx = -1;
-      }
-      param_idx++;
-      break;
-    case 0x36: // MADCTL
-      madctl_mv = (data & 0x20);
-      param_idx = 0; // Single byte param
-      break;
-    case 0x2C: // RAMWR
-      if (!have_pending_byte) {
-        pending_byte = data;
-        have_pending_byte = true;
-      } else {
-        uint16_t pixel = (pending_byte << 8) | data;
-        have_pending_byte = false;
-        WritePixel(pixel);
-      }
-      break;
-    default:
-      param_idx = 0;
+      case 0x2A:  // CASET
+        if (param_idx == 0) xs = (xs & 0xFF) | (data << 8);
+        if (param_idx == 1) xs = (xs & 0xFF00) | data;
+        if (param_idx == 2) xe = (xe & 0xFF) | (data << 8);
+        if (param_idx == 3) {
+          xe = (xe & 0xFF00) | data;
+          param_idx = -1;
+        }
+        param_idx++;
+        break;
+      case 0x2B:  // RASET
+        if (param_idx == 0) ys = (ys & 0xFF) | (data << 8);
+        if (param_idx == 1) ys = (ys & 0xFF00) | data;
+        if (param_idx == 2) ye = (ye & 0xFF) | (data << 8);
+        if (param_idx == 3) {
+          ye = (ye & 0xFF00) | data;
+          param_idx = -1;
+        }
+        param_idx++;
+        break;
+      case 0x36:  // MADCTL
+        madctl_mv = (data & 0x20);
+        param_idx = 0;  // Single byte param
+        break;
+      case 0x2C:  // RAMWR
+        if (!have_pending_byte) {
+          pending_byte = data;
+          have_pending_byte = true;
+        } else {
+          uint16_t pixel = (pending_byte << 8) | data;
+          have_pending_byte = false;
+          WritePixel(pixel);
+        }
+        break;
+      default:
+        param_idx = 0;
     }
   }
 
   void WritePixel(uint16_t pixel) {
-    if (x >= WIDTH || y >= HEIGHT)
-      return;
+    if (x >= WIDTH || y >= HEIGHT) return;
     framebuffer[y * WIDTH + x] = pixel;
 
     // Increment cursor
@@ -141,10 +134,9 @@ struct SimDisplay {
     }
   }
 
-  void DumpPPM(const std::string &filename) {
+  void DumpPPM(const std::string& filename) {
     std::ofstream file(filename, std::ios::binary);
-    if (!file.is_open())
-      return;
+    if (!file.is_open()) return;
 
     file << "P6\n" << WIDTH << " " << HEIGHT << "\n255\n";
     for (int i = 0; i < WIDTH * HEIGHT; ++i) {
@@ -178,8 +170,8 @@ struct DisplayDpiState {
 
 extern "C" {
 
-struct DisplayDpiState *display_dpi_init() {
-  struct DisplayDpiState *ctx = new DisplayDpiState();
+struct DisplayDpiState* display_dpi_init() {
+  struct DisplayDpiState* ctx = new DisplayDpiState();
   ctx->csb_prev = 1;
   ctx->sck_prev = 0;
   ctx->dc_prev = 0;
@@ -191,7 +183,7 @@ struct DisplayDpiState *display_dpi_init() {
   return ctx;
 }
 
-void display_dpi_close(struct DisplayDpiState *ctx) {
+void display_dpi_close(struct DisplayDpiState* ctx) {
   if (ctx) {
     ctx->display.DumpPPM("/tmp/display_out.ppm");
     delete ctx;
@@ -199,7 +191,7 @@ void display_dpi_close(struct DisplayDpiState *ctx) {
   std::cout << "DPI: Display Model Closed" << std::endl;
 }
 
-void display_dpi_reset(struct DisplayDpiState *ctx) {
+void display_dpi_reset(struct DisplayDpiState* ctx) {
   if (ctx) {
     ctx->csb_prev = 1;
     ctx->sck_prev = 0;
@@ -212,13 +204,12 @@ void display_dpi_reset(struct DisplayDpiState *ctx) {
   }
 }
 
-void display_dpi_tick(struct DisplayDpiState *ctx, unsigned char sck,
+void display_dpi_tick(struct DisplayDpiState* ctx, unsigned char sck,
                       unsigned char csb, unsigned char mosi, unsigned char dc,
-                      unsigned char rst, unsigned char *miso) {
-  *miso = 0; // Default MISO low
+                      unsigned char rst, unsigned char* miso) {
+  *miso = 0;  // Default MISO low
 
-  if (!ctx)
-    return;
+  if (!ctx) return;
 
   if (dc != ctx->dc_prev) {
     std::cout << "DPI: Display DC changed to " << (int)dc << std::endl;
@@ -272,12 +263,12 @@ void display_dpi_tick(struct DisplayDpiState *ctx, unsigned char sck,
     if (ctx->bit_count == 8) {
       uint8_t byte = ctx->shift_reg;
 
-      if (dc == 0) { // Command
+      if (dc == 0) {  // Command
         std::cout << "DPI: Display CMD: 0x" << std::hex << std::setw(2)
                   << std::setfill('0') << (int)byte << std::dec << std::endl;
         ctx->last_cmd = byte;
         ctx->display.ProcessCommand(byte);
-      } else { // Data
+      } else {  // Data
         // Only log data if it's not a pixel flood to avoid spam, or log
         // sparingly For now, let's log everything to debug "black screen"
         std::cout << "DPI: Display DATA: 0x" << std::hex << std::setw(2)
@@ -295,4 +286,4 @@ void display_dpi_tick(struct DisplayDpiState *ctx, unsigned char sck,
   ctx->sck_prev = sck;
 }
 
-} // extern "C"
+}  // extern "C"

@@ -36,4 +36,4 @@ uint32_t i2c_get_status(void);
 }
 #endif
 
-#endif // FPGA_SW_I2C_H_
+#endif  // FPGA_SW_I2C_H_

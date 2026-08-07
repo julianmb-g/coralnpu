@@ -32,7 +32,7 @@ struct DisplayCmd {
 };
 
 class DisplayRenderer {
-public:
+ public:
   DisplayRenderer() = default;
 
   // Initializes the display and DMA chain.
@@ -41,7 +41,7 @@ public:
 
   // Synchronous render using a single full-frame DMA.
   // buffer must be 32-byte aligned and 320x240 RGB565.
-  void Render(const uint16_t *frame_buffer);
+  void Render(const uint16_t* frame_buffer);
 
   // Waits for the current DMA operation to complete.
   void WaitDma();
@@ -49,14 +49,14 @@ public:
   static constexpr int kLcdWidth = 320;
   static constexpr int kLcdHeight = 240;
 
-private:
-  void SetupFrameDma(const uint16_t *frame_buffer);
+ private:
+  void SetupFrameDma(const uint16_t* frame_buffer);
 
   PAINT paint_;
-  uint32_t dc_0_val_ = 2; // RST=1, DC=0
-  uint32_t dc_1_val_ = 3; // RST=1, DC=1
+  uint32_t dc_0_val_ = 2;  // RST=1, DC=0
+  uint32_t dc_1_val_ = 3;  // RST=1, DC=1
 };
 
-} // namespace coralnpu
+}  // namespace coralnpu
 
-#endif // FPGA_SW_DISPLAY_RENDERER_H_
+#endif  // FPGA_SW_DISPLAY_RENDERER_H_

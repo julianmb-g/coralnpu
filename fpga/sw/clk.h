@@ -31,4 +31,4 @@ uint32_t clk_get_spim_freq_mhz(void);
 }
 #endif
 
-#endif // FPGA_SW_CLK_H_
+#endif  // FPGA_SW_CLK_H_

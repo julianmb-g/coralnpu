@@ -33,4 +33,4 @@ uint32_t gpio_read_output(void);
 }
 #endif
 
-#endif // FPGA_SW_GPIO_H_
+#endif  // FPGA_SW_GPIO_H_

@@ -24,22 +24,22 @@ struct GpioDpiState {
 
 extern "C" {
 
-void *gpio_dpi_init() {
-  GpioDpiState *ctx = new GpioDpiState();
+void* gpio_dpi_init() {
+  GpioDpiState* ctx = new GpioDpiState();
   ctx->prev_gpio_o = -1;
   ctx->prev_gpio_en = -1;
   std::cout << "DPI: GPIO Initialized" << std::endl;
   return ctx;
 }
 
-void gpio_dpi_close(void *ctx) {
+void gpio_dpi_close(void* ctx) {
   if (ctx) {
-    delete static_cast<GpioDpiState *>(ctx);
+    delete static_cast<GpioDpiState*>(ctx);
   }
 }
 
-void gpio_dpi_tick(void *ctx_void, int gpio_o, int gpio_en_o, int *gpio_i) {
-  GpioDpiState *ctx = static_cast<GpioDpiState *>(ctx_void);
+void gpio_dpi_tick(void* ctx_void, int gpio_o, int gpio_en_o, int* gpio_i) {
+  GpioDpiState* ctx = static_cast<GpioDpiState*>(ctx_void);
 
   // Log changes to outputs
   if (gpio_o != ctx->prev_gpio_o || gpio_en_o != ctx->prev_gpio_en) {
