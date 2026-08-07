@@ -51,10 +51,43 @@ def audit_mpact_formatter():
     print("MpactTraceFormatter ADR-019 integrity verified.")
     return True
 
+def audit_fallback_disassembler():
+    """
+    Verifies that no proactive disassembler engineering exists (ADR-007 Retracted).
+    """
+    print("Auditing for proactive disassembler engineering (ADR-007)...")
+    path = "tests/verilator_sim/rvvi/fallback_disassembler.h"
+    if os.path.exists(path):
+        print(f"Warning: '{path}' exists. Verifying no unapproved changes.")
+        with open(path, "r") as f:
+            content = f.read()
+        if "ProactiveDisassemblerEngineering" in content:
+            print("Error: Detected unapproved proactive disassembler engineering.")
+            return False
+    print("Disassembler ADR-007 integrity verified.")
+    return True
+
+def audit_custom_fallback_formatter():
+    """
+    Verifies that sw/utils/nexus_loader/trace_daemon.cc does NOT explicitly use CustomFallbackFormatter (Design 6.1).
+    Wait, the task says 'for explicit CustomFallbackFormatter usage'. 
+    Let's check if it exists.
+    """
+    path = "sw/utils/nexus_loader/trace_daemon.cc"
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            content = f.read()
+        if "CustomFallbackFormatter" in content:
+            print(f"Error: Explicit CustomFallbackFormatter usage found in {path}")
+            return False
+    return True
+
 def main():
     success = True
     success &= audit_trace_daemon()
     success &= audit_mpact_formatter()
+    success &= audit_fallback_disassembler()
+    success &= audit_custom_fallback_formatter()
     
     if not success:
         print("Audit FAILED.")

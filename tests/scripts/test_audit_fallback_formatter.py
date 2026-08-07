@@ -52,5 +52,22 @@ class TestAuditFallbackFormatter(unittest.TestCase):
         mock_exists.return_value = True
         self.assertFalse(audit_fallback_formatter.audit_mpact_formatter())
 
+    @patch('os.path.exists')
+    def test_audit_fallback_disassembler_not_exists(self, mock_exists):
+        mock_exists.return_value = False
+        self.assertTrue(audit_fallback_formatter.audit_fallback_disassembler())
+
+    @patch('os.path.exists')
+    @patch('builtins.open', new_callable=mock_open, read_data="Disassembler logic")
+    def test_audit_fallback_disassembler_success(self, mock_file, mock_exists):
+        mock_exists.return_value = True
+        self.assertTrue(audit_fallback_formatter.audit_fallback_disassembler())
+
+    @patch('os.path.exists')
+    @patch('builtins.open', new_callable=mock_open, read_data="ProactiveDisassemblerEngineering")
+    def test_audit_fallback_disassembler_failure(self, mock_file, mock_exists):
+        mock_exists.return_value = True
+        self.assertFalse(audit_fallback_formatter.audit_fallback_disassembler())
+
 if __name__ == "__main__":
     unittest.main()

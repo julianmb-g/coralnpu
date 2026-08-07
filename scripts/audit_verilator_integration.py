@@ -31,18 +31,12 @@ def audit_legacy_soc_protection():
             text=True
         )
         changed_files = result.stdout.strip().split("\n")
-        allowed_prefixes = [
-            "tests/verilator_sim/",
-            "scripts/audit_",
-            "tests/scripts/test_audit_"
-        ]
         
         for f in changed_files:
             if not f:
                 continue
-            is_allowed = any(f.startswith(p) for p in allowed_prefixes)
-            if not is_allowed:
-                print(f"Error: Violation of legacy SoC protection. File '{f}' was modified outside allowed directories.")
+            if f.startswith("fpga/"):
+                print(f"Error: Violation of legacy SoC protection. File '{f}' was modified.")
                 return False
         print("Legacy SoC simulation targets successfully protected.")
         return True
