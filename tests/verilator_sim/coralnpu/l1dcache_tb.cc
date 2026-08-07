@@ -26,15 +26,19 @@ using DUT_Class = VL1DCacheBank;
 
 #include "tests/verilator_sim/coralnpu/coralnpu_cfg.h"
 
-template <typename T> struct get_port_width;
+template <typename T>
+struct get_port_width;
 
-template <typename T> struct get_port_width<T &> : get_port_width<T> {};
+template <typename T>
+struct get_port_width<T&> : get_port_width<T> {};
 
-template <int W> struct get_port_width<sc_core::sc_in<sc_dt::sc_bv<W>>> {
+template <int W>
+struct get_port_width<sc_core::sc_in<sc_dt::sc_bv<W>>> {
   static const int value = W;
 };
 
-template <int W> struct get_port_width<sc_core::sc_out<sc_dt::sc_bv<W>>> {
+template <int W>
+struct get_port_width<sc_core::sc_out<sc_dt::sc_bv<W>>> {
   static const int value = W;
 };
 
@@ -45,11 +49,9 @@ constexpr int kVLenB = kVector / 8;
 constexpr int kVLenW = kVLenB / sizeof(int32_t);
 
 class L1DCacheTb : public SyscTb {
-public:
-  static const int DBUS_ADDR_WIDTH =
-      get_port_width<decltype(DUT_Class::io_dbus_addr)>::value;
-  static const int AXI_ADDR_WIDTH =
-      get_port_width<decltype(DUT_Class::io_axi_read_addr_bits_addr)>::value;
+ public:
+  static const int DBUS_ADDR_WIDTH = get_port_width<decltype(DUT_Class::io_dbus_addr)>::value;
+  static const int AXI_ADDR_WIDTH = get_port_width<decltype(DUT_Class::io_axi_read_addr_bits_addr)>::value;
   sc_out<bool> io_flush_valid;
   sc_in<bool> io_flush_ready;
   sc_out<bool> io_flush_all;
@@ -58,57 +60,57 @@ public:
   sc_out<bool> io_dbus_valid;
   sc_in<bool> io_dbus_ready;
   sc_out<bool> io_dbus_write;
-  sc_out<sc_bv<kDbusBits>> io_dbus_size;
-  sc_out<sc_bv<DBUS_ADDR_WIDTH>> io_dbus_addr;
-  sc_out<sc_bv<DBUS_ADDR_WIDTH>> io_dbus_adrx;
-  sc_in<sc_bv<kVector>> io_dbus_rdata;
-  sc_in<sc_bv<32>> io_dbus_pc;
-  sc_out<sc_bv<kVector>> io_dbus_wdata;
-  sc_out<sc_bv<kVector / 8>> io_dbus_wmask;
+  sc_out<sc_bv<kDbusBits> > io_dbus_size;
+  sc_out<sc_bv<DBUS_ADDR_WIDTH> > io_dbus_addr;
+  sc_out<sc_bv<DBUS_ADDR_WIDTH> > io_dbus_adrx;
+  sc_in<sc_bv<kVector> > io_dbus_rdata;
+  sc_in<sc_bv<32> > io_dbus_pc;
+  sc_out<sc_bv<kVector> > io_dbus_wdata;
+  sc_out<sc_bv<kVector / 8> > io_dbus_wmask;
 
   sc_in<bool> io_axi_read_addr_valid;
   sc_out<bool> io_axi_read_addr_ready;
-  sc_in<sc_bv<kL1DAxiId - kDBusBankAdj>> io_axi_read_addr_bits_id;
-  sc_in<sc_bv<AXI_ADDR_WIDTH>> io_axi_read_addr_bits_addr;
-  sc_in<sc_bv<4>> io_axi_read_addr_bits_region;
-  sc_in<sc_bv<4>> io_axi_read_addr_bits_qos;
-  sc_in<sc_bv<3>> io_axi_read_addr_bits_prot;
-  sc_in<sc_bv<4>> io_axi_read_addr_bits_cache;
+  sc_in<sc_bv<kL1DAxiId - kDBusBankAdj> > io_axi_read_addr_bits_id;
+  sc_in<sc_bv<AXI_ADDR_WIDTH> > io_axi_read_addr_bits_addr;
+  sc_in<sc_bv<4> > io_axi_read_addr_bits_region;
+  sc_in<sc_bv<4> > io_axi_read_addr_bits_qos;
+  sc_in<sc_bv<3> > io_axi_read_addr_bits_prot;
+  sc_in<sc_bv<4> > io_axi_read_addr_bits_cache;
   sc_in<bool> io_axi_read_addr_bits_lock;
-  sc_in<sc_bv<2>> io_axi_read_addr_bits_burst;
-  sc_in<sc_bv<3>> io_axi_read_addr_bits_size;
-  sc_in<sc_bv<8>> io_axi_read_addr_bits_len;
+  sc_in<sc_bv<2> > io_axi_read_addr_bits_burst;
+  sc_in<sc_bv<3> > io_axi_read_addr_bits_size;
+  sc_in<sc_bv<8> > io_axi_read_addr_bits_len;
 
   sc_out<bool> io_axi_read_data_valid;
   sc_in<bool> io_axi_read_data_ready;
-  sc_out<sc_bv<2>> io_axi_read_data_bits_resp;
-  sc_out<sc_bv<kL1DAxiId - kDBusBankAdj>> io_axi_read_data_bits_id;
-  sc_out<sc_bv<kL1DAxiBits>> io_axi_read_data_bits_data;
+  sc_out<sc_bv<2> > io_axi_read_data_bits_resp;
+  sc_out<sc_bv<kL1DAxiId - kDBusBankAdj> > io_axi_read_data_bits_id;
+  sc_out<sc_bv<kL1DAxiBits> > io_axi_read_data_bits_data;
   sc_out<bool> io_axi_read_data_bits_last;
 
   sc_in<bool> io_axi_write_addr_valid;
   sc_out<bool> io_axi_write_addr_ready;
-  sc_in<sc_bv<kL1DAxiId - kDBusBankAdj>> io_axi_write_addr_bits_id;
-  sc_in<sc_bv<AXI_ADDR_WIDTH>> io_axi_write_addr_bits_addr;
-  sc_in<sc_bv<4>> io_axi_write_addr_bits_region;
-  sc_in<sc_bv<4>> io_axi_write_addr_bits_qos;
-  sc_in<sc_bv<3>> io_axi_write_addr_bits_prot;
-  sc_in<sc_bv<4>> io_axi_write_addr_bits_cache;
+  sc_in<sc_bv<kL1DAxiId - kDBusBankAdj> > io_axi_write_addr_bits_id;
+  sc_in<sc_bv<AXI_ADDR_WIDTH> > io_axi_write_addr_bits_addr;
+  sc_in<sc_bv<4> > io_axi_write_addr_bits_region;
+  sc_in<sc_bv<4> > io_axi_write_addr_bits_qos;
+  sc_in<sc_bv<3> > io_axi_write_addr_bits_prot;
+  sc_in<sc_bv<4> > io_axi_write_addr_bits_cache;
   sc_in<bool> io_axi_write_addr_bits_lock;
-  sc_in<sc_bv<2>> io_axi_write_addr_bits_burst;
-  sc_in<sc_bv<3>> io_axi_write_addr_bits_size;
-  sc_in<sc_bv<8>> io_axi_write_addr_bits_len;
+  sc_in<sc_bv<2> > io_axi_write_addr_bits_burst;
+  sc_in<sc_bv<3> > io_axi_write_addr_bits_size;
+  sc_in<sc_bv<8> > io_axi_write_addr_bits_len;
 
   sc_in<bool> io_axi_write_data_valid;
   sc_out<bool> io_axi_write_data_ready;
-  sc_in<sc_bv<kL1DAxiStrb>> io_axi_write_data_bits_strb;
-  sc_in<sc_bv<kL1DAxiBits>> io_axi_write_data_bits_data;
+  sc_in<sc_bv<kL1DAxiStrb> > io_axi_write_data_bits_strb;
+  sc_in<sc_bv<kL1DAxiBits> > io_axi_write_data_bits_data;
   sc_in<bool> io_axi_write_data_bits_last;
 
   sc_out<bool> io_axi_write_resp_valid;
   sc_in<bool> io_axi_write_resp_ready;
-  sc_out<sc_bv<2>> io_axi_write_resp_bits_resp;
-  sc_out<sc_bv<kL1DAxiId - kDBusBankAdj>> io_axi_write_resp_bits_id;
+  sc_out<sc_bv<2> > io_axi_write_resp_bits_resp;
+  sc_out<sc_bv<kL1DAxiId - kDBusBankAdj> > io_axi_write_resp_bits_id;
 
   sc_in<bool> io_volt_sel;
 
@@ -169,7 +171,7 @@ public:
       uint32_t addr = io_dbus_addr.read().get_word(0);
       int size = io_dbus_size.read().get_word(0);
       uint8_t wdata[kVLenB];
-      uint32_t *p_wdata = reinterpret_cast<uint32_t *>(wdata);
+      uint32_t* p_wdata = reinterpret_cast<uint32_t*>(wdata);
       for (int i = 0; i < kVLenW; ++i) {
         p_wdata[i] = io_dbus_wdata.read().get_word(i);
       }
@@ -208,7 +210,7 @@ public:
     io_flush_clean = flush_clean;
 
     history_t dbus;
-    if (!io_dbus_valid || !dbus_active) { // latch transaction
+    if (!io_dbus_valid || !dbus_active) {  // latch transaction
       bool valid = SyscTbRandBool() && !flush_valid;
       bool write = RandInt(0, 3) == 0;
       bool newaddr = RandInt(0, 3) == 0 || !history.Rand(dbus);
@@ -289,7 +291,7 @@ public:
       sc_bv<kL1DAxiBits> out;
       for (int i = 0; i < axiw; ++i) {
         uint32_t data;
-        ReadAxi(addr, 4, reinterpret_cast<uint8_t *>(&data));
+        ReadAxi(addr, 4, reinterpret_cast<uint8_t*>(&data));
         out.set_word(i, data);
         addr += 4;
       }
@@ -313,7 +315,7 @@ public:
 
     if (io_axi_write_data_valid && io_axi_write_data_ready) {
       axiwdata_t p;
-      uint32_t *ptr = reinterpret_cast<uint32_t *>(p.data);
+      uint32_t* ptr = reinterpret_cast<uint32_t*>(p.data);
       for (int i = 0; i < axiw; ++i, ++ptr) {
         ptr[0] = io_axi_write_data_bits_data.read().get_word(i);
       }
@@ -349,7 +351,7 @@ public:
     }
   }
 
-private:
+ private:
   struct history_t {
     uint32_t addr;
   };
@@ -396,9 +398,9 @@ private:
     const uint32_t paddr = addr & kLineBase;
     if (mem_bus.find(paddr) == mem_bus.end()) {
       uint8_t data[kLineSize];
-      uint32_t *p_data = reinterpret_cast<uint32_t *>(data);
+      uint32_t* p_data = reinterpret_cast<uint32_t*>(data);
       for (int i = 0; i < kLineSize / 4; ++i) {
-        p_data[i] = rand(); // NOLINT(runtime/threadsafe_fn)
+        p_data[i] = rand();  // NOLINT(runtime/threadsafe_fn)
       }
       memcpy(mem_bus[paddr], data, kLineSize);
       memcpy(mem_axi[paddr], data, kLineSize);
@@ -411,8 +413,8 @@ private:
   }
 
   template <int outsz>
-  void _Read(uint32_t addr, uint8_t size, uint8_t *data,
-             std::map<uint32_t, uint8_t[kLineSize]> &m) {
+  void _Read(uint32_t addr, uint8_t size, uint8_t* data,
+             std::map<uint32_t, uint8_t[kLineSize]>& m) {
     const uint32_t laddr = addr & kLineBase;
     const uint32_t loffset = addr & kLineOffset;
     const uint32_t doffset = addr & (outsz - 1);
@@ -429,25 +431,24 @@ private:
     memcpy(data + doffset, m[laddr] + loffset, outsz);
 #else
     memcpy(data + doffset, m[laddr] + loffset, size0);
-    if (!size1)
-      return;
+    if (!size1) return;
     memcpy(data, m[laddr + kLineSize], size1);
 #endif
   }
 
   void _Write(uint32_t addr, uint8_t data,
-              std::map<uint32_t, uint8_t[kLineSize]> &m) {
+              std::map<uint32_t, uint8_t[kLineSize]>& m) {
     const uint32_t laddr = addr & kLineBase;
     const uint32_t loffset = addr & kLineOffset;
 
     m[laddr][loffset] = data;
   }
 
-  void ReadBus(uint32_t addr, uint8_t size, uint8_t *data) {
+  void ReadBus(uint32_t addr, uint8_t size, uint8_t* data) {
     _Read<kVector / 8>(addr, size, data, mem_bus);
   }
 
-  void ReadAxi(uint32_t addr, uint8_t size, uint8_t *data) {
+  void ReadAxi(uint32_t addr, uint8_t size, uint8_t* data) {
     _Read<4>(addr, size, data, mem_axi);
   }
 
@@ -468,57 +469,57 @@ static void L1DCacheTest(absl::string_view name, int loops, bool trace) {
   sc_signal<bool> io_dbus_valid;
   sc_signal<bool> io_dbus_ready;
   sc_signal<bool> io_dbus_write;
-  sc_signal<sc_bv<kDbusBits>> io_dbus_size;
-  sc_signal<sc_bv<L1DCache_tb::DBUS_ADDR_WIDTH>> io_dbus_addr;
-  sc_signal<sc_bv<L1DCache_tb::DBUS_ADDR_WIDTH>> io_dbus_adrx;
-  sc_signal<sc_bv<kVector>> io_dbus_rdata;
-  sc_signal<sc_bv<32>> io_dbus_pc;
-  sc_signal<sc_bv<kVector>> io_dbus_wdata;
-  sc_signal<sc_bv<kVector / 8>> io_dbus_wmask;
+  sc_signal<sc_bv<kDbusBits> > io_dbus_size;
+  sc_signal<sc_bv<L1DCache_tb::DBUS_ADDR_WIDTH> > io_dbus_addr;
+  sc_signal<sc_bv<L1DCache_tb::DBUS_ADDR_WIDTH> > io_dbus_adrx;
+  sc_signal<sc_bv<kVector> > io_dbus_rdata;
+  sc_signal<sc_bv<32> > io_dbus_pc;
+  sc_signal<sc_bv<kVector> > io_dbus_wdata;
+  sc_signal<sc_bv<kVector / 8> > io_dbus_wmask;
 
   sc_signal<bool> io_axi_read_addr_valid;
   sc_signal<bool> io_axi_read_addr_ready;
-  sc_signal<sc_bv<kL1DAxiId - kDBusBankAdj>> io_axi_read_addr_bits_id;
-  sc_signal<sc_bv<L1DCache_tb::AXI_ADDR_WIDTH>> io_axi_read_addr_bits_addr;
-  sc_signal<sc_bv<4>> io_axi_read_addr_bits_region;
-  sc_signal<sc_bv<4>> io_axi_read_addr_bits_qos;
-  sc_signal<sc_bv<3>> io_axi_read_addr_bits_prot;
-  sc_signal<sc_bv<4>> io_axi_read_addr_bits_cache;
+  sc_signal<sc_bv<kL1DAxiId - kDBusBankAdj> > io_axi_read_addr_bits_id;
+  sc_signal<sc_bv<L1DCache_tb::AXI_ADDR_WIDTH> > io_axi_read_addr_bits_addr;
+  sc_signal<sc_bv<4> > io_axi_read_addr_bits_region;
+  sc_signal<sc_bv<4> > io_axi_read_addr_bits_qos;
+  sc_signal<sc_bv<3> > io_axi_read_addr_bits_prot;
+  sc_signal<sc_bv<4> > io_axi_read_addr_bits_cache;
   sc_signal<bool> io_axi_read_addr_bits_lock;
-  sc_signal<sc_bv<2>> io_axi_read_addr_bits_burst;
-  sc_signal<sc_bv<3>> io_axi_read_addr_bits_size;
-  sc_signal<sc_bv<8>> io_axi_read_addr_bits_len;
+  sc_signal<sc_bv<2> > io_axi_read_addr_bits_burst;
+  sc_signal<sc_bv<3> > io_axi_read_addr_bits_size;
+  sc_signal<sc_bv<8> > io_axi_read_addr_bits_len;
 
   sc_signal<bool> io_axi_read_data_valid;
   sc_signal<bool> io_axi_read_data_ready;
-  sc_signal<sc_bv<2>> io_axi_read_data_bits_resp;
-  sc_signal<sc_bv<kL1DAxiId - kDBusBankAdj>> io_axi_read_data_bits_id;
-  sc_signal<sc_bv<kL1DAxiBits>> io_axi_read_data_bits_data;
+  sc_signal<sc_bv<2> > io_axi_read_data_bits_resp;
+  sc_signal<sc_bv<kL1DAxiId - kDBusBankAdj> > io_axi_read_data_bits_id;
+  sc_signal<sc_bv<kL1DAxiBits> > io_axi_read_data_bits_data;
   sc_signal<bool> io_axi_read_data_bits_last;
 
   sc_signal<bool> io_axi_write_addr_valid;
   sc_signal<bool> io_axi_write_addr_ready;
-  sc_signal<sc_bv<kL1DAxiId - kDBusBankAdj>> io_axi_write_addr_bits_id;
-  sc_signal<sc_bv<L1DCache_tb::AXI_ADDR_WIDTH>> io_axi_write_addr_bits_addr;
-  sc_signal<sc_bv<4>> io_axi_write_addr_bits_region;
-  sc_signal<sc_bv<4>> io_axi_write_addr_bits_qos;
-  sc_signal<sc_bv<3>> io_axi_write_addr_bits_prot;
-  sc_signal<sc_bv<4>> io_axi_write_addr_bits_cache;
+  sc_signal<sc_bv<kL1DAxiId - kDBusBankAdj> > io_axi_write_addr_bits_id;
+  sc_signal<sc_bv<L1DCache_tb::AXI_ADDR_WIDTH> > io_axi_write_addr_bits_addr;
+  sc_signal<sc_bv<4> > io_axi_write_addr_bits_region;
+  sc_signal<sc_bv<4> > io_axi_write_addr_bits_qos;
+  sc_signal<sc_bv<3> > io_axi_write_addr_bits_prot;
+  sc_signal<sc_bv<4> > io_axi_write_addr_bits_cache;
   sc_signal<bool> io_axi_write_addr_bits_lock;
-  sc_signal<sc_bv<2>> io_axi_write_addr_bits_burst;
-  sc_signal<sc_bv<3>> io_axi_write_addr_bits_size;
-  sc_signal<sc_bv<8>> io_axi_write_addr_bits_len;
+  sc_signal<sc_bv<2> > io_axi_write_addr_bits_burst;
+  sc_signal<sc_bv<3> > io_axi_write_addr_bits_size;
+  sc_signal<sc_bv<8> > io_axi_write_addr_bits_len;
 
   sc_signal<bool> io_axi_write_data_valid;
   sc_signal<bool> io_axi_write_data_ready;
-  sc_signal<sc_bv<kL1DAxiStrb>> io_axi_write_data_bits_strb;
-  sc_signal<sc_bv<kL1DAxiBits>> io_axi_write_data_bits_data;
+  sc_signal<sc_bv<kL1DAxiStrb> > io_axi_write_data_bits_strb;
+  sc_signal<sc_bv<kL1DAxiBits> > io_axi_write_data_bits_data;
   sc_signal<bool> io_axi_write_data_bits_last;
 
   sc_signal<bool> io_axi_write_resp_valid;
   sc_signal<bool> io_axi_write_resp_ready;
-  sc_signal<sc_bv<2>> io_axi_write_resp_bits_resp;
-  sc_signal<sc_bv<kL1DAxiId - kDBusBankAdj>> io_axi_write_resp_bits_id;
+  sc_signal<sc_bv<2> > io_axi_write_resp_bits_resp;
+  sc_signal<sc_bv<kL1DAxiId - kDBusBankAdj> > io_axi_write_resp_bits_id;
 
   sc_signal<bool> io_volt_sel;
 
@@ -601,7 +602,7 @@ static void L1DCacheTest(absl::string_view name, int loops, bool trace) {
   tb.Start();
 }
 
-int sc_main(int argc, char *argv[]) {
+int sc_main(int argc, char* argv[]) {
   L1DCacheTest(SyscTb::GetName(argv[0]), 1000000, false);
   return 0;
 }
